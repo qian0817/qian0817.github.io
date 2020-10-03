@@ -263,7 +263,7 @@
   </entry>
   <entry>
     <title>Redis中的对象系统</title>
-    <url>/2020/10/03/Redis%E4%B8%AD%E7%9A%84%E5%AF%B9%E8%B1%A1%E7%B3%BB%E7%BB%9F/</url>
+    <url>/2020/09/09/Redis%E4%B8%AD%E7%9A%84%E5%AF%B9%E8%B1%A1%E7%B3%BB%E7%BB%9F/</url>
     <content><![CDATA[<p>Redis中的对象系统包含字符串对象，列表对象，集合对象，有序集合对象，哈希对象这五种类型。同时在Redis中还实现了基于引用计数的内存回收机制和对象共享机制。Redis中的对象带有访问时间记录信息，能够用于计算数据库键的空转时常。</p>
 <h3 id="对象类型"><a href="#对象类型" class="headerlink" title="对象类型"></a>对象类型</h3><p>Redis使用对象来表示数据库中的键和值。每次新创键一个键值对时，会创建两个对象，一个用作键，一个用作值。</p>
 <h3 id="对象类型结构"><a href="#对象类型结构" class="headerlink" title="对象类型结构"></a>对象类型结构</h3><figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisObject</span> &#123;</span></span><br><span class="line">    <span class="comment">// 类型</span></span><br><span class="line">    <span class="keyword">unsigned</span> type:<span class="number">4</span>;</span><br><span class="line">    <span class="comment">// 编码</span></span><br><span class="line">    <span class="keyword">unsigned</span> encoding:<span class="number">4</span>;</span><br><span class="line">    <span class="comment">// 对象最后一次被访问的时间</span></span><br><span class="line">    <span class="keyword">unsigned</span> lru:REDIS_LRU_BITS;</span><br><span class="line">    <span class="comment">// 引用计数</span></span><br><span class="line">    <span class="keyword">int</span> refcount;</span><br><span class="line">    <span class="comment">// 指向实际值的指针</span></span><br><span class="line">    <span class="keyword">void</span> *ptr;</span><br><span class="line">&#125; robj;</span><br></pre></td></tr></table></figure>
@@ -810,24 +810,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Hello World</title>
-    <url>/2020/10/03/hello-world/</url>
-    <content><![CDATA[<p>Welcome to <a href="https://hexo.io/">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo new <span class="string">&quot;My New Post&quot;</span></span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/writing.html">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo server</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/server.html">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo generate</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/generating.html">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="code"><pre><span class="line">$ hexo deploy</span><br></pre></td></tr></table></figure>
-
-<p>More info: <a href="https://hexo.io/docs/one-command-deployment.html">Deployment</a></p>
-]]></content>
-  </entry>
-  <entry>
     <title>java使用自定义注解</title>
     <url>/2020/07/20/java%E4%BD%BF%E7%94%A8%E8%87%AA%E5%AE%9A%E4%B9%89%E6%B3%A8%E8%A7%A3/</url>
     <content><![CDATA[<h2 id="注解简介"><a href="#注解简介" class="headerlink" title="注解简介"></a>注解简介</h2><p>注解是放在Java源码的类、方法、字段、参数前的一种特殊“注释”，用于保存类相关的信息以供反射调用，提供了一种为程序元素提供元数据的方法。注解不能直接干扰程序的运行。注解本身也是一个类，所有的注解都需要继承自java.lang.annotation.Annotation接口。</p>
@@ -1043,6 +1025,77 @@
       </categories>
       <tags>
         <tag>设计模式</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>JVM中的垃圾回收算法</title>
+    <url>/2020/10/03/JVM%E4%B8%AD%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<p>JVM内存运行时区域分为程序计数区、虚拟机栈、本地方法栈、堆区和方法区，其中前三个区域随着线程的生命周期而变化，对于这些区域不需要过多考虑内存回收的问题，当线程结束时，内存也就会被释放了。但是Java堆和方法区则需要使用到垃圾回收器去进行回收。</p>
+<h2 id="判断对象是否存活"><a href="#判断对象是否存活" class="headerlink" title="判断对象是否存活"></a>判断对象是否存活</h2><p>在对垃圾进行回收时，需要先判断哪些对象存活，哪些对象需要进行回收。</p>
+<h3 id="引用计数算法"><a href="#引用计数算法" class="headerlink" title="引用计数算法"></a>引用计数算法</h3><p>通过在对象中添加一个引用计数器，每有一个对象引用时计数器值加上一，当引用失效时，计数器值减去一。其原理简单且判定效率高，例如C++中的shared_ptr就是使用到了引用计数算法。但是引用计数算法无法解决循环引用的问题，例如以下的C++代码A和B最终都不会调用析构函数，因为A和B相互引用对方，即使A和B已经在最后是无法被访问到的。</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;memory&gt;</span></span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span>;</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">B</span> &#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">shared_ptr</span>&lt;A&gt; a;</span><br><span class="line">    ~B() &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;free B&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">A</span> &#123;</span></span><br><span class="line"><span class="keyword">public</span>:</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">shared_ptr</span>&lt;B&gt; b;</span><br><span class="line">    ~A() &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;free A&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">shared_ptr</span>&lt;A&gt; a = <span class="built_in">std</span>::make_shared&lt;A&gt;();</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">shared_ptr</span>&lt;B&gt; b = <span class="built_in">std</span>::make_shared&lt;B&gt;();</span><br><span class="line">    a-&gt;b = b;</span><br><span class="line">    b-&gt;a = a;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="可达性分析算法"><a href="#可达性分析算法" class="headerlink" title="可达性分析算法"></a>可达性分析算法</h3><p>Java使用的是可达性分析算法来判定对象是否存活。从GC ROOT最为起始节点，从这些节点开始根据引用关系进行搜索，如果某个对象到GC ROOT之间没有引用链相连，那么说明该对象是不可达的即需要回收的对象。</p>
+<p>在JVM中以下对象可以作为GC ROOT</p>
+<ul>
+<li>虚拟机栈中引用的对象。</li>
+<li>方法区中类静态属性引用的对象。</li>
+<li>方法区中常量引用的对象。</li>
+<li>本地方法栈中JNI引用的对象。</li>
+<li>Java虚拟机内部的引用，例如基本数据类型对应的Class对象，常驻的异常对象（例如NullPointException)，系统类加载器。</li>
+<li>被同步锁持有的对象。</li>
+<li>反应JVM内存情况的JMXBean、JVMTI中注册的回调，本地代码缓存。</li>
+</ul>
+<h2 id="引用类型"><a href="#引用类型" class="headerlink" title="引用类型"></a>引用类型</h2><p>Java将引用分为了强引用、软引用、弱引用和虚引用，这四种引用强度依次递减。</p>
+<p>强引用指的是代码中普遍存在的引用赋值，例如<code> Object obj = new Object();</code>这种引用关系。只要强引用关系还存在，那么垃圾回收器就不会回收掉被引用的对象。</p>
+<p>软引用描述那些还有用但是非必须的对象。在系统将要发生内存溢出异常之前，会把这些对象进行第二次回收。JDK提供了SoftReference类来实现软引用。</p>
+<p>弱引用描述那些非必要对象，被弱引用关联的对象只能生存到下一次垃圾回收为止。JDK提供了WeakReference来实现弱引用。</p>
+<p>虚引用是最弱的引用关系，虚引用在任何时候都可能会被垃圾回收器回收，主要作用是跟踪对象被垃圾回收的状态。JDK提供了PhantomReference来实现虚引用。</p>
+<h3 id="finalize方法"><a href="#finalize方法" class="headerlink" title="finalize方法"></a>finalize方法</h3><p>在进行可达性分析以后，会判断需要进行回收的对象有无覆盖finalize()方法以及finalize()方法是否已经被调用。如果有必要执行finalize()方法，那么该对象会放置到F-Queue队列之中，由Finalizer线程去执行finalize()方法。JVM不一定会等到finalize()执行完成，同时finalize方法只会执行一次。</p>
+<h2 id="分代收集理论"><a href="#分代收集理论" class="headerlink" title="分代收集理论"></a>分代收集理论</h2><p>大多数垃圾回收器都遵循分代收集理论进行设计，其建立在两个假说之上。</p>
+<ol>
+<li>绝大多数对象都是朝生夕灭的</li>
+<li>熬过越多次垃圾收集过程的对象越难以消亡。</li>
+</ol>
+<p>在划分出不同的区域以后，垃圾回收器就可以每次只回收某一个部分。通常将会把Java堆分为新生代和老年代两个区域。针对不同的区域的特点，有着不同的垃圾收集算法，主要有标记-清除算法、标记-复制算法以及标记-整理算法。</p>
+<h2 id="垃圾收集算法"><a href="#垃圾收集算法" class="headerlink" title="垃圾收集算法"></a>垃圾收集算法</h2><h3 id="标记-清除算法"><a href="#标记-清除算法" class="headerlink" title="标记-清除算法"></a>标记-清除算法</h3><p>标记-清除算法是最早出现的垃圾收集算法，其过程为：首先标记出所有需要回收的对象，在标记完成以后，统一回收掉所有未被标记的对象。标记-清除算法的缺点是执行效率不稳定和内存碎片化问题。</p>
+<h3 id="标记-复制算法"><a href="#标记-复制算法" class="headerlink" title="标记-复制算法"></a>标记-复制算法</h3><p>标记-复制算法将内存容量分为两部分，当一部分的内存用完时，就将还存活的对象复制到另一块上去，将已使用过的内存空间一次性清理掉。其实现简单但是浪费内存空间。</p>
+<p>通常使用这种算法来回收新生代，因为新生代中的大量对象无法熬过第一轮收集，所以不需要按照1：1的比例来划分两个区域的大小。通常将新生代区域分为一块较大的Eden区和两块较小Survivor区，每次内存分配只使用Eden区和一个Survivor区。当进行垃圾回收时，将Eden区和一块Survivor区的仍然存活对象复制到另一块Survivor区，然后清理掉Eden区和已使用的Survivor区空间。当Survivor空间不足以容纳存活的对象时，就需要依赖内存其他区域进行分配担保，通常直接将这些对象进入老年代。</p>
+<h3 id="标记-整理算法"><a href="#标记-整理算法" class="headerlink" title="标记-整理算法"></a>标记-整理算法</h3><p>将所有存活的对象向内存空间的一端移动，直接清理掉边界以外的内存，成为标记-整理算法。其与标记-清除算法的区别在于是否需要移动对象。通常关注吞吐量的垃圾回收器（如Parallel Scavenge）使用的是标记整理算法，而关注停顿时间的收集器（如CMS）使用的是标记-清除算法。</p>
+<h2 id="根节点枚举"><a href="#根节点枚举" class="headerlink" title="根节点枚举"></a>根节点枚举</h2><p>所有的收集器在根节点枚举这一步骤中都需要暂停用户线程，根节点的枚举必须在一个能够保障一致性的快照中进行。HotSpot使用一个OopMap的数据结构来保存哪些地方存在着对象引用，不必要一个不漏的检查完所有的执行上下文和全局的引用位置。当类加载完成时，HotSpot会把对象内什么偏移量上是什么类型的数据计算出来，这样收集器在扫描时可以知道栈里和寄存器里哪些位置是引用了。</p>
+<h2 id="安全点和安全区域"><a href="#安全点和安全区域" class="headerlink" title="安全点和安全区域"></a>安全点和安全区域</h2><p>由于引用关系的变化，导致OopMap的内容变化的指令非常多，如果为每一个指令都生成对应的OopMap，那么会需要占用大量的额外存储中间。</p>
+<p>因此HotSpot只在特定的位置记录这些信息，这些位置被称为安全点。因为安全点的设定，导致程序必须到达安全点之后才能够暂停，而不是在任何位置都能够停下来开始垃圾收集。虚拟机通常使用主动式中断的方式来让用户线程到达安全点，其思路为在需要中断线程的时候，设置一个标志位，各个线程在执行过程中轮询这个标志，一旦发现标志为真时主动运行到最近的安全点进行中断挂起。</p>
+<p>如果在程序不执行的时候（例如线程处于Sleep状态或者Blocked状态），那么这时候线程无法走到安全点去中断挂起自己。因此需要引入安全区域解决这一问题。在安全区域中，引用关系不会发生变化，因此在该区域中的任意位置开始垃圾回收都是安全的。当用户线程进入安全区域中时，会先标识自己进入了安全区域，离开安全区域时，会检查虚拟机是否在垃圾收集过程中需要暂停用户线程的阶段。</p>
+<h2 id="记忆集与卡表"><a href="#记忆集与卡表" class="headerlink" title="记忆集与卡表"></a>记忆集与卡表</h2><p>为了解决跨代引用（或者跨Region）导致的问题，垃圾收集器会建立名为记忆集的数据结构。记忆集用于记录从非收集区域指向收集区域的指针集合的数据结构。在垃圾收集的场景中，不需要记录全部的跨代引用对象，只需要判断某一块非收集区域是否存在指向收集区域的指针。</p>
+<p>通常使用卡表来实现记忆集，其最简单的形式可以只是一个字节数组。字节数组上的每一个元素代表着其标识的内存区域中一块特定大小的内存块，成为卡页。如果一个卡页中存在跨代指针，那么将对应卡页的值标识为1，称为这个元素变脏，否则标识为0。其伪代码如下，使用的卡页为2的9次幂：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">CARD_TABLE [<span class="keyword">this</span> address &gt;&gt; <span class="number">9</span>] = IS_DIRTY;</span><br></pre></td></tr></table></figure>
+
+<p>在垃圾收集的过程中，只要筛选出卡页变脏的元素，就能知道哪些卡页内存中包含跨代指针，将其加入GC Roots中一并进行扫描。</p>
+<p>在HotSpot虚拟机中使用写屏障来维护卡表状态，在引用赋值的前后产生一个环形的通知（类似于AOP），供程序执行额外的动作。虚拟机会为赋值操作生成相应的指令，在写屏障中增加了更新卡表操作。其简化逻辑如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">oop_field_store</span><span class="params">(oop* field, oop new_value)</span></span>&#123;</span><br><span class="line">	<span class="comment">// 引用字段赋值操作</span></span><br><span class="line">    *field = new_value;</span><br><span class="line">    <span class="comment">// 写后屏障，完成卡表更新操作</span></span><br><span class="line">    post_write_barrier(field, new_value);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在高并发的情况下，卡表可能存在伪共享的可能性，当多线程修改互相独立的变量时，如果这些变量同享同一个缓存行，就会彼此影响导致性能降低。为解决这一问题，可以先检查卡表标记，当该元素没有被标记过时才将其变脏，来尽量减少写卡表的操作。其伪代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">if</span> (CARD_TABLE [<span class="keyword">this</span> address &gt;&gt; <span class="number">9</span>] != DIRTY) </span><br><span class="line">	CARD_TABLE [<span class="keyword">this</span> address &gt;&gt; <span class="number">9</span>] = DIRTY;</span><br></pre></td></tr></table></figure>
+
+<h2 id="并发的可达性分析"><a href="#并发的可达性分析" class="headerlink" title="并发的可达性分析"></a>并发的可达性分析</h2><p>当用户线程与收集器并发工作时，收集器在标记对象是否为垃圾时，用户线程同时也会修改引用关系。此时会出现两种后果：</p>
+<ol>
+<li>将本应该消亡的对象标记为存货</li>
+<li>将存活的对象标记为已消亡</li>
+</ol>
+<p>对于前一种情况，是可以容忍的，但是对于后一种情况会导致运行出错。当且仅当以下两个条件满足时，会产生对象消失的问题：</p>
+<ol>
+<li>赋值器插入了多条从已经被垃圾收集器扫描过的对象到未被垃圾收集器访问的对象的新引用</li>
+<li>赋值器删除了全部从正在被访问过的对象到未被垃圾收集器访问过的对象的直接或间接引用</li>
+</ol>
+<p>因此要解决并发扫描时的对象消失问题，那么只需要破坏其中一个条件即可。对此有两种解决方案：增量更新和原始快照（SATB）。</p>
+<p>增量更新当出现第一种情况时，将新插入的引用记录下来，等扫描结束以后，以这些被记录下来的对象为根，重新扫描一次。</p>
+<p>原始快照当出现第二种情况时，就将被删除的引用记录下来。在扫描结束以后，以这些记录的引用对象为根，重新扫描一次。</p>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>JVM</tag>
       </tags>
   </entry>
 </search>
