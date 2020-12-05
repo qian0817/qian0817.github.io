@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="TCOGPQHqI4qgI6tDjR8RZk1bYwpUmQ0Ng5MJQzHJWWI">
+  <meta name="baidu-site-verification" content="XvPzBf4OrQ">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="并行处理同一任务意味着对于共享资源的并发访问，为了保证共享资源状态的正确性，需要正确的在这些子任务中进行同步。为了正确的高效的解决这些同步问题，抽象出了同步原语这一概念。 互斥锁在任意时刻只允许最多一个线程访问的方式被称为互斥访问，保证互斥访问共享资源的代码区域被称为临界区。在同一时刻只能有一个线程可以执行临界区中的代码。因此在临界区中，一个线程可以安全的对共享资源进行操作。为了达到这样的目的，需">
+<meta property="og:type" content="article">
+<meta property="og:title" content="操作系统同步原语">
+<meta property="og:url" content="http://qian0817.top/2020/12/05/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%90%8C%E6%AD%A5%E5%8E%9F%E8%AF%AD/index.html">
+<meta property="og:site_name" content="Qian0817">
+<meta property="og:description" content="并行处理同一任务意味着对于共享资源的并发访问，为了保证共享资源状态的正确性，需要正确的在这些子任务中进行同步。为了正确的高效的解决这些同步问题，抽象出了同步原语这一概念。 互斥锁在任意时刻只允许最多一个线程访问的方式被称为互斥访问，保证互斥访问共享资源的代码区域被称为临界区。在同一时刻只能有一个线程可以执行临界区中的代码。因此在临界区中，一个线程可以安全的对共享资源进行操作。为了达到这样的目的，需">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2020-12-05T10:15:50.000Z">
+<meta property="article:modified_time" content="2020-12-05T10:15:50.775Z">
+<meta property="article:author" content="qianlei">
+<meta property="article:tag" content="操作系统">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://qian0817.top/2020/12/05/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%90%8C%E6%AD%A5%E5%8E%9F%E8%AF%AD/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>操作系统同步原语 | Qian0817</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Qian0817" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Qian0817</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/qian0817" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2020/12/05/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%90%8C%E6%AD%A5%E5%8E%9F%E8%AF%AD/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="qianlei">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qian0817">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          操作系统同步原语
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2020-12-05 18:15:50" itemprop="dateCreated datePublished" datetime="2020-12-05T18:15:50+08:00">2020-12-05</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>7.1k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>20 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>并行处理同一任务意味着对于共享资源的并发访问，为了保证共享资源状态的正确性，需要正确的在这些子任务中进行同步。为了正确的高效的解决这些同步问题，抽象出了同步原语这一概念。</p>
+<h2 id="互斥锁"><a href="#互斥锁" class="headerlink" title="互斥锁"></a>互斥锁</h2><p>在任意时刻只允许最多一个线程访问的方式被称为互斥访问，保证互斥访问共享资源的代码区域被称为临界区。在同一时刻只能有一个线程可以执行临界区中的代码。因此在临界区中，一个线程可以安全的对共享资源进行操作。为了达到这样的目的，需要设计一个协议来保证临界区的互斥性，保证互斥访问、优先等待以及空闲让出。</p>
+<h3 id="硬件实现：关闭中断"><a href="#硬件实现：关闭中断" class="headerlink" title="硬件实现：关闭中断"></a>硬件实现：关闭中断</h3><p>在单核条件中，关闭中断意味着当前执行的线程不能被其他线程抢占。因此如果在进入临界区之前关闭中断并在离开临界区之后在开启中断，那么就能避免当前执行临界区代码的线程被打断，保证了只有一个线程执行临界区，也就保证了互斥访问。</p>
+<p>但是在多线程环境中，关闭中断的方式不再适用。即使关闭了所有核心的中断，也不能阻塞其他核心上正在运行的线程执行。</p>
+<h3 id="软件实现：皮特森算法"><a href="#软件实现：皮特森算法" class="headerlink" title="软件实现：皮特森算法"></a>软件实现：皮特森算法</h3><p>皮特森算法是一种纯软件方法，可以解决两个线程的临界区问题。其代码如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">bool</span> flag[<span class="number">2</span>] = &#123;<span class="literal">false</span>,<span class="literal">false</span>&#125;;</span><br><span class="line"><span class="keyword">int</span> trun = <span class="number">0</span>;</span><br><span class="line"><span class="comment">// 线程1</span></span><br><span class="line"><span class="keyword">while</span>(<span class="literal">true</span>) &#123;</span><br><span class="line">    flag[<span class="number">0</span>] = <span class="literal">true</span>;</span><br><span class="line">    turn = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">while</span>(flag[<span class="number">1</span>] == <span class="literal">true</span> &amp;&amp; turn == <span class="number">1</span>);</span><br><span class="line">    <span class="comment">// 临界区部分</span></span><br><span class="line">    flag[<span class="number">0</span>] = <span class="literal">false</span>;</span><br><span class="line">    <span class="comment">// 其他部分</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">// 线程2</span></span><br><span class="line"><span class="keyword">while</span>(<span class="literal">true</span>) &#123;</span><br><span class="line">    flag[<span class="number">1</span>] = <span class="literal">true</span>;</span><br><span class="line">    turn = <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">while</span>(flag[<span class="number">0</span>] == <span class="literal">true</span> &amp;&amp; turn == <span class="number">0</span>);</span><br><span class="line">    <span class="comment">// 临界区部分</span></span><br><span class="line">    flag[<span class="number">1</span>] = <span class="literal">false</span>;</span><br><span class="line">    <span class="comment">// 其他部分</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>其中有两个重要的变量，一个是全局数组flag，其有两个布尔成员（flag[0]和flag[1]），分别代表线程1和线程2是否尝试进入临界区。第二个是全局变量turn。如果两个线程都申请进入临界区，那么turn将决定最终进入临界区的线程编号。线程在进入临界区之前，以线程1为例，必须满足flag[1]==false（表示线程1没有申请进入临界区）或者trun==0（表示turn决定线程1可以进入临界区），方能进入临界区。</p>
+<p>皮特森算法要求访存严格按照程序顺序执行，然而现代CPU为了达到更好的性能允许访存操作乱序执行，因此皮森特算法在这些CPU上无法正常的进行工作。</p>
+<h3 id="软硬件协同：原子操作"><a href="#软硬件协同：原子操作" class="headerlink" title="软硬件协同：原子操作"></a>软硬件协同：原子操作</h3><p>硬件提供的原子操作也可以解决临界区问题。原子操作指的是不可被打断的一个或者一系列的操作，最常见的是比较与置换（CAS），利用该特性可以实现互斥锁。</p>
+<h4 id="自旋锁"><a href="#自旋锁" class="headerlink" title="自旋锁"></a>自旋锁</h4><p>自旋锁利用一个变量lock来表示锁的状态，在加锁时，线程会通过CAS判断lock是否空闲，如果空闲则上锁，否则一遍遍的进行重试。代码如下所示：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lock_init</span><span class="params">(<span class="keyword">int</span>* lock)</span></span>&#123;</span><br><span class="line">    *lock = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lock</span><span class="params">(<span class="keyword">int</span>* lock)</span></span>&#123;</span><br><span class="line">    <span class="keyword">while</span> (atomic_CAS(lock,<span class="number">0</span>,<span class="number">1</span>) != <span class="number">0</span>);</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unlock</span><span class="params">(<span class="keyword">int</span>* lock)</span></span>&#123;</span><br><span class="line">    *lock = <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>自旋锁的实现简单，在竞争程度低的时候非常高效，依然广泛的运用在各种软件之中。</p>
+<h2 id="条件变量"><a href="#条件变量" class="headerlink" title="条件变量"></a>条件变量</h2><p>条件变量可以让一个线程停止使用CPU并将自己挂起。当等待的条件满足时，其他线程会唤醒该挂起的线程让其继续执行。使用条件变量能够避免无谓的循环等待。</p>
+<p>条件变量的实现如下，每个条件变量的结构体中都包含了一个wait_list，用于记录等待在该条件变量上的线程。线程在调用cond_wait挂起自己时，需要先将当前线程加入到等待队列之中，然后原子的挂起当前线程并且释放锁。这个操作需要利用到操作系统辅助完成，例如使用Linux系统下的futex机制。当该线程被其他线程唤醒以后，其应当再次获取锁并且进入临界区然后返回。cond_signal函数会利用操作系统提供的唤醒服务将线程唤醒。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">cond</span> &#123;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">thread</span> *<span class="title">wait_list</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cond_wait</span><span class="params">(struct cond *cond, struct lock *mutex)</span> </span>&#123;</span><br><span class="line">    list_append(cond-&gt;wait_list,current_thread());</span><br><span class="line">    atomic_block_unlock(mutex); <span class="comment">// yuan&#x27;zi挂起</span></span><br><span class="line">    lock(mutex);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cond_signal</span><span class="params">(struct cond *cond, struct lock *mutex)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (!list_empty(cond-&gt;wait_list))&#123;</span><br><span class="line">        wakeup(list_remove(cond-&gt;wait_list));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cond_broadcast</span><span class="params">(struct cond *cond)</span></span>&#123;</span><br><span class="line">    <span class="keyword">while</span> (!list_empty(cond-&gt;wait_list))&#123;</span><br><span class="line">        wakeup(list_remove(cond-&gt;wait_list));</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="信号量"><a href="#信号量" class="headerlink" title="信号量"></a>信号量</h2><p>信号量在不同的线程之间充当信号灯，其根据剩余资源数量控制不同线程的执行或者等待。信号量定义了两个操作分别为P和V，因此信号量又被称为PV原语。一般使用wait和signal来表示信号量的P和V操作。信号量的语义如下：</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">wait</span><span class="params">(<span class="keyword">int</span>* S)</span></span>&#123;</span><br><span class="line">	<span class="keyword">while</span>(*S &lt;= <span class="number">0</span>); <span class="comment">// 循环忙等</span></span><br><span class="line">    *S = *S<span class="number">-1</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">signal</span><span class="params">(<span class="keyword">int</span>* S)</span></span>&#123;</span><br><span class="line">    *S = *S + <span class="number">1</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上面的代码仅仅是信号量的语义，并非信号量的真正实现。该代码存在两个问题。首先，可能存在多个线程同时更新共享信号量的情况导致更新丢失的问题。同时当一次资源被释放时，同时通知多个线程的效率比较低，让多余的线程挂起并且放弃CPU才是正确的选择。</p>
+<p>实现一个正确的信号量需要组合使用互斥锁和条件变量。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sem</span> &#123;</span></span><br><span class="line">    <span class="comment">/* </span></span><br><span class="line"><span class="comment">    没有线程等待时，value 为整数或零，表示剩余的资源数量</span></span><br><span class="line"><span class="comment">    有线程等待时，value 为负数，代表正在等待资源的线程数量</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">int</span> value;</span><br><span class="line">    <span class="comment">/*</span></span><br><span class="line"><span class="comment">    有线程等待时的可用资源数量，也代表应当唤醒的线程数量</span></span><br><span class="line"><span class="comment">    */</span></span><br><span class="line">    <span class="keyword">int</span> wakeup;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">lock</span> <span class="title">sem_lock</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">cond</span> <span class="title">sem_cond</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">wait</span><span class="params">(struct sem *S)</span> </span>&#123;</span><br><span class="line">    lock(&amp;S-&gt;sem_lock);</span><br><span class="line">    S-&gt;value--;</span><br><span class="line">    <span class="keyword">if</span> (S-&gt;value &lt; <span class="number">0</span>) &#123; <span class="comment">// 代表没有空闲的资源</span></span><br><span class="line">        <span class="keyword">do</span> &#123;</span><br><span class="line">            cond_wait(&amp;S-&gt;sem_cond, &amp;S-&gt;sem_lock);</span><br><span class="line">        &#125; <span class="keyword">while</span> (S-&gt;wakeup == <span class="number">0</span>);</span><br><span class="line">        S-&gt;wakeup--;</span><br><span class="line">    &#125;</span><br><span class="line">    unlock(&amp;S-&gt;sem_lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">signal</span><span class="params">(struct sem *S)</span> </span>&#123;</span><br><span class="line">    lock(&amp;S-&gt;sem_lock);</span><br><span class="line">    S-&gt;value++;</span><br><span class="line">    <span class="keyword">if</span> (S-&gt;value &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">        S-&gt;wakeup++;</span><br><span class="line">        cond_signal(&amp;S-&gt;sem_cond);</span><br><span class="line">    &#125;</span><br><span class="line">    unlock(&amp;S-&gt;sem_lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在调用wait操作时，该线程会在获取该信号量的互斥锁后，先将value数值减1。若其值大于等于0，说明有空闲的资源，wait操作成功。如果value小于0，那么需要使用到wakeup来判断是否与空闲的资源来消耗。如果wakeup也为0，需要将当前线程挂起等待。</p>
+<p>信号量与互斥锁有着相似之处。如果信号量只允许其值在0和1之间变化时，那么可以把信号量当作互斥锁来使用。</p>
+<h2 id="读写锁"><a href="#读写锁" class="headerlink" title="读写锁"></a>读写锁</h2><p>当一些线程仅仅需要读取而非修改共享资源时，就没有必要保证它们之间的互斥性。在这种情况下直接使用互斥锁不会带来任何正确性的问题，但是会削减读者之间的并行度，造成性能损失。读写锁就是为了解决这一问题而提出的同步原语。</p>
+<p>读写锁允许多个读者同时进入读临界区，因此会带来倾向性的问题。假设在某一时刻，已经有一些读者在写临界区，那么此时有一个读者和一个写者同时申请进入临界区，那么是否允许该读者进入写临界区。如果允许读者进入写临界区，称为偏向读者的读写锁，否则称为偏向写者的读写锁。</p>
+<p>下面的代码实现了偏向读写的读写锁。读者在上锁的时候需要使用到reader_lock来保证reader_cnt更新的原子性。如果是第一个读者还需要获取writer_lock保证读者和写者的互斥。同样如果读者在释放锁时发现自己是最后一个读者还需要释放write_lock取消对于写者的阻塞。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rwlock</span> &#123;</span></span><br><span class="line">    <span class="keyword">int</span> reader_cnt;</span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">lock</span> <span class="title">reader_lock</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">lock</span> <span class="title">writer_lock</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lock_reader</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    lock(&amp;lock-&gt;reader_lock);</span><br><span class="line">    lock-&gt;reader_cnt++;</span><br><span class="line">    <span class="keyword">if</span> (lock-&gt;reader_cnt == <span class="number">1</span>) &#123; <span class="comment">// 第一个读者</span></span><br><span class="line">        lock(&amp;lock-&gt;writer_lock);</span><br><span class="line">    &#125;</span><br><span class="line">    unlock(&amp;lock-&gt;reader_lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unlock_reader</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    lock(&amp;lock-&gt;reader_lock);</span><br><span class="line">    lock-&gt;reader_cnt--;</span><br><span class="line">    <span class="keyword">if</span> (lock-&gt;reader_cnt == <span class="number">0</span>) &#123; <span class="comment">// 最后一个读者</span></span><br><span class="line">        unlock(&amp;lock-&gt;writer_lock);</span><br><span class="line">    &#125;</span><br><span class="line">    unlock(&amp;lock-&gt;reader_lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lock_writer</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    lock(&amp;lock-&gt;writer_lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unlock_writer</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    unlock(&amp;lock-&gt;writer_lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>偏向写者的读写锁实现更加复杂。在rwlock结构中需要添加一个布尔变量has_writer来表示当前是否有写者到达。当有写者获得锁时，会将has_writer设置为true。读者通过判断has_writer的值来决定是否需要等待前序的写者。</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">rwlock</span> &#123;</span></span><br><span class="line">    <span class="keyword">volatile</span> <span class="keyword">int</span> reader_cnt;</span><br><span class="line">    <span class="keyword">volatile</span> <span class="keyword">bool</span> has_writer;</span><br><span class="line">    <span class="comment">/* 读者写者需要共享锁 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">lock</span> <span class="title">lock</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">cond</span> <span class="title">reader_cond</span>;</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">cond</span> <span class="title">writer_cond</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lock_reader</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    lock(&amp;lock-&gt;lock);</span><br><span class="line">    <span class="keyword">while</span> (lock-&gt;has_writer)&#123;</span><br><span class="line">        cond_wait(&amp;lock-&gt;writer_cond,&amp;lock-&gt;lock);</span><br><span class="line">    &#125;</span><br><span class="line">    lock-&gt;reader_cnt++;</span><br><span class="line">    unlock(&amp;lock-&gt;lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unlock_reader</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    lock(&amp;lock-&gt;lock);</span><br><span class="line">    lock-&gt;reader_cnt--;</span><br><span class="line">    <span class="keyword">if</span> (lock-&gt;reader_cnt == <span class="number">0</span>) &#123; <span class="comment">// 最后一个读者</span></span><br><span class="line">        cond_signal(&amp;lock-&gt;reader_cond);</span><br><span class="line">    &#125;</span><br><span class="line">    unlock(&amp;lock-&gt;lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">lock_writer</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    lock(&amp;lock-&gt;lock);</span><br><span class="line">    <span class="keyword">while</span> (lock-&gt;has_writer)&#123;</span><br><span class="line">        cond_wait(&amp;lock-&gt;writer_cond,&amp;lock-&gt;lock);</span><br><span class="line">    &#125;</span><br><span class="line">    lock-&gt;has_writer= <span class="literal">true</span>;</span><br><span class="line">    <span class="keyword">while</span> (lock-&gt;reader_cnt&gt;<span class="number">0</span>)&#123;</span><br><span class="line">        cond_wait(&amp;lock-&gt;reader_cond,&amp;lock-&gt;lock);</span><br><span class="line">    &#125;</span><br><span class="line">    unlock(&amp;lock-&gt;lock);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">unlock_writer</span><span class="params">(struct rwlock *lock)</span> </span>&#123;</span><br><span class="line">    lock(&amp;lock-&gt;lock);</span><br><span class="line">    lock-&gt;has_writer= <span class="literal">false</span>;</span><br><span class="line">    cond_broadcast(lock-&gt;writer_cond);</span><br><span class="line">    unlock(&amp;lock-&gt;lock);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>偏向读者的锁能够大幅的提升读者之间的并行度，但是会面临很高的写延迟，偏向写者的锁正好相反。因此在实际使用场景中需要根据具体需求选择合适的读写锁。</p>
+<h2 id="死锁"><a href="#死锁" class="headerlink" title="死锁"></a>死锁</h2><p>死锁指的是一组线程中每一个线程都在等待其他线程释放资源而导致的无限等待。下列的代码就演示了死锁出现的场景。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">thread_a</span><span class="params">()</span></span>&#123;</span><br><span class="line">	lock(lock_a);</span><br><span class="line">    lock(lock_b);</span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">	unlock(lock_b);</span><br><span class="line">    unlock(lock_a);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">thread_b</span><span class="params">()</span></span>&#123;</span><br><span class="line">	lock(lock_b);</span><br><span class="line">    lock(lock_a);</span><br><span class="line">    <span class="comment">//do something</span></span><br><span class="line">	unlock(lock_a);</span><br><span class="line">    unlock(lock_b);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="产生原因"><a href="#产生原因" class="headerlink" title="产生原因"></a>产生原因</h3><p>导致死锁出现一共有四个必要条件</p>
+<ol>
+<li>互斥访问：一个共享资源在同一时刻只能被至多一个线程访问。</li>
+<li>持有并等待：线程持有一些资源的同时在等待一些资源。</li>
+<li>资源非抢占：一旦一个资源被持有，除非持有者主动放弃，否则其他竞争者得不到这个资源。</li>
+<li>循环等待：在一系列线程中，例如T<sub>0</sub>，T<sub>1</sub>，T<sub>2</sub>。其中T<sub>0</sub>等待T<sub>1</sub>，T<sub>1</sub>等待T<sub>2</sub>，T<sub>2</sub>等待T<sub>0</sub>，形成了一个循环。</li>
+</ol>
+<h3 id="死锁检测与恢复"><a href="#死锁检测与恢复" class="headerlink" title="死锁检测与恢复"></a>死锁检测与恢复</h3><p>当死锁出现时，需要一个第三方来打破僵局，帮助进行死锁恢复。操作系统往往会扮演这个第三方的角色。</p>
+<p>前面死锁的四个条件之中只有循环等待这一条件与实际运行状态相关，因此是检测死锁的关键。为了确认系统中是否存在循环等待，需要获取到系统中资源分配以及线程等待的相关信息，通过这两张表建立图，判断图中是否存在环，就可以进行死锁的检测。</p>
+<p>再找到的环中的任意线程，终止该线程并释放其占有的所有资源就可以进行死锁的恢复。</p>
+<h3 id="死锁预防"><a href="#死锁预防" class="headerlink" title="死锁预防"></a>死锁预防</h3><p>死锁预防指的是通过合理的资源分配算法，从源头上预防死锁。为了实现这个目标，需要保证死锁的四个条件不能被同时满足。</p>
+<ol>
+<li>避免互斥访问：</li>
+<li>不允许持有并等待：可以让线程在真正开始操作前一次性申请所有的资源，一旦任意资源不能获取则释放掉所有资源并进行重试。该方法会导致资源利用率低，出现饥饿的情况。</li>
+<li>允许资源被抢占：允许一个资源抢占其他线程已经占有的资源，难点在于如何保证被抢占的线程正确的进行恢复。</li>
+<li>避免循环等待：可以要求线程按照一定的顺序进行资源获取，例如对锁进行编号，要求所有线程按照顺序获取锁，可以避免发生死锁。</li>
+</ol>
+<h3 id="死锁避免"><a href="#死锁避免" class="headerlink" title="死锁避免"></a>死锁避免</h3><p>死锁避免是通过系统运行时跟踪资源分配过程来避免出现死锁。银行家算法是一种具体的死锁避免算法。银行家算法通过模拟分配资源后的状态来判断系统是否处于安全状态。例如假设系统中存在M个资源，线程有N个，那么会有以下四个数据结构。</p>
+<ol>
+<li>全局可利用资源：Available[M]</li>
+<li>每个线程的最大需求量：Max[N][M]</li>
+<li>已分配资源数量：Allocation[N][M]</li>
+<li>还需要资源数量：Need[N][M]</li>
+</ol>
+<p>银行家算法执行检查的流程如下：</p>
+<ol>
+<li>建立一个临时数组Available_temp，其初始值与数组Available数组一致，用于模拟系统可用资源数量。</li>
+<li>找到系统当前剩余资源能够满足的线程，称为线程X，如果找不到对应的线程，说明系统处于非安全状态。</li>
+<li>对于Available_temp中的所有成员m，都执行Available_temp[m]+=Allocation[x][m]。</li>
+<li>遍历所有线程，查看是否还有未被标记执行结束的线程。如果有则回到第二步，否则代表系统处于安全状态。</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>qianlei
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://qian0817.top/2020/12/05/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%90%8C%E6%AD%A5%E5%8E%9F%E8%AF%AD/" title="操作系统同步原语">http://qian0817.top/2020/12/05/操作系统同步原语/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" rel="tag"># 操作系统</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/12/03/%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F/" rel="prev" title="进程间通信方式">
+      <i class="fa fa-chevron-left"></i> 进程间通信方式
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%92%E6%96%A5%E9%94%81"><span class="nav-number">1.</span> <span class="nav-text">互斥锁</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%A1%AC%E4%BB%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E5%85%B3%E9%97%AD%E4%B8%AD%E6%96%AD"><span class="nav-number">1.1.</span> <span class="nav-text">硬件实现：关闭中断</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AF%E4%BB%B6%E5%AE%9E%E7%8E%B0%EF%BC%9A%E7%9A%AE%E7%89%B9%E6%A3%AE%E7%AE%97%E6%B3%95"><span class="nav-number">1.2.</span> <span class="nav-text">软件实现：皮特森算法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BD%AF%E7%A1%AC%E4%BB%B6%E5%8D%8F%E5%90%8C%EF%BC%9A%E5%8E%9F%E5%AD%90%E6%93%8D%E4%BD%9C"><span class="nav-number">1.3.</span> <span class="nav-text">软硬件协同：原子操作</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%87%AA%E6%97%8B%E9%94%81"><span class="nav-number">1.3.1.</span> <span class="nav-text">自旋锁</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9D%A1%E4%BB%B6%E5%8F%98%E9%87%8F"><span class="nav-number">2.</span> <span class="nav-text">条件变量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%A1%E5%8F%B7%E9%87%8F"><span class="nav-number">3.</span> <span class="nav-text">信号量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%AF%BB%E5%86%99%E9%94%81"><span class="nav-number">4.</span> <span class="nav-text">读写锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%AD%BB%E9%94%81"><span class="nav-number">5.</span> <span class="nav-text">死锁</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BA%A7%E7%94%9F%E5%8E%9F%E5%9B%A0"><span class="nav-number">5.1.</span> <span class="nav-text">产生原因</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E6%A3%80%E6%B5%8B%E4%B8%8E%E6%81%A2%E5%A4%8D"><span class="nav-number">5.2.</span> <span class="nav-text">死锁检测与恢复</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E9%A2%84%E9%98%B2"><span class="nav-number">5.3.</span> <span class="nav-text">死锁预防</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%AD%BB%E9%94%81%E9%81%BF%E5%85%8D"><span class="nav-number">5.4.</span> <span class="nav-text">死锁避免</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">qianlei</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">21</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/qian0817" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;qian0817" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:qianlei666@gmail.com" title="E-Mail → mailto:qianlei666@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备19007396号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">qianlei</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">83k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">3:56</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var canonicalURL, curProtocol;
+      //Get the <link> tag
+      var x=document.getElementsByTagName("link");
+		//Find the last canonical URL
+		if(x.length > 0){
+			for (i=0;i<x.length;i++){
+				if(x[i].rel.toLowerCase() == 'canonical' && x[i].href){
+					canonicalURL=x[i].href;
+				}
+			}
+		}
+    //Get protocol
+	    if (!canonicalURL){
+	    	curProtocol = window.location.protocol.split(':')[0];
+	    }
+	    else{
+	    	curProtocol = canonicalURL.split(':')[0];
+	    }
+      //Get current URL if the canonical URL does not exist
+	    if (!canonicalURL) canonicalURL = window.location.href;
+	    //Assign script content. Replace current URL with the canonical URL
+      !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=canonicalURL,t=document.referrer;if(!e.test(r)){var n=(String(curProtocol).toLowerCase() === 'https')?"https://sp0.baidu.com/9_Q4simg2RQJ8t7jm9iCKT-xh_/s.gif":"//api.share.baidu.com/s.gif";t?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var i=new Image;i.src=n}}(window);})();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

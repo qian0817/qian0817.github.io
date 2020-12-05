@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="TCOGPQHqI4qgI6tDjR8RZk1bYwpUmQ0Ng5MJQzHJWWI">
+  <meta name="baidu-site-verification" content="XvPzBf4OrQ">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="操作系统会同时处理多个请求，但是硬件的运行资源是有限的。调度就是用来协调每个请求对于资源的使用方法。 一般调度器会通过维护运行队列来管理任务。运行队列不一定需要使用先进先出的队列，例如在Linux中使用的调度器就会使用红黑树来运行队列。当任务在执行时出发一定的条件（例如运行了指定的时间片以后或者发起了IO请求），那么会被加入到运行队列之中，等待再次被调度执行。 调度指标在计算机处理的任务之中，有一">
+<meta property="og:type" content="article">
+<meta property="og:title" content="操作系统调度">
+<meta property="og:url" content="http://qian0817.top/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/index.html">
+<meta property="og:site_name" content="Qian0817">
+<meta property="og:description" content="操作系统会同时处理多个请求，但是硬件的运行资源是有限的。调度就是用来协调每个请求对于资源的使用方法。 一般调度器会通过维护运行队列来管理任务。运行队列不一定需要使用先进先出的队列，例如在Linux中使用的调度器就会使用红黑树来运行队列。当任务在执行时出发一定的条件（例如运行了指定的时间片以后或者发起了IO请求），那么会被加入到运行队列之中，等待再次被调度执行。 调度指标在计算机处理的任务之中，有一">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://qian0817.top/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/%E5%9F%BA%E4%BA%8E%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E7%9A%84%E8%BF%9B%E7%A8%8B%E8%BD%AC%E6%8D%A2.png">
+<meta property="article:published_time" content="2020-11-25T09:34:46.000Z">
+<meta property="article:modified_time" content="2020-11-25T09:35:09.636Z">
+<meta property="article:author" content="qianlei">
+<meta property="article:tag" content="操作系统">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://qian0817.top/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/%E5%9F%BA%E4%BA%8E%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E7%9A%84%E8%BF%9B%E7%A8%8B%E8%BD%AC%E6%8D%A2.png">
+
+<link rel="canonical" href="http://qian0817.top/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>操作系统调度 | Qian0817</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Qian0817" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Qian0817</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/qian0817" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="qianlei">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qian0817">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          操作系统调度
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2020-11-25 17:34:46 / 修改时间：17:35:09" itemprop="dateCreated datePublished" datetime="2020-11-25T17:34:46+08:00">2020-11-25</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" itemprop="url" rel="index"><span itemprop="name">操作系统</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>3.3k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>9 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>操作系统会同时处理多个请求，但是硬件的运行资源是有限的。调度就是用来协调每个请求对于资源的使用方法。</p>
+<p>一般调度器会通过维护运行队列来管理任务。运行队列不一定需要使用先进先出的队列，例如在Linux中使用的调度器就会使用红黑树来运行队列。当任务在执行时出发一定的条件（例如运行了指定的时间片以后或者发起了IO请求），那么会被加入到运行队列之中，等待再次被调度执行。</p>
+<h2 id="调度指标"><a href="#调度指标" class="headerlink" title="调度指标"></a>调度指标</h2><p>在计算机处理的任务之中，有一类任务被称为批处理任务（比如复杂的科学计算等等），这些任务在执行时无需与用户进行交互，其主要的调度指标为任务处理的吞吐量，需要让吞吐量尽可能高，周转周期（即花费的时间）尽可能短。</p>
+<p>还有一类任务为交互式任务，，需要在执行过程中对用户的操作做出响应。这类任务需要保证响应时间足够短使用户获得良好体验。</p>
+<p>同时还有一类有截止时间要求的实时任务（例如车载操作系统需要检测汽车与外部物体的距离）。调度器必须让逝世人物在截止时间前完成，满足实时性的要求。</p>
+<p>同时在移动设备中，调度器还需要尽可能地降低能耗。在通常情况下，调度器需要保证每个任务都有执行的机会，即满足公平性。调度器做出决策的时间也必须短，降低调度开销。</p>
+<p>因此调度器在不同场景下有着不同的调度指标，需要在诸多方面做出权衡。</p>
+<h2 id="调度机制"><a href="#调度机制" class="headerlink" title="调度机制"></a>调度机制</h2><p>进程可能处于不同的状态，这些状态包括新生、预备、运行、阻塞、终止。进程调度机制就负责在这些状态间进行转换。进程调度根据职责的不同，分为长期、中期、短期调度。</p>
+<p>当用户像操作系统提交了执行某个程序的请求以后，系统可能不会立即处理该请求，这一决策由长期调度负责。长期调度用于限制系统中真正被短期调度管理的进程数量，避免短期调度的开销过大。只有当长期调度为某个程序创建了进程并且将状态设置为预备状态以后，才会由短期调度进一步管理该线程。</p>
+<p>短期调度负责进程在预备状态、运行状态以及阻塞状态之间的转换。在短期调度决定执行某个进程以后，会将该进程从预备状态设置为运行状态。短期调度会使用适当的调度策略，尽可能地满足系统的调度指标。</p>
+<p>中期调度实际上是换页机制的一部分。当系统中的进程已经占用了大量的内存资源以后，中期调度会挂起系统中被短期调度管理的进程，从而降低进程占用的内存总量。中期调度策略会根据策略来选择将要被挂起的进程，设置为对应的挂起状态，使其不再被调度执行。同时中期调度也会监控当前的内存使用情况，在适当的时机激活此前挂起的进程，使其可以重新被调度。</p>
+<p>在引入了调度机制以后，进程转换的示意图变为如下所示。与之前的示意图相比，其区别在与引入了两个额外的进程状态：预备挂起状态以及挂起阻塞状态。</p>
+<p><img data-src="%E5%9F%BA%E4%BA%8E%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E7%9A%84%E8%BF%9B%E7%A8%8B%E8%BD%AC%E6%8D%A2.png" alt="基于进程调度的进程转换"></p>
+<p>在进程调度中，长期中期短期相互协作，分别以不同的目标对进程进行调度。长期调度负责决定是否将一个新的进程纳入调度管理。中期调度负责限制系统中进程的内存占用。短期调度细粒度的调度进程的执行，做出对应的调度策略。</p>
+<h2 id="单核调度策略"><a href="#单核调度策略" class="headerlink" title="单核调度策略"></a>单核调度策略</h2><h3 id="经典调度"><a href="#经典调度" class="headerlink" title="经典调度"></a>经典调度</h3><h4 id="先到先得"><a href="#先到先得" class="headerlink" title="先到先得"></a>先到先得</h4><p>先到先得策略也叫先进先出策略。该策略在系统中维护一个运行队列，在执行任务的时候，选取队列中的第一个任务，将其移除队列并且执行，当任务阻塞时，将其放入运行队列队尾，当一个任务执行完后，再执行下一个任务。</p>
+<p>该策略的弊端在于在长短任务的场景下对于短任务不友好，会导致短任务的周转时间与运行时间之比过大。同时其对IO密集型任务也不够友好，可能会导致I/O密集型任务长时间内无法执行。</p>
+<h4 id="最短时间优先-最短完成时间任务优先"><a href="#最短时间优先-最短完成时间任务优先" class="headerlink" title="最短时间优先/最短完成时间任务优先"></a>最短时间优先/最短完成时间任务优先</h4><p>先到先得策略出现的问题提示我们需要让短任务立即进行执行。根据这一思想，得出的策略就是最短任务优先和最短完成时间任务优先。这两种策略的区别在于是否是抢占式的。前者必须等一个任务执行完成才能开始下一调度，后者会中断正在执行的进程转而执行其他任务。</p>
+<p>这两种调度的弊端在于必须先预知任务的运行时间。同时前者调度策略其表现与任务到达时间点有着严重的依赖，后者调度策略会导致长任务饥饿。</p>
+<h4 id="时间片轮转"><a href="#时间片轮转" class="headerlink" title="时间片轮转"></a>时间片轮转</h4><p>在时间片流转策略中需要为任务设置时间片，限定任务每次执行的时间。当任务执行完时间片以后，就切换到运行队列的下一个任务，这就是时间片轮转策略。由于时间片一般会设的足够小，所有任务都可以在一定时间内执行并且响应用户，从而将响应时间在可接受范围内。</p>
+<p>该策略的弊端在于任务运行时间形似的场景下平均周转周期高，但是如果仅考虑响应时间，那么该策略会有很好的效果。</p>
+<h3 id="优先级调度"><a href="#优先级调度" class="headerlink" title="优先级调度"></a>优先级调度</h3><p>如果操作系统可以分别交互式任务以及批处理任务，那么可以设置让交互式任务优先执行的调度策略，为此调度器引入了优先级的概念。通过优先级概念，调度器可以确定哪些任务应该优先执行。</p>
+<h4 id="多级队列"><a href="#多级队列" class="headerlink" title="多级队列"></a>多级队列</h4><p>每个任务都会被分配预先设置好的优先级，每个优先级一个队列，任务会被存储在对应的优先级队列之中。如果优先级不同的任务同时处于预备状态，那么调度器会选择优先级较高的任务进行调度。一个任务必须等到所有优先级比它高的任务调度完才可以被调度。</p>
+<p>该策略会导致低优先级任务饥饿的问题，很容易出现因为大量的高优先级任务不断地进入系统导致低优先级任务饥饿。</p>
+<h4 id="多级反馈队列"><a href="#多级反馈队列" class="headerlink" title="多级反馈队列"></a>多级反馈队列</h4><p>在多级队列的基础上，多级反馈队列增加了动态设置任务优先级的策略。该策略会先对人物的运行时间进行评估，其中短任务会拥有更高的优先级。但是在真实世界中无法预知任务的完成时间，为此多级反馈队列策略会统计每个任务已经执行多长的时间，以此判断该任务是长任务还是短任务。当任务进入系统时，该策略会默认该任务为短任务，为其设置最高优先级。然后该策略会为每个任务队列设置任务的最大运行时间，如果任务在当前队列运行的总时间最终超过了队列允许的最大时间，那么会认为该任务是运行时间较长的任务，将该任务的优先级减一。</p>
+<p>多级反馈队列策略能够动态的评估任务的运行时间，适配大致的任务优先级。同时在该策略中会定时的将所有任务的优先级提升至最高，保证不会出现任务饥饿的情况。该调度策略能够达到低平均周转周期的同时保证任务的响应时间，避免任务饥饿，在许多的操作系统中得到了应用，例如早期的Linux。</p>
+<h2 id="多核调度策略"><a href="#多核调度策略" class="headerlink" title="多核调度策略"></a>多核调度策略</h2><p>相比于单核调度，多核调度策略还需要解决在哪个CPU上执行的问题。</p>
+<h3 id="负载分担"><a href="#负载分担" class="headerlink" title="负载分担"></a>负载分担</h3><p>沿用单核跳读策略的思路，假设多核共享一个全局运行队列，当一个CPU核心需要调度任务时，从全局运行队列中获取一个任务作为下一个由他执行的任务。</p>
+<p>该策略的优点在于设计实现简单，可以将多和调度策略问题规约为单核调度策略问题，同时不会出现CPU资源浪费的情况。但是也存在对应的问题，例如在多核处理器中，多核之间如何同步全局共享运行队列的信息或导致调度开销变得不可忽视。同时在多个CPU核心之间来回切换的开销很大，人物在不同CPU核心之间切换会导致诸如重新载入缓存、TLB刷新等问题。</p>
+<h3 id="协同调度"><a href="#协同调度" class="headerlink" title="协同调度"></a>协同调度</h3><p>多线程为了充分利用多核处理器，通常会将工作量较大的任务切分为多个子任务，这些子任务中可能会存在依赖关系。协同调度的目的是尽可能让一组任务并行执行，避免调度器调度有依赖关系的两组任务。</p>
+<p>群组调度是协同调度的一个经典策略，其基本思想是将关联任务设置为一组，并且以组为单位调度人物在多个CPU核心上执行，使他们的开始时间与结束时间尽可能保持接近。通过将任务以组为单位在多核处理器上进行调度，群组调度策略可以提升特定应用场景下的任务执行性能。</p>
+<h3 id="两级调度"><a href="#两级调度" class="headerlink" title="两级调度"></a>两级调度</h3><p>由于全局调度器在不同CPU核心上切换执行会造成切换开销，为了减少开销，每个人物都尽可能只在一个CPU核心上进行调度。因此新的调度策略改为每个CPU核心都引入一个本地调度器，并用它管理对应核心上执行的任务。这种调度策略同时使用全局调度器和本地调度器，被称为两级调度。</p>
+<p>当一个任务进入系统时，会根据系统的当前信息，决定该任务在哪个CPU核心上被执行。当一个任务被分配到给定的CPU核心时，将一直被该核心的本地调度器管理，不会迁移到其他CPU核心上运行。</p>
+<h3 id="负载均衡"><a href="#负载均衡" class="headerlink" title="负载均衡"></a>负载均衡</h3><p>两级调度将任务绑定在特定的CPU核心上调度执行，避免了任务在多核间切换，有着良好的性能。但是两级调度没有任务在CPU核心间切换的机制，会导致多核间的负载不均匀。为了解决这一问题，引入了负载均衡策略，通过追踪每个CPU核心的负载情况，将处于高CPU负载核心管理的任务迁移到低负载CPU核心上，保证每个核心负载大致相同。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>qianlei
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://qian0817.top/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/" title="操作系统调度">http://qian0817.top/2020/11/25/操作系统调度/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F/" rel="tag"># 操作系统</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/" rel="prev" title="进程线程与纤程">
+      <i class="fa fa-chevron-left"></i> 进程线程与纤程
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2020/12/03/%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F/" rel="next" title="进程间通信方式">
+      进程间通信方式 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E6%8C%87%E6%A0%87"><span class="nav-number">1.</span> <span class="nav-text">调度指标</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E6%9C%BA%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">调度机制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8D%95%E6%A0%B8%E8%B0%83%E5%BA%A6%E7%AD%96%E7%95%A5"><span class="nav-number">3.</span> <span class="nav-text">单核调度策略</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BB%8F%E5%85%B8%E8%B0%83%E5%BA%A6"><span class="nav-number">3.1.</span> <span class="nav-text">经典调度</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%85%88%E5%88%B0%E5%85%88%E5%BE%97"><span class="nav-number">3.1.1.</span> <span class="nav-text">先到先得</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%9C%80%E7%9F%AD%E6%97%B6%E9%97%B4%E4%BC%98%E5%85%88-%E6%9C%80%E7%9F%AD%E5%AE%8C%E6%88%90%E6%97%B6%E9%97%B4%E4%BB%BB%E5%8A%A1%E4%BC%98%E5%85%88"><span class="nav-number">3.1.2.</span> <span class="nav-text">最短时间优先&#x2F;最短完成时间任务优先</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E6%97%B6%E9%97%B4%E7%89%87%E8%BD%AE%E8%BD%AC"><span class="nav-number">3.1.3.</span> <span class="nav-text">时间片轮转</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BC%98%E5%85%88%E7%BA%A7%E8%B0%83%E5%BA%A6"><span class="nav-number">3.2.</span> <span class="nav-text">优先级调度</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%9A%E7%BA%A7%E9%98%9F%E5%88%97"><span class="nav-number">3.2.1.</span> <span class="nav-text">多级队列</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%A4%9A%E7%BA%A7%E5%8F%8D%E9%A6%88%E9%98%9F%E5%88%97"><span class="nav-number">3.2.2.</span> <span class="nav-text">多级反馈队列</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A4%9A%E6%A0%B8%E8%B0%83%E5%BA%A6%E7%AD%96%E7%95%A5"><span class="nav-number">4.</span> <span class="nav-text">多核调度策略</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B4%9F%E8%BD%BD%E5%88%86%E6%8B%85"><span class="nav-number">4.1.</span> <span class="nav-text">负载分担</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8D%8F%E5%90%8C%E8%B0%83%E5%BA%A6"><span class="nav-number">4.2.</span> <span class="nav-text">协同调度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%A4%E7%BA%A7%E8%B0%83%E5%BA%A6"><span class="nav-number">4.3.</span> <span class="nav-text">两级调度</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%B4%9F%E8%BD%BD%E5%9D%87%E8%A1%A1"><span class="nav-number">4.4.</span> <span class="nav-text">负载均衡</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">qianlei</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">21</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">8</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">19</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/qian0817" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;qian0817" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:qianlei666@gmail.com" title="E-Mail → mailto:qianlei666@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备19007396号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2020</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">qianlei</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">83k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">3:56</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var canonicalURL, curProtocol;
+      //Get the <link> tag
+      var x=document.getElementsByTagName("link");
+		//Find the last canonical URL
+		if(x.length > 0){
+			for (i=0;i<x.length;i++){
+				if(x[i].rel.toLowerCase() == 'canonical' && x[i].href){
+					canonicalURL=x[i].href;
+				}
+			}
+		}
+    //Get protocol
+	    if (!canonicalURL){
+	    	curProtocol = window.location.protocol.split(':')[0];
+	    }
+	    else{
+	    	curProtocol = canonicalURL.split(':')[0];
+	    }
+      //Get current URL if the canonical URL does not exist
+	    if (!canonicalURL) canonicalURL = window.location.href;
+	    //Assign script content. Replace current URL with the canonical URL
+      !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=canonicalURL,t=document.referrer;if(!e.test(r)){var n=(String(curProtocol).toLowerCase() === 'https')?"https://sp0.baidu.com/9_Q4simg2RQJ8t7jm9iCKT-xh_/s.gif":"//api.share.baidu.com/s.gif";t?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var i=new Image;i.src=n}}(window);})();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
