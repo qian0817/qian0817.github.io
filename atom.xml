@@ -6,7 +6,7 @@
   <link href="http://qian0817.top/atom.xml" rel="self"/>
   
   <link href="http://qian0817.top/"/>
-  <updated>2021-01-26T05:45:35.684Z</updated>
+  <updated>2021-01-28T06:32:27.487Z</updated>
   <id>http://qian0817.top/</id>
   
   <author>
@@ -15,6 +15,29 @@
   </author>
   
   <generator uri="https://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>netty常用概念</title>
+    <link href="http://qian0817.top/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/"/>
+    <id>http://qian0817.top/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/</id>
+    <published>2021-01-28T06:32:27.000Z</published>
+    <updated>2021-01-28T06:32:27.487Z</updated>
+    
+    <content type="html"><![CDATA[<h2 id="channel"><a href="#channel" class="headerlink" title="channel"></a>channel</h2><p>Channel接口是Netty对网络操作的抽象类，代表一个到实体（如硬件设备、网络套接字、文件等等）的开放连接，包含基本的读写操作。常用的Channel接口实现类包括NioServerSocketChannel和NioSocketChannel。这两个相当于BIO编程模型中的ServerSocket以及Socket两个概念。</p><h2 id="Future"><a href="#Future" class="headerlink" title="Future"></a>Future</h2><p>Netty是异步非阻塞的，所有的IO操作都是异步的，因此无法立即得到操作是否执行成功。通过Future提供了一种在操作完成时通知应用程序的方法，这个对象可以看作是一个异步操作的结果的占位符。</p><p>Netty提供了自己的实现ChannelFuture，其中addListener()方法可以注册一个ChannelFutureListener，当操作执行完成时，会自动触发返回结果。还可以通过sync()方法将异步的操作转换为同步的。</p><h2 id="ChannelHandler"><a href="#ChannelHandler" class="headerlink" title="ChannelHandler"></a>ChannelHandler</h2><p>Netty使用不同的事件来通知我们状态的改变或者是操作的状态。ChannelHandler 是消息的具体处理器。他负责处理读写操作、客户端连接等事情。</p><p>ChannelPipeline是ChannelHandler构成的链条，可以通过ChannelPipeline的add()方法添加ChannelHandler。</p><p>Netty也提供了预定义的ChannelHandler实现，包括实现HTTP,TLS的ChannelHandler。</p><h2 id="Eventloop"><a href="#Eventloop" class="headerlink" title="Eventloop"></a>Eventloop</h2><p>EventLoop 的主要作用实际就是负责监听网络事件并调用事件处理器进行相关 I/O 操作的处理。</p><p>EventLoopGroup 包含多个 EventLoop。</p><p>当客户端连接服务端时，bossGroup会处理客户端连接请求。当客户端处理完成后，会将这个连接提交workerGroup来处理，然后workerGroup负责处理其 IO 相关操作。</p><h2 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h2><p>Bootstrap 是客户端的启动引导类，通过connect()方法连接到远程的主机和端口，作为TCP连接的客户端，也可以通过bind()方法绑定一个本地端口，作为UDP协议通信中的一端。</p><p>ServerBootstrap是服务端的启动引导类，使用bind放大绑定到本地端口上，等待客户端的连接。 </p><h2 id="线程模型"><a href="#线程模型" class="headerlink" title="线程模型"></a>线程模型</h2><p>Netty线程模型基于Reactor模式设计开发。Reactor 模式基于事件驱动，采用多路复用将事件分发给相应的Handler处理。Netty主要靠NioEventLoopGroup线程池来实现具体的线程模型的。在实现服务端的时候，一般会初始化两个线程组，分别为bossGroup用于接受连接以及workerGroup负责具体的处理。其中bossGroup和workerGroup可以共用同一个EventLoopGroup。</p><h2 id="长连接与心跳机制"><a href="#长连接与心跳机制" class="headerlink" title="长连接与心跳机制"></a>长连接与心跳机制</h2><p>短连接指的是server与client端建立连接以后，读写完成之后就关闭掉连接，如果下次还需要继续发送消息，那么就要重新建立连接。</p><p>长连接说的就是 client 向 server 双方建立连接之后，它们之间的连接并不会主动关闭，后续的读写操作会继续使用这个连接。长连接的可以省去较多的 TCP 建立和关闭的操作，降低对网络资源的消耗。</p><p>在保存长连接的过程中，如果遇到断网等情况，需要使用到心跳机制判断对方是否已经掉线。如果client与server之间在一定时间内没有数据交互时，会发送一个特殊的数据包给对方，当接收方收到这个数据报文后, 也立即发送一个特殊的数据报文。当某一端收到心跳消息以后，就可以知道对方仍然在线，确保TCP连接的有效性。</p>]]></content>
+    
+    
+    <summary type="html">介绍Netty中的常用概念</summary>
+    
+    
+    
+    <category term="Netty" scheme="http://qian0817.top/categories/Netty/"/>
+    
+    
+    <category term="网络" scheme="http://qian0817.top/tags/%E7%BD%91%E7%BB%9C/"/>
+    
+    <category term="Netty" scheme="http://qian0817.top/tags/Netty/"/>
+    
+  </entry>
   
   <entry>
     <title>Kafka基本概念</title>
@@ -445,31 +468,6 @@
     <category term="JVM" scheme="http://qian0817.top/tags/JVM/"/>
     
     <category term="Java" scheme="http://qian0817.top/tags/Java/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>MySQL的日志系统</title>
-    <link href="http://qian0817.top/2020/09/01/MySQL%E7%9A%84%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F/"/>
-    <id>http://qian0817.top/2020/09/01/MySQL%E7%9A%84%E6%97%A5%E5%BF%97%E7%B3%BB%E7%BB%9F/</id>
-    <published>2020-09-01T02:57:29.000Z</published>
-    <updated>2020-12-30T04:35:50.323Z</updated>
-    
-    <content type="html"><![CDATA[<h2 id="归档日志binlog"><a href="#归档日志binlog" class="headerlink" title="归档日志binlog"></a>归档日志binlog</h2><p>归档日志记录了所有对MySQL数据库执行更改的所有操作（不包括SELECT和SHOW这样不会修改数据的操作）</p><h3 id="作用"><a href="#作用" class="headerlink" title="作用"></a>作用</h3><ol><li>恢复：用户可以通过binlog对数据库中的数据进行恢复。</li><li>复制：可以通过binlog使得两台MySQL数据库之间进行实时同步。</li><li>审计：通过binlog来判断是否存在对数据库进行注入的攻击。</li></ol><h3 id="日志格式"><a href="#日志格式" class="headerlink" title="日志格式"></a>日志格式</h3><p>binlog_format参数记录了binlog的格式，可选值由ROW,STATEMENT和MIXED。</p><p>ROW格式下记录了表的更改情况。</p><p>STATEMENT格式记录了日志的逻辑SQL语句。</p><p>MIXED格式下，MySQL会默认采用STATEMENT格式进行binlog的记录，但是在一些特殊的情况下会使用ROW格式（例如使用了UUID和RAND函数）。</p><h2 id="错误日志"><a href="#错误日志" class="headerlink" title="错误日志"></a>错误日志</h2><p>错误日志文件对MySqlQL的启动、关闭、运行过程进行记录，记录所有的错误日志以及一部分的警告或正确的信息。可以使用如下命令来定位错误日志文件。</p><figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; SHOW VARIABLES LIKE &#x27;log_error&#x27;;</span><br><span class="line">+---------------+--------------------------+</span><br><span class="line">| Variable_name | Value                    |</span><br><span class="line">+---------------+--------------------------+</span><br><span class="line">| log_error     | /var/log/mysql/error.log |</span><br><span class="line">+---------------+--------------------------+</span><br><span class="line">1 row in set (0.00 sec)</span><br></pre></td></tr></table></figure><h2 id="慢查询日志"><a href="#慢查询日志" class="headerlink" title="慢查询日志"></a>慢查询日志</h2><p>慢查询日志可以帮助定位可能存在问题的SQL语句，从而帮助SQL语句优化。在MySQL运行期间，运行时间超过参数long_query_time的值（默认为10）的所有SQL语句都记录到慢查询日志之中。</p><h2 id="查询日志"><a href="#查询日志" class="headerlink" title="查询日志"></a>查询日志</h2><p>查询日志记录了所有对MySQL数据库请求的信息，无论这些请求是否得到了正确的执行。</p><h2 id="重做日志redo-log"><a href="#重做日志redo-log" class="headerlink" title="重做日志redo log"></a>重做日志redo log</h2><p>当InnoDB引擎在进行更新的时候，会先把记录写到redo log中，同时更新内存，这个时候更新就算完成了。同时，InnoDB 引擎会在适当的时候，将这个操作记录保存到磁盘里面。有了redo log，InnoDB保证了可以在数据库发生异常重启时之前提交的记录不会丢失。</p><h2 id="binlog与redo-log区别"><a href="#binlog与redo-log区别" class="headerlink" title="binlog与redo log区别"></a>binlog与redo log区别</h2><ul><li>redo log是InnoDB独有的日志系统，而Binlog对于所有的引擎都可以使用。</li><li>只依靠Binlog无法实现Crash-safe能力因此InooDB引擎才引入了redo log来实现Crash-safe。</li><li>redo log是循环写的，空间固定会用完；binlog 是可以追加写入的,在写到一定大小后会切换到下一个，不会覆盖以前的日志。</li><li>redo log是物理日志，记录的是在某个数据页上做了什么修改；binlog 是逻辑日志，记录的是这个语句的原始逻辑。</li></ul><h2 id="二阶段提交"><a href="#二阶段提交" class="headerlink" title="二阶段提交"></a>二阶段提交</h2><p>为了保证两份日志之间的逻辑一致，必须要有二阶段提交的操作。在二阶段提交的过程中，需要先写入redo log，然后进入prepare阶段，之后写入binlog，提交事务，处于commit状态，完成二阶段提交。</p><p>如果不使用二阶段提交的方案，那么数据库的状态就有可能和用它的日志恢复出来的库的状态不一致。</p><p>如果选择先写redo log后写binlog。假设在redo log写完，binlog 还没有写完的时候，MySQL出现崩溃的情况。redo log 写完之后，系统即使崩溃，仍然能够把数据恢复回来，但是由于 binlog 没写完就 crash 了，这时候 binlog 里面就没有记录这个语句。因此，之后备份日志的时候，存起来的 binlog 里面就没有这条语句。然后你会发现，如果需要用这个 binlog 来恢复临时库的话，由于这个语句的 binlog 丢失，这个临时库就会少了这一次更新，恢复出来的这一行 c 的值就是 0，与原库的值不同。</p><p>如果先写binlog后写redo log。如果在binlog写完之后 crash，由于redo log还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值是 0。但是 binlog 里面已经记录了“把 c 从 0 改成 1”这个日志。所以，在之后用 binlog 来恢复的时候就多了一个事务出来，恢复出来的这一行 c 的值就是 1，与原库的值不同。</p>]]></content>
-    
-    
-    <summary type="html">在 MySQL 中日志系统主要有  redo log (重做日志)和 binlog (归档日志)。redo log 是 InnoDB 存储引擎层的日志，binlog 是 MySQL Server 层记录的日志。</summary>
-    
-    
-    
-    <category term="数据库" scheme="http://qian0817.top/categories/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
-    
-    <category term="MYSQL" scheme="http://qian0817.top/tags/MYSQL/"/>
-    
-    <category term="数据库" scheme="http://qian0817.top/tags/%E6%95%B0%E6%8D%AE%E5%BA%93/"/>
-    
-    <category term="日志" scheme="http://qian0817.top/tags/%E6%97%A5%E5%BF%97/"/>
     
   </entry>
   

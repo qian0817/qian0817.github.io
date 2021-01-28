@@ -333,89 +333,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Redis中的持久化机制</title>
-    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
-<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
-<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
-
-<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
-<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
-<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
-<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
-<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
-<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
-<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
-<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
-<table>
-<thead>
-<tr>
-<th>配置项</th>
-<th>写回时机</th>
-<th>优点</th>
-<th>缺点</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Always</td>
-<td>同步写回</td>
-<td>可靠性高，数据基本不会丢失</td>
-<td>性能影响大</td>
-</tr>
-<tr>
-<td>No</td>
-<td>操作系统控制的写回</td>
-<td>性能高</td>
-<td>丢失数据多</td>
-</tr>
-<tr>
-<td>Everysec</td>
-<td>每秒写回</td>
-<td>性能适中</td>
-<td>会丢失1秒内的数据</td>
-</tr>
-</tbody></table>
-<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
-<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
-
-<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
-<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
-<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
-<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
-<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
-<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
-<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
-<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
-<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
-<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
-<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
-<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
-<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
-<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
-<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
-<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
-<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
-<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
-<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
-<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
-<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
-<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
-]]></content>
-      <categories>
-        <category>Redis</category>
-      </categories>
-      <tags>
-        <tag>Redis</tag>
-        <tag>日志</tag>
-        <tag>持久化</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Redis中的对象系统</title>
     <url>/2020/09/09/Redis%E4%B8%AD%E7%9A%84%E5%AF%B9%E8%B1%A1%E7%B3%BB%E7%BB%9F/</url>
     <content><![CDATA[<p>Redis中的对象系统包含字符串对象，列表对象，集合对象，有序集合对象，哈希对象这五种类型。同时在Redis中还实现了基于引用计数的内存回收机制和对象共享机制。Redis中的对象带有访问时间记录信息，能够用于计算数据库键的空转时常。</p>
@@ -542,6 +459,89 @@
       </categories>
       <tags>
         <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Redis中的持久化机制</title>
+    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
+<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
+<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
+
+<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
+<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
+<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
+<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
+<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
+<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
+<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
+<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>写回时机</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Always</td>
+<td>同步写回</td>
+<td>可靠性高，数据基本不会丢失</td>
+<td>性能影响大</td>
+</tr>
+<tr>
+<td>No</td>
+<td>操作系统控制的写回</td>
+<td>性能高</td>
+<td>丢失数据多</td>
+</tr>
+<tr>
+<td>Everysec</td>
+<td>每秒写回</td>
+<td>性能适中</td>
+<td>会丢失1秒内的数据</td>
+</tr>
+</tbody></table>
+<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
+<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
+
+<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
+<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
+<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
+<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
+<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
+<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
+<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
+<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
+<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
+<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
+<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
+<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
+<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
+<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
+<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
+<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
+<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
+<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
+<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
+<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
+<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
+<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+        <tag>日志</tag>
+        <tag>持久化</tag>
       </tags>
   </entry>
   <entry>
@@ -749,36 +749,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Redis如何删除过期键</title>
-    <url>/2020/09/09/Redis%E5%A6%82%E4%BD%95%E5%88%A0%E9%99%A4%E8%BF%87%E6%9C%9F%E9%94%AE/</url>
-    <content><![CDATA[<p>通过EXPIRE，PEXPIRE，SETEX等指令，Redis可以为数据库中的某键设置生存时间，在经过指定时间之后，服务器就会删除生存时间为0的键。</p>
-<h2 id="设置过期时间"><a href="#设置过期时间" class="headerlink" title="设置过期时间"></a>设置过期时间</h2><h3 id="保存过期时间"><a href="#保存过期时间" class="headerlink" title="保存过期时间"></a>保存过期时间</h3><p>redisDb结构的expires字典保存了数据库中所有键的过期时间。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisDb</span> &#123;</span></span><br><span class="line">    <span class="comment">// 数据库键空间，保存着数据库中的所有键值对</span></span><br><span class="line">    dict *dict;                 <span class="comment">/* The keyspace for this DB */</span></span><br><span class="line">    <span class="comment">// 键的过期时间，字典的键为键，字典的值为过期事件 UNIX 时间戳</span></span><br><span class="line">    dict *expires;              <span class="comment">/* Timeout of keys with a timeout set */</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125; redisDb;</span><br></pre></td></tr></table></figure>
-
-<p>过期字典的键是一个指针指向键空间中的某一个键对象，值是一个long long类型的整数，保存了毫秒精度的UNIX时间戳。当执行设置过期时间的命令时，服务器会在数据库的过期字典中关联给定的数据库键以及过期时间。</p>
-<h3 id="移除过期时间"><a href="#移除过期时间" class="headerlink" title="移除过期时间"></a>移除过期时间</h3><p>PERSIST命令可以移除一个键的过期时间。当需要移除过期时间时，会从expires字典之中移除给定键的键值对关联。</p>
-<h3 id="返回过期时间"><a href="#返回过期时间" class="headerlink" title="返回过期时间"></a>返回过期时间</h3><p>TTL和PTTL命令可以返回秒或毫秒为单位的剩余生存时间。其都是通过计算两个键的过期时间与当前时间之差来实现的。    </p>
-<h2 id="过期键删除策略"><a href="#过期键删除策略" class="headerlink" title="过期键删除策略"></a>过期键删除策略</h2><h3 id="可能的删除策略"><a href="#可能的删除策略" class="headerlink" title="可能的删除策略"></a>可能的删除策略</h3><h4 id="定时删除"><a href="#定时删除" class="headerlink" title="定时删除"></a>定时删除</h4><p>通过在设置键的同时，创建一个定时器。在定时器结束时，立即删除该键。该策略对内存友好，可以保证过期键最快的被删除。但是在比较多过期键的情况下，会很占用CPU资源，导致服务器的响应时间降低。</p>
-<h4 id="惰性删除"><a href="#惰性删除" class="headerlink" title="惰性删除"></a>惰性删除</h4><p>惰性删除指的是当从键空间中获取值时，检查该键是否过期，如果过期的话，则删除该键，否则返回该键。惰性删除策略不会在删除其他无关键上花费CPU时间，属于CPU友好型策略。但是如果一个键已经过期但是一致没有被访问到，那么该键永远不会过期，所占用的内存永远不会释放。</p>
-<h4 id="定期删除"><a href="#定期删除" class="headerlink" title="定期删除"></a>定期删除</h4><p>每隔一段时间，对数据库进行检查，删除其中的过期键。其难点在于确定执行的时长与频率。如果执行的太频繁，会导致占用过多CPU，如果执行的太少，会导致内存浪费的情况。</p>
-<h3 id="Redis中的删除策略实现"><a href="#Redis中的删除策略实现" class="headerlink" title="Redis中的删除策略实现"></a>Redis中的删除策略实现</h3><p>Redis中整合了惰性删除和定期删除两种策略，取得了合理使用CPU时间和内存空间之间的平衡。</p>
-<h4 id="惰性删除实现"><a href="#惰性删除实现" class="headerlink" title="惰性删除实现"></a>惰性删除实现</h4><p>所有读写redis命令在执行之前都会调用惰性删除的代码进行判断，惰性删除的代码如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 检查 key 是否已经过期，如果是的话，将它从数据库中删除。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 返回 0 表示键没有过期时间，或者键未过期。</span></span><br><span class="line"><span class="comment"> * 返回 1 表示键已经因为过期而被删除了。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">expireIfNeeded</span><span class="params">(redisDb *db, robj *key)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 取出键的过期时间</span></span><br><span class="line">    <span class="keyword">mstime_t</span> when = getExpire(db,key);</span><br><span class="line">    <span class="keyword">mstime_t</span> now;</span><br><span class="line">    <span class="comment">// 没有过期时间</span></span><br><span class="line">    <span class="keyword">if</span> (when &lt; <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>; </span><br><span class="line">    <span class="comment">// 如果服务器正在进行载入，那么不进行任何过期检查</span></span><br><span class="line">    <span class="keyword">if</span> (server.loading) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	<span class="comment">// 当前时间</span></span><br><span class="line">    now = server.lua_caller ? server.lua_time_start : mstime();</span><br><span class="line">    <span class="comment">// 当服务器运行在 replication 模式时</span></span><br><span class="line">    <span class="comment">// 附属节点并不主动删除 key</span></span><br><span class="line">    <span class="comment">// 它只返回一个逻辑上正确的返回值</span></span><br><span class="line">    <span class="comment">// 真正的删除操作要等待主节点发来删除命令时才执行</span></span><br><span class="line">    <span class="comment">// 从而保证数据的同步</span></span><br><span class="line">    <span class="keyword">if</span> (server.masterhost != <span class="literal">NULL</span>) <span class="keyword">return</span> now &gt; when;</span><br><span class="line">    <span class="comment">// 运行到这里，表示键带有过期时间，并且服务器为主节点</span></span><br><span class="line">    <span class="comment">// 如果未过期，返回 0</span></span><br><span class="line">    <span class="keyword">if</span> (now &lt;= when) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    server.stat_expiredkeys++;</span><br><span class="line">    <span class="comment">// 向 AOF 文件和附属节点传播过期信息</span></span><br><span class="line">    propagateExpire(db,key);</span><br><span class="line">    <span class="comment">// 发送事件通知</span></span><br><span class="line">    notifyKeyspaceEvent(REDIS_NOTIFY_EXPIRED,</span><br><span class="line">        <span class="string">&quot;expired&quot;</span>,key,db-&gt;id);</span><br><span class="line">    <span class="comment">// 将过期键从数据库中删除</span></span><br><span class="line">    <span class="keyword">return</span> dbDelete(db,key);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果键已经过期，那么该函数会将输入的键从数据库之中删除，否则不做任何动作。当处理后的键仍然存在时，命令会按照存在的情况继续执行，否则按照不存在的情况执行。</p>
-<h4 id="定期删除实现"><a href="#定期删除实现" class="headerlink" title="定期删除实现"></a>定期删除实现</h4><p>每当Redis的周期操作函数serverCron函数执行时，会调用activeExpireCycle函数进行过期键的清理。其会在规定的时间内，分次遍历数据库中的各个数据库，从expires字典中随机检查一部分过期时间，并删除其中的过期键。在扫描的时候，会提供一个全局变量记录上一次扫描的进度，并在下一次调用时，接着上一次的进度进行新一轮的检查工作。</p>
-<h2 id="AOF-RDB和复制功能处理过期键"><a href="#AOF-RDB和复制功能处理过期键" class="headerlink" title="AOF,RDB和复制功能处理过期键"></a>AOF,RDB和复制功能处理过期键</h2><h3 id="AOF文件处理"><a href="#AOF文件处理" class="headerlink" title="AOF文件处理"></a>AOF文件处理</h3><p>当一个键已经过期时并被删除时，Redis会像AOF日志之中添加一条DEL命令，来记录该键已经被删除。在进行AOF重写的时候，程序会对数据库中的键进行检查，已过期的键不会保存到重写以后的AOF日志之中。</p>
-<h3 id="RDB文件处理"><a href="#RDB文件处理" class="headerlink" title="RDB文件处理"></a>RDB文件处理</h3><p>在生成RDB文件的时候，如果一个键已经过期，那么不会被保存到RDB文件之中。在载入RDB文件的时候，如果以主服务器的方式运行，那么过期的键不会被载入到数据库之中。如果以从服务器的方式运行，那么无论键是否过期都会被载入，因为在于主服务器同步的时候，从服务器的数据就会清空，所以对从服务器也没有影响。</p>
-<h3 id="复制功能处理"><a href="#复制功能处理" class="headerlink" title="复制功能处理"></a>复制功能处理</h3><p>当处于服务器处于复制模式下时，服务器的过期删除键由主服务器控制。在主服务器删除一个过期键之后，会向从服务器发送一个DEL命令，告诉从服务器删除该键。从服务器即使键到达了过期时间也不会删除，知道收到DEL命令时才进行删除。通过主服务器统一的删除过期键可以保证主从一致性。</p>
-]]></content>
-      <categories>
-        <category>Redis</category>
-      </categories>
-      <tags>
-        <tag>Redis</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Redis实现主从复制原理</title>
     <url>/2020/09/11/Redis%E5%AE%9E%E7%8E%B0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%8E%9F%E7%90%86/</url>
     <content><![CDATA[<p>在Redis中可以通过SLAVEOF（5.0版本以后可使用REPLICAOF）命令让一个服务器去复制另一个服务器。被复制的服务器被称为主服务器，对主服务器进行复制的服务器成为从服务器。Redis进行主从同步的过程如下：</p>
@@ -940,6 +910,72 @@
       </tags>
   </entry>
   <entry>
+    <title>Redis如何删除过期键</title>
+    <url>/2020/09/09/Redis%E5%A6%82%E4%BD%95%E5%88%A0%E9%99%A4%E8%BF%87%E6%9C%9F%E9%94%AE/</url>
+    <content><![CDATA[<p>通过EXPIRE，PEXPIRE，SETEX等指令，Redis可以为数据库中的某键设置生存时间，在经过指定时间之后，服务器就会删除生存时间为0的键。</p>
+<h2 id="设置过期时间"><a href="#设置过期时间" class="headerlink" title="设置过期时间"></a>设置过期时间</h2><h3 id="保存过期时间"><a href="#保存过期时间" class="headerlink" title="保存过期时间"></a>保存过期时间</h3><p>redisDb结构的expires字典保存了数据库中所有键的过期时间。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisDb</span> &#123;</span></span><br><span class="line">    <span class="comment">// 数据库键空间，保存着数据库中的所有键值对</span></span><br><span class="line">    dict *dict;                 <span class="comment">/* The keyspace for this DB */</span></span><br><span class="line">    <span class="comment">// 键的过期时间，字典的键为键，字典的值为过期事件 UNIX 时间戳</span></span><br><span class="line">    dict *expires;              <span class="comment">/* Timeout of keys with a timeout set */</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125; redisDb;</span><br></pre></td></tr></table></figure>
+
+<p>过期字典的键是一个指针指向键空间中的某一个键对象，值是一个long long类型的整数，保存了毫秒精度的UNIX时间戳。当执行设置过期时间的命令时，服务器会在数据库的过期字典中关联给定的数据库键以及过期时间。</p>
+<h3 id="移除过期时间"><a href="#移除过期时间" class="headerlink" title="移除过期时间"></a>移除过期时间</h3><p>PERSIST命令可以移除一个键的过期时间。当需要移除过期时间时，会从expires字典之中移除给定键的键值对关联。</p>
+<h3 id="返回过期时间"><a href="#返回过期时间" class="headerlink" title="返回过期时间"></a>返回过期时间</h3><p>TTL和PTTL命令可以返回秒或毫秒为单位的剩余生存时间。其都是通过计算两个键的过期时间与当前时间之差来实现的。    </p>
+<h2 id="过期键删除策略"><a href="#过期键删除策略" class="headerlink" title="过期键删除策略"></a>过期键删除策略</h2><h3 id="可能的删除策略"><a href="#可能的删除策略" class="headerlink" title="可能的删除策略"></a>可能的删除策略</h3><h4 id="定时删除"><a href="#定时删除" class="headerlink" title="定时删除"></a>定时删除</h4><p>通过在设置键的同时，创建一个定时器。在定时器结束时，立即删除该键。该策略对内存友好，可以保证过期键最快的被删除。但是在比较多过期键的情况下，会很占用CPU资源，导致服务器的响应时间降低。</p>
+<h4 id="惰性删除"><a href="#惰性删除" class="headerlink" title="惰性删除"></a>惰性删除</h4><p>惰性删除指的是当从键空间中获取值时，检查该键是否过期，如果过期的话，则删除该键，否则返回该键。惰性删除策略不会在删除其他无关键上花费CPU时间，属于CPU友好型策略。但是如果一个键已经过期但是一致没有被访问到，那么该键永远不会过期，所占用的内存永远不会释放。</p>
+<h4 id="定期删除"><a href="#定期删除" class="headerlink" title="定期删除"></a>定期删除</h4><p>每隔一段时间，对数据库进行检查，删除其中的过期键。其难点在于确定执行的时长与频率。如果执行的太频繁，会导致占用过多CPU，如果执行的太少，会导致内存浪费的情况。</p>
+<h3 id="Redis中的删除策略实现"><a href="#Redis中的删除策略实现" class="headerlink" title="Redis中的删除策略实现"></a>Redis中的删除策略实现</h3><p>Redis中整合了惰性删除和定期删除两种策略，取得了合理使用CPU时间和内存空间之间的平衡。</p>
+<h4 id="惰性删除实现"><a href="#惰性删除实现" class="headerlink" title="惰性删除实现"></a>惰性删除实现</h4><p>所有读写redis命令在执行之前都会调用惰性删除的代码进行判断，惰性删除的代码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 检查 key 是否已经过期，如果是的话，将它从数据库中删除。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 返回 0 表示键没有过期时间，或者键未过期。</span></span><br><span class="line"><span class="comment"> * 返回 1 表示键已经因为过期而被删除了。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">expireIfNeeded</span><span class="params">(redisDb *db, robj *key)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 取出键的过期时间</span></span><br><span class="line">    <span class="keyword">mstime_t</span> when = getExpire(db,key);</span><br><span class="line">    <span class="keyword">mstime_t</span> now;</span><br><span class="line">    <span class="comment">// 没有过期时间</span></span><br><span class="line">    <span class="keyword">if</span> (when &lt; <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>; </span><br><span class="line">    <span class="comment">// 如果服务器正在进行载入，那么不进行任何过期检查</span></span><br><span class="line">    <span class="keyword">if</span> (server.loading) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	<span class="comment">// 当前时间</span></span><br><span class="line">    now = server.lua_caller ? server.lua_time_start : mstime();</span><br><span class="line">    <span class="comment">// 当服务器运行在 replication 模式时</span></span><br><span class="line">    <span class="comment">// 附属节点并不主动删除 key</span></span><br><span class="line">    <span class="comment">// 它只返回一个逻辑上正确的返回值</span></span><br><span class="line">    <span class="comment">// 真正的删除操作要等待主节点发来删除命令时才执行</span></span><br><span class="line">    <span class="comment">// 从而保证数据的同步</span></span><br><span class="line">    <span class="keyword">if</span> (server.masterhost != <span class="literal">NULL</span>) <span class="keyword">return</span> now &gt; when;</span><br><span class="line">    <span class="comment">// 运行到这里，表示键带有过期时间，并且服务器为主节点</span></span><br><span class="line">    <span class="comment">// 如果未过期，返回 0</span></span><br><span class="line">    <span class="keyword">if</span> (now &lt;= when) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    server.stat_expiredkeys++;</span><br><span class="line">    <span class="comment">// 向 AOF 文件和附属节点传播过期信息</span></span><br><span class="line">    propagateExpire(db,key);</span><br><span class="line">    <span class="comment">// 发送事件通知</span></span><br><span class="line">    notifyKeyspaceEvent(REDIS_NOTIFY_EXPIRED,</span><br><span class="line">        <span class="string">&quot;expired&quot;</span>,key,db-&gt;id);</span><br><span class="line">    <span class="comment">// 将过期键从数据库中删除</span></span><br><span class="line">    <span class="keyword">return</span> dbDelete(db,key);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果键已经过期，那么该函数会将输入的键从数据库之中删除，否则不做任何动作。当处理后的键仍然存在时，命令会按照存在的情况继续执行，否则按照不存在的情况执行。</p>
+<h4 id="定期删除实现"><a href="#定期删除实现" class="headerlink" title="定期删除实现"></a>定期删除实现</h4><p>每当Redis的周期操作函数serverCron函数执行时，会调用activeExpireCycle函数进行过期键的清理。其会在规定的时间内，分次遍历数据库中的各个数据库，从expires字典中随机检查一部分过期时间，并删除其中的过期键。在扫描的时候，会提供一个全局变量记录上一次扫描的进度，并在下一次调用时，接着上一次的进度进行新一轮的检查工作。</p>
+<h2 id="AOF-RDB和复制功能处理过期键"><a href="#AOF-RDB和复制功能处理过期键" class="headerlink" title="AOF,RDB和复制功能处理过期键"></a>AOF,RDB和复制功能处理过期键</h2><h3 id="AOF文件处理"><a href="#AOF文件处理" class="headerlink" title="AOF文件处理"></a>AOF文件处理</h3><p>当一个键已经过期时并被删除时，Redis会像AOF日志之中添加一条DEL命令，来记录该键已经被删除。在进行AOF重写的时候，程序会对数据库中的键进行检查，已过期的键不会保存到重写以后的AOF日志之中。</p>
+<h3 id="RDB文件处理"><a href="#RDB文件处理" class="headerlink" title="RDB文件处理"></a>RDB文件处理</h3><p>在生成RDB文件的时候，如果一个键已经过期，那么不会被保存到RDB文件之中。在载入RDB文件的时候，如果以主服务器的方式运行，那么过期的键不会被载入到数据库之中。如果以从服务器的方式运行，那么无论键是否过期都会被载入，因为在于主服务器同步的时候，从服务器的数据就会清空，所以对从服务器也没有影响。</p>
+<h3 id="复制功能处理"><a href="#复制功能处理" class="headerlink" title="复制功能处理"></a>复制功能处理</h3><p>当处于服务器处于复制模式下时，服务器的过期删除键由主服务器控制。在主服务器删除一个过期键之后，会向从服务器发送一个DEL命令，告诉从服务器删除该键。从服务器即使键到达了过期时间也不会删除，知道收到DEL命令时才进行删除。通过主服务器统一的删除过期键可以保证主从一致性。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>操作系统内存管理</title>
+    <url>/2020/11/21/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/</url>
+    <content><![CDATA[<p>为了让不同的应用程序能够既高效又安全的共同使用内存，现代操作系统的普遍做法是在应用程序和物理内存之间加入一个新的抽象：虚拟内存。应用程序面向虚拟内存进行编写而不是面向物理内存进行编写，应用程序在运行时只能够使用虚拟内存，操作系统负责虚拟内存和物理内存之间的映射，CPU负责将虚拟内存翻译为物理内存。</p>
+<p>CPU中的组件内存管理单元（MMU）负责虚拟地址到物理地址的转换。程序在CPU上运行时，它使用的虚拟地址都会由MMU进行翻译。当需要访问物理内存设备的时候，MMU翻译出的物理地址信息将会通过总线传递到相应的物理内存设备中去，从而完成相对应的物理内存读写请求。</p>
+<h2 id="分段与分页机制"><a href="#分段与分页机制" class="headerlink" title="分段与分页机制"></a>分段与分页机制</h2><p>MMU将虚拟地址转换为物理地址的主要机制有两种，分别为分段机制和分页机制</p>
+<h3 id="分段"><a href="#分段" class="headerlink" title="分段"></a>分段</h3><p>在分段机制下，操作系统以段为的形式管理物理内存。当CPU访问虚拟内存地址空间中的某一段时，MMU会通过查询段表得到该段对应的物理内存区域。虚拟地址由两个部分组成，第一个部分表示段号，标识着该虚拟地址属于整个虚拟地址空间的哪一段；第二部分表示段内地址，即相对于该段起始地址的偏移量。在段表中会存放着一个虚拟地址空间中每一个分段的信息，包括段起始地址和段长。在翻译虚拟地址的过程之中，MMU首先会通过段表基址寄存器来找到段表的位置，结合代翻译虚拟地址中的段号找到对应段的信息，然后取出该段的起始地址，加上段内地址就能得到最终的物理地址。段表中还存有段长信息来检查虚拟地址是否超过合法范围。</p>
+<p><img data-src="%E5%88%86%E6%AE%B5.png" alt="分段机制"></p>
+<p>在分段机制下，虚拟地址和物理地址都以段为单位进行分配。这种分配方式会导致物理内存的外部碎片，在段与段之间留下碎片空间，从而造成物理资源利用率的降低。例如一个3GB的内存被分为3段进行分配，第一段为0-1GB，第二段为1-2GB，第三段为2-3GB。如果第一段和第三段被释放，之后又分配一个2GB的段会出现分配失败的情况。</p>
+<h3 id="分页"><a href="#分页" class="headerlink" title="分页"></a>分页</h3><p>分页机制时现代操作系统广泛采用的机制。其思想是将应用程序的虚拟地址空间和物理内存都划分为连续的等长的虚拟页（分段机制下位不同长度的段），由操作系统为每个应用程序构造虚拟内存到物理页的映射关系表（即页表）。虚拟地址由虚拟页号和页内偏移量两个部分组成。在翻译过程中，MMU首先会解析得到虚拟地址的虚拟页号，并通过虚拟页号去页表（存放于页表基地址寄存器）中取出对应的物理页号，然后与虚拟地址中的页内偏移量相加得到最终的物理地址。</p>
+<h4 id="多级页表"><a href="#多级页表" class="headerlink" title="多级页表"></a>多级页表</h4><p>页表负责记录虚拟页到物理页的映射关系。对于63位的虚拟地址空间，假设页的大小为4KB，页表中每一项大小为8字节，那么一张页表的大小为2^64/4*8字节大小即32PB。为了对页表进行压缩，操作系统引入了多级页表的结构，用来满足虚拟内存在高效性上的要求。</p>
+<p>在使用多级页表的时候，一个虚拟地址仍然包括虚拟页号以及业内偏移量，其中虚拟页号被划分为了多个部分，虚拟页号i对应着该虚拟地址在第i级页表中的索引。当任意一级的页表中的某一个条目为空时，该条目下一级的页表就不需要存在，因此多级页表的设计极大地减少了页表占用的空间大小。</p>
+<p>以五层页表为例，通常在当MMU翻译一个虚拟地址的时候，会先根据页表基地址寄存器中的物理地址找到第0级页表页，将第0级的虚拟页号作为页表项索引，读取对应的页表项，该页表项中存储着下一级的页表项的物理地址，按照类似的方式依次读取第2级页表，第3级页表。MMU将在第3级页表项之中的页表项里面找到该虚拟地址对应的物理页号，结合虚拟地址中的业内偏移量获取最终的物理地址。</p>
+<h4 id="TLB"><a href="#TLB" class="headerlink" title="TLB"></a>TLB</h4><p>多级页表能够压缩页表大小，但是会导致页表翻译时间的增加。为了减少地址翻译的访存次数，MMU引入了TLB机制来加速地址翻译的过程。在TLB之中缓存了虚拟页号到物理页号的映射关系，可以简单地将TLB简化成为一个键为虚拟页号值为物理页号的哈希表。</p>
+<h4 id="换页与缺页异常"><a href="#换页与缺页异常" class="headerlink" title="换页与缺页异常"></a>换页与缺页异常</h4><p>换页机制是当物理内容容量不够的时候，操作系统将物理页的数据写入到磁盘之中，然后回收这些物理页并继续使用。当应用程序访问已分配但是未映射到物理内存的虚拟页时，就会触发缺页异常。此时操作系统会找到空闲的物理页，将之前写到磁盘上的数据重新加载到物理页之中，并在页表之中填写虚拟地址到这一物理页的映射，之后CPU回到发生缺页中断的地方继续运行。</p>
+<h4 id="页替换策略"><a href="#页替换策略" class="headerlink" title="页替换策略"></a>页替换策略</h4><p>当分配物理页时，如果空闲的物理页已经用完，操作系统将会根据页替换策略分配一个物理页换出到磁盘中以让出空间。</p>
+<p>OPT策略在选择被换出的页时，优先选择未来最长事件不会再访问的页。这种策略是最优的页替换策略，但是在实际中因为页访问策略取决于应用程序，操作系统无法预知应用程序的行为，所以很难进行实现。</p>
+<p>FIFO策略优先选择最先换入的页进行换出，是最简单的页替换策略之一，因为简单其时间开销很低，但是在实际使用中常常表现不佳。</p>
+<p>LRU策略优先选择最久未被访问的页。在实际实现中，需要精确的记录时间信息记录CPU访问了哪些物理页，其实现开销比较大。</p>
+<p>时钟算法策略将换入物理内存的页号排成一个时钟的形状。该时钟有一个手臂只相信换入内存的后一个，同时为每一个页号维护一个访问标志位，每次需要选择换出页号时，该算法从针臂所指的页号开始检查，如果当前页号的访问位没有色湖之，就将该页替换，否则将访问位清空。如此重复直到找到一个访问位未被置上的页号。</p>
+<h4 id="工作集模型"><a href="#工作集模型" class="headerlink" title="工作集模型"></a>工作集模型</h4><p>如果选择的页替换算法与真实的工作负载不匹配，那么会导致出现颠簸现象，造成性能损失。</p>
+<p>工作集模型能够有效的避免颠簸现象的发生。工作集的定义是一个应用程序在时刻t的工作集W为它在时间区间[t-x,t]使用的内存页集合，也视为它在下一段x时间内会访问的内存页集合。该模型将应用程序的工作集要么全部都在物理内存之中，要么全部被换出，从而减少应用程序工作时发生换页的次数。</p>
+<h2 id="虚拟内存"><a href="#虚拟内存" class="headerlink" title="虚拟内存"></a>虚拟内存</h2><p>虚拟内存使得应用程序能够拥有独立且连续的内存空间。其功能包括共享内存，写时拷贝，内存去重，内存压缩，内存大页等等。</p>
+<p>共享内存允许同一个物理页在不同的应用程序之间共享，且能够同时看到对方修改的内容。共享内存的作用是让不同的应用程序相互通信和传递数据。</p>
+<p>写时拷贝允许多个应用程序以只读的方式共享同一段物理内存。一旦某一个应用程序对该内存进行修改，就会发生缺页异常，操作系统会将对应的物理页重新拷贝一份重新映射给触发异常的应用程序，此后再恢复应用程序的执行。</p>
+<p>基于写时拷贝技术，操作系统进一步设计了内存去重功能，在内存中扫描具有相同内容的物理页，找到映射到这些物理页的虚拟页，然后只保留其中一个物理页，将其他虚拟页以写时拷贝的方式映射到这个物理页。在Linux系统中该功能称为KSM。</p>
+<p>当内存资源不足时，操作系统会使用一些最近不太会使用的内存页进行压缩，从而释放出更多的空闲内存。当应用程序需要进行访问的时候操作系统则将其解压，Linux中的zswap机制就使用到了内存压缩技术。</p>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
+        <tag>内存</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>操作系统同步原语</title>
     <url>/2020/12/05/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%90%8C%E6%AD%A5%E5%8E%9F%E8%AF%AD/</url>
     <content><![CDATA[<p>并行处理同一任务意味着对于共享资源的并发访问，为了保证共享资源状态的正确性，需要正确的在这些子任务中进行同步。为了正确的高效的解决这些同步问题，抽象出了同步原语这一概念。</p>
@@ -1021,39 +1057,30 @@
       </tags>
   </entry>
   <entry>
-    <title>操作系统内存管理</title>
-    <url>/2020/11/21/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E5%86%85%E5%AD%98%E7%AE%A1%E7%90%86/</url>
-    <content><![CDATA[<p>为了让不同的应用程序能够既高效又安全的共同使用内存，现代操作系统的普遍做法是在应用程序和物理内存之间加入一个新的抽象：虚拟内存。应用程序面向虚拟内存进行编写而不是面向物理内存进行编写，应用程序在运行时只能够使用虚拟内存，操作系统负责虚拟内存和物理内存之间的映射，CPU负责将虚拟内存翻译为物理内存。</p>
-<p>CPU中的组件内存管理单元（MMU）负责虚拟地址到物理地址的转换。程序在CPU上运行时，它使用的虚拟地址都会由MMU进行翻译。当需要访问物理内存设备的时候，MMU翻译出的物理地址信息将会通过总线传递到相应的物理内存设备中去，从而完成相对应的物理内存读写请求。</p>
-<h2 id="分段与分页机制"><a href="#分段与分页机制" class="headerlink" title="分段与分页机制"></a>分段与分页机制</h2><p>MMU将虚拟地址转换为物理地址的主要机制有两种，分别为分段机制和分页机制</p>
-<h3 id="分段"><a href="#分段" class="headerlink" title="分段"></a>分段</h3><p>在分段机制下，操作系统以段为的形式管理物理内存。当CPU访问虚拟内存地址空间中的某一段时，MMU会通过查询段表得到该段对应的物理内存区域。虚拟地址由两个部分组成，第一个部分表示段号，标识着该虚拟地址属于整个虚拟地址空间的哪一段；第二部分表示段内地址，即相对于该段起始地址的偏移量。在段表中会存放着一个虚拟地址空间中每一个分段的信息，包括段起始地址和段长。在翻译虚拟地址的过程之中，MMU首先会通过段表基址寄存器来找到段表的位置，结合代翻译虚拟地址中的段号找到对应段的信息，然后取出该段的起始地址，加上段内地址就能得到最终的物理地址。段表中还存有段长信息来检查虚拟地址是否超过合法范围。</p>
-<p><img data-src="%E5%88%86%E6%AE%B5.png" alt="分段机制"></p>
-<p>在分段机制下，虚拟地址和物理地址都以段为单位进行分配。这种分配方式会导致物理内存的外部碎片，在段与段之间留下碎片空间，从而造成物理资源利用率的降低。例如一个3GB的内存被分为3段进行分配，第一段为0-1GB，第二段为1-2GB，第三段为2-3GB。如果第一段和第三段被释放，之后又分配一个2GB的段会出现分配失败的情况。</p>
-<h3 id="分页"><a href="#分页" class="headerlink" title="分页"></a>分页</h3><p>分页机制时现代操作系统广泛采用的机制。其思想是将应用程序的虚拟地址空间和物理内存都划分为连续的等长的虚拟页（分段机制下位不同长度的段），由操作系统为每个应用程序构造虚拟内存到物理页的映射关系表（即页表）。虚拟地址由虚拟页号和页内偏移量两个部分组成。在翻译过程中，MMU首先会解析得到虚拟地址的虚拟页号，并通过虚拟页号去页表（存放于页表基地址寄存器）中取出对应的物理页号，然后与虚拟地址中的页内偏移量相加得到最终的物理地址。</p>
-<h4 id="多级页表"><a href="#多级页表" class="headerlink" title="多级页表"></a>多级页表</h4><p>页表负责记录虚拟页到物理页的映射关系。对于63位的虚拟地址空间，假设页的大小为4KB，页表中每一项大小为8字节，那么一张页表的大小为2^64/4*8字节大小即32PB。为了对页表进行压缩，操作系统引入了多级页表的结构，用来满足虚拟内存在高效性上的要求。</p>
-<p>在使用多级页表的时候，一个虚拟地址仍然包括虚拟页号以及业内偏移量，其中虚拟页号被划分为了多个部分，虚拟页号i对应着该虚拟地址在第i级页表中的索引。当任意一级的页表中的某一个条目为空时，该条目下一级的页表就不需要存在，因此多级页表的设计极大地减少了页表占用的空间大小。</p>
-<p>以五层页表为例，通常在当MMU翻译一个虚拟地址的时候，会先根据页表基地址寄存器中的物理地址找到第0级页表页，将第0级的虚拟页号作为页表项索引，读取对应的页表项，该页表项中存储着下一级的页表项的物理地址，按照类似的方式依次读取第2级页表，第3级页表。MMU将在第3级页表项之中的页表项里面找到该虚拟地址对应的物理页号，结合虚拟地址中的业内偏移量获取最终的物理地址。</p>
-<h4 id="TLB"><a href="#TLB" class="headerlink" title="TLB"></a>TLB</h4><p>多级页表能够压缩页表大小，但是会导致页表翻译时间的增加。为了减少地址翻译的访存次数，MMU引入了TLB机制来加速地址翻译的过程。在TLB之中缓存了虚拟页号到物理页号的映射关系，可以简单地将TLB简化成为一个键为虚拟页号值为物理页号的哈希表。</p>
-<h4 id="换页与缺页异常"><a href="#换页与缺页异常" class="headerlink" title="换页与缺页异常"></a>换页与缺页异常</h4><p>换页机制是当物理内容容量不够的时候，操作系统将物理页的数据写入到磁盘之中，然后回收这些物理页并继续使用。当应用程序访问已分配但是未映射到物理内存的虚拟页时，就会触发缺页异常。此时操作系统会找到空闲的物理页，将之前写到磁盘上的数据重新加载到物理页之中，并在页表之中填写虚拟地址到这一物理页的映射，之后CPU回到发生缺页中断的地方继续运行。</p>
-<h4 id="页替换策略"><a href="#页替换策略" class="headerlink" title="页替换策略"></a>页替换策略</h4><p>当分配物理页时，如果空闲的物理页已经用完，操作系统将会根据页替换策略分配一个物理页换出到磁盘中以让出空间。</p>
-<p>OPT策略在选择被换出的页时，优先选择未来最长事件不会再访问的页。这种策略是最优的页替换策略，但是在实际中因为页访问策略取决于应用程序，操作系统无法预知应用程序的行为，所以很难进行实现。</p>
-<p>FIFO策略优先选择最先换入的页进行换出，是最简单的页替换策略之一，因为简单其时间开销很低，但是在实际使用中常常表现不佳。</p>
-<p>LRU策略优先选择最久未被访问的页。在实际实现中，需要精确的记录时间信息记录CPU访问了哪些物理页，其实现开销比较大。</p>
-<p>时钟算法策略将换入物理内存的页号排成一个时钟的形状。该时钟有一个手臂只相信换入内存的后一个，同时为每一个页号维护一个访问标志位，每次需要选择换出页号时，该算法从针臂所指的页号开始检查，如果当前页号的访问位没有色湖之，就将该页替换，否则将访问位清空。如此重复直到找到一个访问位未被置上的页号。</p>
-<h4 id="工作集模型"><a href="#工作集模型" class="headerlink" title="工作集模型"></a>工作集模型</h4><p>如果选择的页替换算法与真实的工作负载不匹配，那么会导致出现颠簸现象，造成性能损失。</p>
-<p>工作集模型能够有效的避免颠簸现象的发生。工作集的定义是一个应用程序在时刻t的工作集W为它在时间区间[t-x,t]使用的内存页集合，也视为它在下一段x时间内会访问的内存页集合。该模型将应用程序的工作集要么全部都在物理内存之中，要么全部被换出，从而减少应用程序工作时发生换页的次数。</p>
-<h2 id="虚拟内存"><a href="#虚拟内存" class="headerlink" title="虚拟内存"></a>虚拟内存</h2><p>虚拟内存使得应用程序能够拥有独立且连续的内存空间。其功能包括共享内存，写时拷贝，内存去重，内存压缩，内存大页等等。</p>
-<p>共享内存允许同一个物理页在不同的应用程序之间共享，且能够同时看到对方修改的内容。共享内存的作用是让不同的应用程序相互通信和传递数据。</p>
-<p>写时拷贝允许多个应用程序以只读的方式共享同一段物理内存。一旦某一个应用程序对该内存进行修改，就会发生缺页异常，操作系统会将对应的物理页重新拷贝一份重新映射给触发异常的应用程序，此后再恢复应用程序的执行。</p>
-<p>基于写时拷贝技术，操作系统进一步设计了内存去重功能，在内存中扫描具有相同内容的物理页，找到映射到这些物理页的虚拟页，然后只保留其中一个物理页，将其他虚拟页以写时拷贝的方式映射到这个物理页。在Linux系统中该功能称为KSM。</p>
-<p>当内存资源不足时，操作系统会使用一些最近不太会使用的内存页进行压缩，从而释放出更多的空闲内存。当应用程序需要进行访问的时候操作系统则将其解压，Linux中的zswap机制就使用到了内存压缩技术。</p>
+    <title>netty常用概念</title>
+    <url>/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h2 id="channel"><a href="#channel" class="headerlink" title="channel"></a>channel</h2><p>Channel接口是Netty对网络操作的抽象类，代表一个到实体（如硬件设备、网络套接字、文件等等）的开放连接，包含基本的读写操作。常用的Channel接口实现类包括NioServerSocketChannel和NioSocketChannel。这两个相当于BIO编程模型中的ServerSocket以及Socket两个概念。</p>
+<h2 id="Future"><a href="#Future" class="headerlink" title="Future"></a>Future</h2><p>Netty是异步非阻塞的，所有的IO操作都是异步的，因此无法立即得到操作是否执行成功。通过Future提供了一种在操作完成时通知应用程序的方法，这个对象可以看作是一个异步操作的结果的占位符。</p>
+<p>Netty提供了自己的实现ChannelFuture，其中addListener()方法可以注册一个ChannelFutureListener，当操作执行完成时，会自动触发返回结果。还可以通过sync()方法将异步的操作转换为同步的。</p>
+<h2 id="ChannelHandler"><a href="#ChannelHandler" class="headerlink" title="ChannelHandler"></a>ChannelHandler</h2><p>Netty使用不同的事件来通知我们状态的改变或者是操作的状态。ChannelHandler 是消息的具体处理器。他负责处理读写操作、客户端连接等事情。</p>
+<p>ChannelPipeline是ChannelHandler构成的链条，可以通过ChannelPipeline的add()方法添加ChannelHandler。</p>
+<p>Netty也提供了预定义的ChannelHandler实现，包括实现HTTP,TLS的ChannelHandler。</p>
+<h2 id="Eventloop"><a href="#Eventloop" class="headerlink" title="Eventloop"></a>Eventloop</h2><p>EventLoop 的主要作用实际就是负责监听网络事件并调用事件处理器进行相关 I/O 操作的处理。</p>
+<p>EventLoopGroup 包含多个 EventLoop。</p>
+<p>当客户端连接服务端时，bossGroup会处理客户端连接请求。当客户端处理完成后，会将这个连接提交workerGroup来处理，然后workerGroup负责处理其 IO 相关操作。</p>
+<h2 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h2><p>Bootstrap 是客户端的启动引导类，通过connect()方法连接到远程的主机和端口，作为TCP连接的客户端，也可以通过bind()方法绑定一个本地端口，作为UDP协议通信中的一端。</p>
+<p>ServerBootstrap是服务端的启动引导类，使用bind放大绑定到本地端口上，等待客户端的连接。 </p>
+<h2 id="线程模型"><a href="#线程模型" class="headerlink" title="线程模型"></a>线程模型</h2><p>Netty线程模型基于Reactor模式设计开发。Reactor 模式基于事件驱动，采用多路复用将事件分发给相应的Handler处理。Netty主要靠NioEventLoopGroup线程池来实现具体的线程模型的。在实现服务端的时候，一般会初始化两个线程组，分别为bossGroup用于接受连接以及workerGroup负责具体的处理。其中bossGroup和workerGroup可以共用同一个EventLoopGroup。</p>
+<h2 id="长连接与心跳机制"><a href="#长连接与心跳机制" class="headerlink" title="长连接与心跳机制"></a>长连接与心跳机制</h2><p>短连接指的是server与client端建立连接以后，读写完成之后就关闭掉连接，如果下次还需要继续发送消息，那么就要重新建立连接。</p>
+<p>长连接说的就是 client 向 server 双方建立连接之后，它们之间的连接并不会主动关闭，后续的读写操作会继续使用这个连接。长连接的可以省去较多的 TCP 建立和关闭的操作，降低对网络资源的消耗。</p>
+<p>在保存长连接的过程中，如果遇到断网等情况，需要使用到心跳机制判断对方是否已经掉线。如果client与server之间在一定时间内没有数据交互时，会发送一个特殊的数据包给对方，当接收方收到这个数据报文后, 也立即发送一个特殊的数据报文。当某一端收到心跳消息以后，就可以知道对方仍然在线，确保TCP连接的有效性。</p>
 ]]></content>
       <categories>
-        <category>操作系统</category>
+        <category>Netty</category>
       </categories>
       <tags>
-        <tag>操作系统</tag>
-        <tag>内存</tag>
+        <tag>网络</tag>
+        <tag>Netty</tag>
       </tags>
   </entry>
   <entry>
