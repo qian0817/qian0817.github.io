@@ -44,6 +44,57 @@
       </tags>
   </entry>
   <entry>
+    <title>HTTP各版本特性</title>
+    <url>/2021/01/30/HTTP%E5%90%84%E7%89%88%E6%9C%AC%E7%89%B9%E6%80%A7/</url>
+    <content><![CDATA[<p>HTTP（超文本传输协议）定义了浏览器如何向服务器请求万维网文档以及服务器如何将文档传送给浏览器。</p>
+<h2 id="HTTP-0-9"><a href="#HTTP-0-9" class="headerlink" title="HTTP 0.9"></a>HTTP 0.9</h2><p>HTTP 0.9在请求时不支持请求头，并且只支持GET方法。</p>
+<h2 id="HTTP-1-0"><a href="#HTTP-1-0" class="headerlink" title="HTTP 1.0"></a>HTTP 1.0</h2><p>HTTP1.0 加入了以下几个内容</p>
+<ul>
+<li><p>在请求中加入了HTTP版本号信息</p>
+</li>
+<li><p>加入了请求头</p>
+</li>
+<li><p>增加了HTTP Status Code作为状态码</p>
+</li>
+</ul>
+<p>但是HTTP1.0在性能上有很大的问题，每次请求都需要建立一个TCP连接，并且是串行执行请求。</p>
+<h2 id="HTTP-1-1"><a href="#HTTP-1-1" class="headerlink" title="HTTP 1.1"></a>HTTP 1.1</h2><p>HTTP 1.1的变化主要有以下几个内容</p>
+<ol>
+<li>设置 keepalive 让 HTTP 重用 TCP 连接，省下了每次握手都要进行 TCP 3 次握手的重大开销。也就是 HTTP 长连接。</li>
+<li>支持以流水线的形式进行请求发送，只要一个请求发出去，不必等到其回来就可以发送第二个请求出去。</li>
+<li>增加了 cache control 机制。</li>
+<li>增加 HOST 头，服务器可以知道你在请求哪个网站。</li>
+<li>加入了 OPTIONS 方法，用于 CORS 应用。</li>
+</ol>
+<h2 id="HTTPS"><a href="#HTTPS" class="headerlink" title="HTTPS"></a>HTTPS</h2><p>HTTPS在传输过程中通过加密来保护数据安全，避免用户敏感信息被第三方获取。其过程如下</p>
+<ol>
+<li>客户端发起HTTPS请求，告诉客户端自己所支持的加密套件列表以及希望使用的TLS选项。</li>
+<li>服务端选择客户端的一个加密套件，会有一套数字证书，就是一对公钥和私钥。</li>
+<li>传输证书，将公钥信息传递给客户端。</li>
+<li>客户端解析证书，会验证公钥是否有效。一般操作系统和浏览器都会内置一个知名证书颁发机构的名单，也可以通过手动指定证书的方式来添加证书。如果证书存在问题，那么会弹出警示框告诉用户该网站不安全。如果证书没有问题，那么生成一个随机值作为会话密钥。</li>
+<li>将随机值通过公钥进行加密，然后将加密后的随机值传输给服务端</li>
+<li>服务端用私钥解密，获取到的随机值就是会话密钥。双方使用该密钥进行对称加密通信。</li>
+</ol>
+<h2 id="HTTP-2-0"><a href="#HTTP-2-0" class="headerlink" title="HTTP 2.0"></a>HTTP 2.0</h2><p>HTTP 1.1虽然可以重用TCP连接，但是还是需要串行发送请求以保证其顺序。但是大量的网页请求中都是些资源类的东西，如果能够并行这些请求，那就会增加更大的网络吞吐和性能。同时HTTP1.1 在传输数据时使用的是文本的方式，借助zip压缩方式以减少网络带宽，但是会消耗前端和后端的CPU资源。</p>
+<p>与HTTP2.0的新特性包括</p>
+<ol>
+<li>HTTP/2是一个二进制协议，增加了数据传输的效率。</li>
+<li>可以在一个TCP连接中并发请求多个HTTP请求。</li>
+<li>使用HPACK算法压缩头部信息，如果多个请求的头是相识的，协议会消除重复的部分。</li>
+<li>允许服务端PUSH。例如请求X，服务端知道X依赖于Y，会同时将Y一起返回客户端。</li>
+</ol>
+<h2 id="HTTP-3-0"><a href="#HTTP-3-0" class="headerlink" title="HTTP 3.0"></a>HTTP 3.0</h2><p>虽然HTTP2.0能够多个HTTP请求复用一个TCP连接，但是底层的TCP协议不知道上层有多少个HTTP请求，一旦出现丢包，会造成所有的HTTP请求都必需等待丢了的包被重传回来，即使这个包不是本次HTTP请求的。</p>
+<p>为了解决这一问题，HTTP 3.0 将HTTP的底层由TCP协议改为了UDP协议，并且使用了QUIC。因为UDP不需要管理顺序，不管丢包。QUIC的任务就是要有一个像TCP一样的丢包重传机制。在基于UDP以后，QUIC直接将TCP和TLS需要做的事情合并为了三次握手。因此QUIC可以将其视为一个在UDP之上的伪TCP +TLS +HTTP/2的多路复用的协议。</p>
+]]></content>
+      <categories>
+        <category>网络</category>
+      </categories>
+      <tags>
+        <tag>网络</tag>
+        <tag>HTTP</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>JVM中的垃圾回收算法</title>
     <url>/2020/10/03/JVM%E4%B8%AD%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%AE%97%E6%B3%95/</url>
     <content><![CDATA[<p>JVM内存运行时区域分为程序计数区、虚拟机栈、本地方法栈、堆区和方法区，其中前三个区域随着线程的生命周期而变化，对于这些区域不需要过多考虑内存回收的问题，当线程结束时，内存也就会被释放了。但是Java堆和方法区则需要使用到垃圾回收器去进行回收。</p>
@@ -262,77 +313,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Redis中的客户端与服务器实现</title>
-    <url>/2020/09/10/Redis%E4%B8%AD%E7%9A%84%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%B8%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%9E%E7%8E%B0/</url>
-    <content><![CDATA[<p>Redis服务器可以与多个客户端建立网络连接，每个客户端也可以向服务器发送命令请求。Redis服务器使用单线程单进程的方式来处理命令请求，并与多个客户端进行网络通信。</p>
-<h2 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h2><h3 id="客户端结构"><a href="#客户端结构" class="headerlink" title="客户端结构"></a>客户端结构</h3><p>每个进行连接的客户端，都会创建一个redisClient结构，保存了客户端当前的信息。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisClient</span> &#123;</span></span><br><span class="line">    <span class="comment">// 套接字描述符</span></span><br><span class="line">    <span class="comment">// -1代表伪客户端，来自于AOF文件或者LUA脚本</span></span><br><span class="line">    <span class="comment">// 普通客户端为大于-1的整数，记录套接字描述符</span></span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库</span></span><br><span class="line">    redisDb *db;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库的 id （号码）</span></span><br><span class="line">    <span class="keyword">int</span> dictid;</span><br><span class="line">    <span class="comment">// 客户端的名字</span></span><br><span class="line">    robj *name;             <span class="comment">/* As set by CLIENT SETNAME */</span></span><br><span class="line">    <span class="comment">// 查询缓冲区</span></span><br><span class="line">    sds querybuf;</span><br><span class="line">    <span class="comment">// 查询缓冲区长度峰值</span></span><br><span class="line">    <span class="keyword">size_t</span> querybuf_peak;   <span class="comment">/* Recent (100ms or more) peak of querybuf size */</span></span><br><span class="line">    <span class="comment">// 参数数量</span></span><br><span class="line">    <span class="keyword">int</span> argc;</span><br><span class="line">    <span class="comment">// 参数对象数组</span></span><br><span class="line">    robj **argv;</span><br><span class="line">    <span class="comment">// 记录被客户端执行的命令</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> *<span class="title">cmd</span>, *<span class="title">lastcmd</span>;</span></span><br><span class="line">    <span class="comment">// 请求的类型：内联命令还是多条命令</span></span><br><span class="line">    <span class="keyword">int</span> reqtype;</span><br><span class="line">    <span class="comment">// 剩余未读取的命令内容数量</span></span><br><span class="line">    <span class="keyword">int</span> multibulklen;       <span class="comment">/* number of multi bulk arguments left to read */</span></span><br><span class="line">    <span class="comment">// 命令内容的长度</span></span><br><span class="line">    <span class="keyword">long</span> bulklen;           <span class="comment">/* length of bulk argument in multi bulk request */</span></span><br><span class="line">    <span class="comment">// 回复链表</span></span><br><span class="line">    <span class="built_in">list</span> *reply;</span><br><span class="line">    <span class="comment">// 回复链表中对象的总大小</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> reply_bytes; <span class="comment">/* Tot bytes of objects in reply list */</span></span><br><span class="line">    <span class="comment">// 已发送字节，处理 short write 用</span></span><br><span class="line">    <span class="keyword">int</span> sentlen;            <span class="comment">/* Amount of bytes already sent in the current</span></span><br><span class="line"><span class="comment">                               buffer or object being sent. */</span></span><br><span class="line">    <span class="comment">// 创建客户端的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> ctime;           <span class="comment">/* Client creation time */</span></span><br><span class="line">    <span class="comment">// 客户端最后一次和服务器互动的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> lastinteraction; <span class="comment">/* time of the last interaction, used for timeout */</span></span><br><span class="line">    <span class="comment">// 客户端的输出缓冲区超过软性限制的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> obuf_soft_limit_reached_time;</span><br><span class="line">    <span class="comment">// 客户端状态标志</span></span><br><span class="line">    <span class="comment">// 记录客户端的角色以及客户端所处状态</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="keyword">int</span> flags;              <span class="comment">/* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */</span></span><br><span class="line">    <span class="comment">// 当 server.requirepass 不为 NULL 时</span></span><br><span class="line">    <span class="comment">// 代表认证的状态</span></span><br><span class="line">    <span class="comment">// 0 代表未认证， 1 代表已认证</span></span><br><span class="line">    <span class="keyword">int</span> authenticated;      <span class="comment">/* when requirepass is non-NULL */</span></span><br><span class="line">    <span class="comment">// 复制状态</span></span><br><span class="line">    <span class="keyword">int</span> replstate;          <span class="comment">/* replication state if this is a slave */</span></span><br><span class="line">    <span class="comment">// 用于保存主服务器传来的 RDB 文件的文件描述符</span></span><br><span class="line">    <span class="keyword">int</span> repldbfd;           <span class="comment">/* replication DB file descriptor */</span></span><br><span class="line">    <span class="comment">// 读取主服务器传来的 RDB 文件的偏移量</span></span><br><span class="line">    <span class="keyword">off_t</span> repldboff;        <span class="comment">/* replication DB file offset */</span></span><br><span class="line">    <span class="comment">// 主服务器传来的 RDB 文件的大小</span></span><br><span class="line">    <span class="keyword">off_t</span> repldbsize;       <span class="comment">/* replication DB file size */</span></span><br><span class="line">    sds replpreamble;       <span class="comment">/* replication DB preamble. */</span></span><br><span class="line">    <span class="comment">// 主服务器的复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> reploff;      <span class="comment">/* replication offset if this is our master */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 时的偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_off; <span class="comment">/* replication ack offset, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 的时间</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_time;<span class="comment">/* replication ack time, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 主服务器的 master run ID</span></span><br><span class="line">    <span class="comment">// 保存在客户端，用于执行部分重同步</span></span><br><span class="line">    <span class="keyword">char</span> replrunid[REDIS_RUN_ID_SIZE+<span class="number">1</span>]; <span class="comment">/* master run id if this is a master */</span></span><br><span class="line">    <span class="comment">// 从服务器的监听端口号</span></span><br><span class="line">    <span class="keyword">int</span> slave_listening_port; <span class="comment">/* As configured with: SLAVECONF listening-port */</span></span><br><span class="line">    <span class="comment">// 事务状态</span></span><br><span class="line">    multiState mstate;      <span class="comment">/* MULTI/EXEC state */</span></span><br><span class="line">    <span class="comment">// 阻塞类型</span></span><br><span class="line">    <span class="keyword">int</span> btype;              <span class="comment">/* Type of blocking op if REDIS_BLOCKED. */</span></span><br><span class="line">    <span class="comment">// 阻塞状态</span></span><br><span class="line">    blockingState bpop;     <span class="comment">/* blocking state */</span></span><br><span class="line">    <span class="comment">// 最后被写入的全局复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> woff;         <span class="comment">/* Last write global replication offset. */</span></span><br><span class="line">    <span class="comment">// 被监视的键</span></span><br><span class="line">    <span class="built_in">list</span> *watched_keys;     <span class="comment">/* Keys WATCHED for MULTI/EXEC CAS */</span></span><br><span class="line">    <span class="comment">// 这个字典记录了客户端所有订阅的频道</span></span><br><span class="line">    <span class="comment">// 键为频道名字，值为 NULL</span></span><br><span class="line">    <span class="comment">// 也即是，一个频道的集合</span></span><br><span class="line">    dict *pubsub_channels;  <span class="comment">/* channels a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    <span class="comment">// 链表，包含多个 pubsubPattern 结构</span></span><br><span class="line">    <span class="comment">// 记录了所有订阅频道的客户端的信息</span></span><br><span class="line">    <span class="comment">// 新 pubsubPattern 结构总是被添加到表尾</span></span><br><span class="line">    <span class="built_in">list</span> *pubsub_patterns;  <span class="comment">/* patterns a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    sds peerid;             <span class="comment">/* Cached peer ID. */</span></span><br><span class="line">    <span class="comment">// 固定大小的缓冲区</span></span><br><span class="line">    <span class="comment">// 回复偏移量</span></span><br><span class="line">    <span class="keyword">int</span> bufpos;</span><br><span class="line">    <span class="comment">// 回复缓冲区</span></span><br><span class="line">    <span class="keyword">char</span> buf[REDIS_REPLY_CHUNK_BYTES];</span><br><span class="line">&#125; redisClient;</span><br></pre></td></tr></table></figure>
-
-<p>Redis服务器的clients属性是一个链表，保存了所有客户端的状态。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisServer</span>&#123;</span></span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    <span class="comment">//一个保存所有客户端状态的链表</span></span><br><span class="line">  	<span class="built_in">list</span>* clients;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<h4 id="套接字描述符"><a href="#套接字描述符" class="headerlink" title="套接字描述符"></a>套接字描述符</h4><p>fd属性记录了客户端正在使用的套接字描述符。根据客户端的不同类型，fd的值可以为-1或者大于-1的整数。</p>
-<p>如果fd的值为-1，代表该客户端为伪客户端。伪客户端的请求来源于AOF文件或者LUA脚本而不是来自于网络。这种客户端不需要使用套接字进行连接。普通客户端的fd属性的值为大于-1的整数，记录客户端套接字的描述符。</p>
-<h4 id="名字"><a href="#名字" class="headerlink" title="名字"></a>名字</h4><p>客户端的名称记录在name属性中。在默认情况下，客户端是没有名字的。通过CLIENT SETNAME命令可以设置名字。</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name= ...</span><br><span class="line">127.0.0.1:6379&gt; CLIENT SETNAME test-name</span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name=test-name ...</span><br></pre></td></tr></table></figure>
-
-<p>如果客户端没有设置名字，那么name属性将会指向NULL，否则指向一个字符串对象，保存客户端的名字。</p>
-<h4 id="标志"><a href="#标志" class="headerlink" title="标志"></a>标志</h4><p>客户端的flag属性记录了客户端的角色，其值可以为单个标志或者多个标志的二进制值。</p>
-<h4 id="命令请求"><a href="#命令请求" class="headerlink" title="命令请求"></a>命令请求</h4><p>客户端的输入输出缓冲区用于保存客户端发送的命令请求，用querybuf属性进行保存。</p>
-<p>例如当客户端发送了SET key value命令，那么querybuf的内容将为以下值</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$3</span><br><span class="line">key</span><br><span class="line">$3</span><br><span class="line">value</span><br></pre></td></tr></table></figure>
-
-<p>querybuf的大小最大为1GB，如果超过，Redis会关闭该连接。</p>
-<p>在保存到缓冲区之后，会对请求的内容进行分析，并将得出的命令参数和个数保存到argv属性和argc属性中去。   例如对于刚才的命令，argc的值会设置为3，argv会设置为[set,key,value]数组。</p>
-<p>当分析出argc和argv之后，服务器会根据argv[0]的值，在命令表中查找对应的命令实现函数，然后将cmd属性指向该命令结构。然后使用cmd属性所指向的redisCommand结构并设置命令参数信息，调用命令实现函数，执行对应的命令。</p>
-<h4 id="输出缓冲区"><a href="#输出缓冲区" class="headerlink" title="输出缓冲区"></a>输出缓冲区</h4><p>执行命令完成后，命令回复会被保存到输出缓冲区之中。每个客户端都有一个可变大小的缓冲区和固定大小的缓冲区。</p>
-<p>其中固定大小的缓冲区有buf和bufpos两个属性组成。buf属性是一个字节数组，bufpos记录了buf数组目前已使用的字节数量。其作用是保存那些长度比较少的回复。</p>
-<p>可变大小的缓冲区有reply属性保存。reply是一个链表连接多个字符串对象，用于保存那些长度比较大的回复，例如非常长的字符串，很多项组成的列表，很多元素的集合。</p>
-<h4 id="身份验证"><a href="#身份验证" class="headerlink" title="身份验证"></a>身份验证</h4><p>authenticated属性记录了客户端是否通过了身份验证。如果其值为0代表未通过身份验证。</p>
-<h3 id="客户端的创建与关闭"><a href="#客户端的创建与关闭" class="headerlink" title="客户端的创建与关闭"></a>客户端的创建与关闭</h3><h4 id="创建普通客户端"><a href="#创建普通客户端" class="headerlink" title="创建普通客户端"></a>创建普通客户端</h4><p>客户端使用connect函数创建连接时，服务器会调用连接事件处理器，为客户端创建相应的客户端状态，并将该客户端状态添加到服务器状态结构clients链表的末尾。</p>
-<h4 id="关闭普通客户端"><a href="#关闭普通客户端" class="headerlink" title="关闭普通客户端"></a>关闭普通客户端</h4><p>当出现以下情况时会出现客户端关闭：</p>
-<ul>
-<li>客户端与服务器的网络连接被关闭。</li>
-<li>发送了带有不符合协议格式的命令请求。</li>
-<li>客户端成为CLIENT KILL命令的目标</li>
-<li>发送的命令请求大小超过了输入缓冲区的大小</li>
-<li>命令回复超过了输出缓冲的大小</li>
-<li>用户为服务器设置了timeout配置选项。当空转时间超过该选项值时会被关闭。</li>
-</ul>
-<h4 id="伪客户端"><a href="#伪客户端" class="headerlink" title="伪客户端"></a>伪客户端</h4><p>服务器在初始化时会创建执行Lua脚本的Redis命令的伪客户端，并将该伪客户端关联在服务器状态的lua_client属性值中。在服务器关闭时，该客户端才会被关闭。</p>
-<p>服务器在载入AOF文件时，会创建执行AOF文件的伪客户端，在执行完成后，立即关闭该客户端。</p>
-<h2 id="服务器"><a href="#服务器" class="headerlink" title="服务器"></a>服务器</h2><h3 id="命令请求过程"><a href="#命令请求过程" class="headerlink" title="命令请求过程"></a>命令请求过程</h3><h4 id="发送命令请求"><a href="#发送命令请求" class="headerlink" title="发送命令请求"></a>发送命令请求</h4><p>Redis服务器的命令请求来自与Redis客户端。客户端会将命令请求转化为协议格式，通过连接到服务器的套接字，将协议的命令请求发送给服务器。</p>
-<h4 id="读取命令请求"><a href="#读取命令请求" class="headerlink" title="读取命令请求"></a>读取命令请求</h4><p>当套接字变得可读时，会调用命令处理器来执行以下操作</p>
-<ul>
-<li><p>读取套接字中协议格式的命令请求，并将其保存到客户端状态的输入缓冲区中。</p>
-</li>
-<li><p>对输入缓冲区的命令请求进行分析，提取命令参数。</p>
-</li>
-<li><p>调用命令执行器执行指定的命令。</p>
-</li>
-</ul>
-<h4 id="命令执行器"><a href="#命令执行器" class="headerlink" title="命令执行器"></a>命令执行器</h4><p>先根据客户端的argv[0]参数，在命令表中查找参数指定的命令，并保存到cmd属性值中。cmd的属性是redisCommand，其结构如下:</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> &#123;</span></span><br><span class="line">    <span class="comment">// 命令名字</span></span><br><span class="line">    <span class="keyword">char</span> *name;</span><br><span class="line">    <span class="comment">// 实现函数</span></span><br><span class="line">    redisCommandProc *proc;</span><br><span class="line">    <span class="comment">// 参数个数</span></span><br><span class="line">    <span class="keyword">int</span> arity;</span><br><span class="line">    <span class="comment">// 字符串表示的 FLAG</span></span><br><span class="line">    <span class="keyword">char</span> *sflags;</span><br><span class="line">    <span class="comment">// 实际 FLAG</span></span><br><span class="line">    <span class="keyword">int</span> flags;</span><br><span class="line">    <span class="comment">// 从命令中判断命令的键参数。在 Redis 集群转向时使用。</span></span><br><span class="line">    redisGetKeysProc *getkeys_proc;</span><br><span class="line">    <span class="comment">// 指定哪些参数是 key</span></span><br><span class="line">    <span class="keyword">int</span> firstkey; <span class="comment">/* The first argument that&#x27;s a key (0 = no keys) */</span></span><br><span class="line">    <span class="keyword">int</span> lastkey;  <span class="comment">/* The last argument that&#x27;s a key */</span></span><br><span class="line">    <span class="keyword">int</span> keystep;  <span class="comment">/* The step between first and last key */</span></span><br><span class="line">    <span class="comment">// microseconds 记录了命令执行耗费的总毫微秒数</span></span><br><span class="line">    <span class="comment">// calls 是命令被执行的总次数</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> microseconds, calls;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>在查找到命令以后，执行预备操作，例如检查cmd指针是否为NULL，参数个数是否正确等等。当完成预备操作后，服务器才开始真正的执行命令。redisCommandProc是一个函数指针的别名，参数为redisClient。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">typedef</span> <span class="keyword">void</span> <span class="title">redisCommandProc</span><span class="params">(redisClient *c)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>在服务器真正实行命令时，只需要调用以下语句即可。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">client-&gt;cmd-&gt;proc(client);</span><br></pre></td></tr></table></figure>
-
-<p>被调用的命令实现函数会执行指定的操作，产生相应的命令回复，保存到输出缓冲区之中。</p>
-<p>在执行完成以后，服务器还需要执行一些后续操作，例如打印慢日志，AOF日志输出。完成后续操作以后，就可以处理下一个命令请求了。</p>
-<h3 id="serverCron函数"><a href="#serverCron函数" class="headerlink" title="serverCron函数"></a>serverCron函数</h3><p>Redis中的serverCron函数会每隔一段执行一次，负责管理服务器的资源，保证服务器运转良好。</p>
-<p>在serverCron会进行例如更新服务器时间缓存，执行持久化操作，关闭客户端等等。</p>
-]]></content>
-      <categories>
-        <category>Redis</category>
-      </categories>
-      <tags>
-        <tag>Redis</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Redis中的对象系统</title>
     <url>/2020/09/09/Redis%E4%B8%AD%E7%9A%84%E5%AF%B9%E8%B1%A1%E7%B3%BB%E7%BB%9F/</url>
     <content><![CDATA[<p>Redis中的对象系统包含字符串对象，列表对象，集合对象，有序集合对象，哈希对象这五种类型。同时在Redis中还实现了基于引用计数的内存回收机制和对象共享机制。Redis中的对象带有访问时间记录信息，能够用于计算数据库键的空转时常。</p>
@@ -462,86 +442,74 @@
       </tags>
   </entry>
   <entry>
-    <title>Redis中的持久化机制</title>
-    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
-<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
-<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
+    <title>Redis中的客户端与服务器实现</title>
+    <url>/2020/09/10/Redis%E4%B8%AD%E7%9A%84%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%B8%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%9E%E7%8E%B0/</url>
+    <content><![CDATA[<p>Redis服务器可以与多个客户端建立网络连接，每个客户端也可以向服务器发送命令请求。Redis服务器使用单线程单进程的方式来处理命令请求，并与多个客户端进行网络通信。</p>
+<h2 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h2><h3 id="客户端结构"><a href="#客户端结构" class="headerlink" title="客户端结构"></a>客户端结构</h3><p>每个进行连接的客户端，都会创建一个redisClient结构，保存了客户端当前的信息。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisClient</span> &#123;</span></span><br><span class="line">    <span class="comment">// 套接字描述符</span></span><br><span class="line">    <span class="comment">// -1代表伪客户端，来自于AOF文件或者LUA脚本</span></span><br><span class="line">    <span class="comment">// 普通客户端为大于-1的整数，记录套接字描述符</span></span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库</span></span><br><span class="line">    redisDb *db;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库的 id （号码）</span></span><br><span class="line">    <span class="keyword">int</span> dictid;</span><br><span class="line">    <span class="comment">// 客户端的名字</span></span><br><span class="line">    robj *name;             <span class="comment">/* As set by CLIENT SETNAME */</span></span><br><span class="line">    <span class="comment">// 查询缓冲区</span></span><br><span class="line">    sds querybuf;</span><br><span class="line">    <span class="comment">// 查询缓冲区长度峰值</span></span><br><span class="line">    <span class="keyword">size_t</span> querybuf_peak;   <span class="comment">/* Recent (100ms or more) peak of querybuf size */</span></span><br><span class="line">    <span class="comment">// 参数数量</span></span><br><span class="line">    <span class="keyword">int</span> argc;</span><br><span class="line">    <span class="comment">// 参数对象数组</span></span><br><span class="line">    robj **argv;</span><br><span class="line">    <span class="comment">// 记录被客户端执行的命令</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> *<span class="title">cmd</span>, *<span class="title">lastcmd</span>;</span></span><br><span class="line">    <span class="comment">// 请求的类型：内联命令还是多条命令</span></span><br><span class="line">    <span class="keyword">int</span> reqtype;</span><br><span class="line">    <span class="comment">// 剩余未读取的命令内容数量</span></span><br><span class="line">    <span class="keyword">int</span> multibulklen;       <span class="comment">/* number of multi bulk arguments left to read */</span></span><br><span class="line">    <span class="comment">// 命令内容的长度</span></span><br><span class="line">    <span class="keyword">long</span> bulklen;           <span class="comment">/* length of bulk argument in multi bulk request */</span></span><br><span class="line">    <span class="comment">// 回复链表</span></span><br><span class="line">    <span class="built_in">list</span> *reply;</span><br><span class="line">    <span class="comment">// 回复链表中对象的总大小</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> reply_bytes; <span class="comment">/* Tot bytes of objects in reply list */</span></span><br><span class="line">    <span class="comment">// 已发送字节，处理 short write 用</span></span><br><span class="line">    <span class="keyword">int</span> sentlen;            <span class="comment">/* Amount of bytes already sent in the current</span></span><br><span class="line"><span class="comment">                               buffer or object being sent. */</span></span><br><span class="line">    <span class="comment">// 创建客户端的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> ctime;           <span class="comment">/* Client creation time */</span></span><br><span class="line">    <span class="comment">// 客户端最后一次和服务器互动的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> lastinteraction; <span class="comment">/* time of the last interaction, used for timeout */</span></span><br><span class="line">    <span class="comment">// 客户端的输出缓冲区超过软性限制的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> obuf_soft_limit_reached_time;</span><br><span class="line">    <span class="comment">// 客户端状态标志</span></span><br><span class="line">    <span class="comment">// 记录客户端的角色以及客户端所处状态</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="keyword">int</span> flags;              <span class="comment">/* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */</span></span><br><span class="line">    <span class="comment">// 当 server.requirepass 不为 NULL 时</span></span><br><span class="line">    <span class="comment">// 代表认证的状态</span></span><br><span class="line">    <span class="comment">// 0 代表未认证， 1 代表已认证</span></span><br><span class="line">    <span class="keyword">int</span> authenticated;      <span class="comment">/* when requirepass is non-NULL */</span></span><br><span class="line">    <span class="comment">// 复制状态</span></span><br><span class="line">    <span class="keyword">int</span> replstate;          <span class="comment">/* replication state if this is a slave */</span></span><br><span class="line">    <span class="comment">// 用于保存主服务器传来的 RDB 文件的文件描述符</span></span><br><span class="line">    <span class="keyword">int</span> repldbfd;           <span class="comment">/* replication DB file descriptor */</span></span><br><span class="line">    <span class="comment">// 读取主服务器传来的 RDB 文件的偏移量</span></span><br><span class="line">    <span class="keyword">off_t</span> repldboff;        <span class="comment">/* replication DB file offset */</span></span><br><span class="line">    <span class="comment">// 主服务器传来的 RDB 文件的大小</span></span><br><span class="line">    <span class="keyword">off_t</span> repldbsize;       <span class="comment">/* replication DB file size */</span></span><br><span class="line">    sds replpreamble;       <span class="comment">/* replication DB preamble. */</span></span><br><span class="line">    <span class="comment">// 主服务器的复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> reploff;      <span class="comment">/* replication offset if this is our master */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 时的偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_off; <span class="comment">/* replication ack offset, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 的时间</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_time;<span class="comment">/* replication ack time, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 主服务器的 master run ID</span></span><br><span class="line">    <span class="comment">// 保存在客户端，用于执行部分重同步</span></span><br><span class="line">    <span class="keyword">char</span> replrunid[REDIS_RUN_ID_SIZE+<span class="number">1</span>]; <span class="comment">/* master run id if this is a master */</span></span><br><span class="line">    <span class="comment">// 从服务器的监听端口号</span></span><br><span class="line">    <span class="keyword">int</span> slave_listening_port; <span class="comment">/* As configured with: SLAVECONF listening-port */</span></span><br><span class="line">    <span class="comment">// 事务状态</span></span><br><span class="line">    multiState mstate;      <span class="comment">/* MULTI/EXEC state */</span></span><br><span class="line">    <span class="comment">// 阻塞类型</span></span><br><span class="line">    <span class="keyword">int</span> btype;              <span class="comment">/* Type of blocking op if REDIS_BLOCKED. */</span></span><br><span class="line">    <span class="comment">// 阻塞状态</span></span><br><span class="line">    blockingState bpop;     <span class="comment">/* blocking state */</span></span><br><span class="line">    <span class="comment">// 最后被写入的全局复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> woff;         <span class="comment">/* Last write global replication offset. */</span></span><br><span class="line">    <span class="comment">// 被监视的键</span></span><br><span class="line">    <span class="built_in">list</span> *watched_keys;     <span class="comment">/* Keys WATCHED for MULTI/EXEC CAS */</span></span><br><span class="line">    <span class="comment">// 这个字典记录了客户端所有订阅的频道</span></span><br><span class="line">    <span class="comment">// 键为频道名字，值为 NULL</span></span><br><span class="line">    <span class="comment">// 也即是，一个频道的集合</span></span><br><span class="line">    dict *pubsub_channels;  <span class="comment">/* channels a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    <span class="comment">// 链表，包含多个 pubsubPattern 结构</span></span><br><span class="line">    <span class="comment">// 记录了所有订阅频道的客户端的信息</span></span><br><span class="line">    <span class="comment">// 新 pubsubPattern 结构总是被添加到表尾</span></span><br><span class="line">    <span class="built_in">list</span> *pubsub_patterns;  <span class="comment">/* patterns a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    sds peerid;             <span class="comment">/* Cached peer ID. */</span></span><br><span class="line">    <span class="comment">// 固定大小的缓冲区</span></span><br><span class="line">    <span class="comment">// 回复偏移量</span></span><br><span class="line">    <span class="keyword">int</span> bufpos;</span><br><span class="line">    <span class="comment">// 回复缓冲区</span></span><br><span class="line">    <span class="keyword">char</span> buf[REDIS_REPLY_CHUNK_BYTES];</span><br><span class="line">&#125; redisClient;</span><br></pre></td></tr></table></figure>
 
-<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
-<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
-<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
-<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
-<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
-<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
-<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
-<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
-<table>
-<thead>
-<tr>
-<th>配置项</th>
-<th>写回时机</th>
-<th>优点</th>
-<th>缺点</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Always</td>
-<td>同步写回</td>
-<td>可靠性高，数据基本不会丢失</td>
-<td>性能影响大</td>
-</tr>
-<tr>
-<td>No</td>
-<td>操作系统控制的写回</td>
-<td>性能高</td>
-<td>丢失数据多</td>
-</tr>
-<tr>
-<td>Everysec</td>
-<td>每秒写回</td>
-<td>性能适中</td>
-<td>会丢失1秒内的数据</td>
-</tr>
-</tbody></table>
-<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
-<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
+<p>Redis服务器的clients属性是一个链表，保存了所有客户端的状态。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisServer</span>&#123;</span></span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    <span class="comment">//一个保存所有客户端状态的链表</span></span><br><span class="line">  	<span class="built_in">list</span>* clients;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 
-<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
-<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
-<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
-<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
-<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
-<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
-<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
-<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
-<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
-<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
-<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
-<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
-<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
-<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
-<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
-<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
-<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
-<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
-<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
-<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
-<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h4 id="套接字描述符"><a href="#套接字描述符" class="headerlink" title="套接字描述符"></a>套接字描述符</h4><p>fd属性记录了客户端正在使用的套接字描述符。根据客户端的不同类型，fd的值可以为-1或者大于-1的整数。</p>
+<p>如果fd的值为-1，代表该客户端为伪客户端。伪客户端的请求来源于AOF文件或者LUA脚本而不是来自于网络。这种客户端不需要使用套接字进行连接。普通客户端的fd属性的值为大于-1的整数，记录客户端套接字的描述符。</p>
+<h4 id="名字"><a href="#名字" class="headerlink" title="名字"></a>名字</h4><p>客户端的名称记录在name属性中。在默认情况下，客户端是没有名字的。通过CLIENT SETNAME命令可以设置名字。</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name= ...</span><br><span class="line">127.0.0.1:6379&gt; CLIENT SETNAME test-name</span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name=test-name ...</span><br></pre></td></tr></table></figure>
 
-<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
-<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
+<p>如果客户端没有设置名字，那么name属性将会指向NULL，否则指向一个字符串对象，保存客户端的名字。</p>
+<h4 id="标志"><a href="#标志" class="headerlink" title="标志"></a>标志</h4><p>客户端的flag属性记录了客户端的角色，其值可以为单个标志或者多个标志的二进制值。</p>
+<h4 id="命令请求"><a href="#命令请求" class="headerlink" title="命令请求"></a>命令请求</h4><p>客户端的输入输出缓冲区用于保存客户端发送的命令请求，用querybuf属性进行保存。</p>
+<p>例如当客户端发送了SET key value命令，那么querybuf的内容将为以下值</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$3</span><br><span class="line">key</span><br><span class="line">$3</span><br><span class="line">value</span><br></pre></td></tr></table></figure>
+
+<p>querybuf的大小最大为1GB，如果超过，Redis会关闭该连接。</p>
+<p>在保存到缓冲区之后，会对请求的内容进行分析，并将得出的命令参数和个数保存到argv属性和argc属性中去。   例如对于刚才的命令，argc的值会设置为3，argv会设置为[set,key,value]数组。</p>
+<p>当分析出argc和argv之后，服务器会根据argv[0]的值，在命令表中查找对应的命令实现函数，然后将cmd属性指向该命令结构。然后使用cmd属性所指向的redisCommand结构并设置命令参数信息，调用命令实现函数，执行对应的命令。</p>
+<h4 id="输出缓冲区"><a href="#输出缓冲区" class="headerlink" title="输出缓冲区"></a>输出缓冲区</h4><p>执行命令完成后，命令回复会被保存到输出缓冲区之中。每个客户端都有一个可变大小的缓冲区和固定大小的缓冲区。</p>
+<p>其中固定大小的缓冲区有buf和bufpos两个属性组成。buf属性是一个字节数组，bufpos记录了buf数组目前已使用的字节数量。其作用是保存那些长度比较少的回复。</p>
+<p>可变大小的缓冲区有reply属性保存。reply是一个链表连接多个字符串对象，用于保存那些长度比较大的回复，例如非常长的字符串，很多项组成的列表，很多元素的集合。</p>
+<h4 id="身份验证"><a href="#身份验证" class="headerlink" title="身份验证"></a>身份验证</h4><p>authenticated属性记录了客户端是否通过了身份验证。如果其值为0代表未通过身份验证。</p>
+<h3 id="客户端的创建与关闭"><a href="#客户端的创建与关闭" class="headerlink" title="客户端的创建与关闭"></a>客户端的创建与关闭</h3><h4 id="创建普通客户端"><a href="#创建普通客户端" class="headerlink" title="创建普通客户端"></a>创建普通客户端</h4><p>客户端使用connect函数创建连接时，服务器会调用连接事件处理器，为客户端创建相应的客户端状态，并将该客户端状态添加到服务器状态结构clients链表的末尾。</p>
+<h4 id="关闭普通客户端"><a href="#关闭普通客户端" class="headerlink" title="关闭普通客户端"></a>关闭普通客户端</h4><p>当出现以下情况时会出现客户端关闭：</p>
+<ul>
+<li>客户端与服务器的网络连接被关闭。</li>
+<li>发送了带有不符合协议格式的命令请求。</li>
+<li>客户端成为CLIENT KILL命令的目标</li>
+<li>发送的命令请求大小超过了输入缓冲区的大小</li>
+<li>命令回复超过了输出缓冲的大小</li>
+<li>用户为服务器设置了timeout配置选项。当空转时间超过该选项值时会被关闭。</li>
+</ul>
+<h4 id="伪客户端"><a href="#伪客户端" class="headerlink" title="伪客户端"></a>伪客户端</h4><p>服务器在初始化时会创建执行Lua脚本的Redis命令的伪客户端，并将该伪客户端关联在服务器状态的lua_client属性值中。在服务器关闭时，该客户端才会被关闭。</p>
+<p>服务器在载入AOF文件时，会创建执行AOF文件的伪客户端，在执行完成后，立即关闭该客户端。</p>
+<h2 id="服务器"><a href="#服务器" class="headerlink" title="服务器"></a>服务器</h2><h3 id="命令请求过程"><a href="#命令请求过程" class="headerlink" title="命令请求过程"></a>命令请求过程</h3><h4 id="发送命令请求"><a href="#发送命令请求" class="headerlink" title="发送命令请求"></a>发送命令请求</h4><p>Redis服务器的命令请求来自与Redis客户端。客户端会将命令请求转化为协议格式，通过连接到服务器的套接字，将协议的命令请求发送给服务器。</p>
+<h4 id="读取命令请求"><a href="#读取命令请求" class="headerlink" title="读取命令请求"></a>读取命令请求</h4><p>当套接字变得可读时，会调用命令处理器来执行以下操作</p>
+<ul>
+<li><p>读取套接字中协议格式的命令请求，并将其保存到客户端状态的输入缓冲区中。</p>
+</li>
+<li><p>对输入缓冲区的命令请求进行分析，提取命令参数。</p>
+</li>
+<li><p>调用命令执行器执行指定的命令。</p>
+</li>
+</ul>
+<h4 id="命令执行器"><a href="#命令执行器" class="headerlink" title="命令执行器"></a>命令执行器</h4><p>先根据客户端的argv[0]参数，在命令表中查找参数指定的命令，并保存到cmd属性值中。cmd的属性是redisCommand，其结构如下:</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> &#123;</span></span><br><span class="line">    <span class="comment">// 命令名字</span></span><br><span class="line">    <span class="keyword">char</span> *name;</span><br><span class="line">    <span class="comment">// 实现函数</span></span><br><span class="line">    redisCommandProc *proc;</span><br><span class="line">    <span class="comment">// 参数个数</span></span><br><span class="line">    <span class="keyword">int</span> arity;</span><br><span class="line">    <span class="comment">// 字符串表示的 FLAG</span></span><br><span class="line">    <span class="keyword">char</span> *sflags;</span><br><span class="line">    <span class="comment">// 实际 FLAG</span></span><br><span class="line">    <span class="keyword">int</span> flags;</span><br><span class="line">    <span class="comment">// 从命令中判断命令的键参数。在 Redis 集群转向时使用。</span></span><br><span class="line">    redisGetKeysProc *getkeys_proc;</span><br><span class="line">    <span class="comment">// 指定哪些参数是 key</span></span><br><span class="line">    <span class="keyword">int</span> firstkey; <span class="comment">/* The first argument that&#x27;s a key (0 = no keys) */</span></span><br><span class="line">    <span class="keyword">int</span> lastkey;  <span class="comment">/* The last argument that&#x27;s a key */</span></span><br><span class="line">    <span class="keyword">int</span> keystep;  <span class="comment">/* The step between first and last key */</span></span><br><span class="line">    <span class="comment">// microseconds 记录了命令执行耗费的总毫微秒数</span></span><br><span class="line">    <span class="comment">// calls 是命令被执行的总次数</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> microseconds, calls;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>在查找到命令以后，执行预备操作，例如检查cmd指针是否为NULL，参数个数是否正确等等。当完成预备操作后，服务器才开始真正的执行命令。redisCommandProc是一个函数指针的别名，参数为redisClient。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">typedef</span> <span class="keyword">void</span> <span class="title">redisCommandProc</span><span class="params">(redisClient *c)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>在服务器真正实行命令时，只需要调用以下语句即可。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">client-&gt;cmd-&gt;proc(client);</span><br></pre></td></tr></table></figure>
+
+<p>被调用的命令实现函数会执行指定的操作，产生相应的命令回复，保存到输出缓冲区之中。</p>
+<p>在执行完成以后，服务器还需要执行一些后续操作，例如打印慢日志，AOF日志输出。完成后续操作以后，就可以处理下一个命令请求了。</p>
+<h3 id="serverCron函数"><a href="#serverCron函数" class="headerlink" title="serverCron函数"></a>serverCron函数</h3><p>Redis中的serverCron函数会每隔一段执行一次，负责管理服务器的资源，保证服务器运转良好。</p>
+<p>在serverCron会进行例如更新服务器时间缓存，执行持久化操作，关闭客户端等等。</p>
 ]]></content>
       <categories>
         <category>Redis</category>
       </categories>
       <tags>
         <tag>Redis</tag>
-        <tag>日志</tag>
-        <tag>持久化</tag>
       </tags>
   </entry>
   <entry>
@@ -749,6 +717,166 @@
       </tags>
   </entry>
   <entry>
+    <title>Redis中的持久化机制</title>
+    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
+<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
+<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
+
+<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
+<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
+<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
+<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
+<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
+<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
+<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
+<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>写回时机</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Always</td>
+<td>同步写回</td>
+<td>可靠性高，数据基本不会丢失</td>
+<td>性能影响大</td>
+</tr>
+<tr>
+<td>No</td>
+<td>操作系统控制的写回</td>
+<td>性能高</td>
+<td>丢失数据多</td>
+</tr>
+<tr>
+<td>Everysec</td>
+<td>每秒写回</td>
+<td>性能适中</td>
+<td>会丢失1秒内的数据</td>
+</tr>
+</tbody></table>
+<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
+<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
+
+<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
+<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
+<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
+<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
+<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
+<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
+<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
+<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
+<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
+<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
+<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
+<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
+<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
+<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
+<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
+<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
+<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
+<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
+<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
+<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
+<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
+<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+        <tag>日志</tag>
+        <tag>持久化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Redis如何删除过期键</title>
+    <url>/2020/09/09/Redis%E5%A6%82%E4%BD%95%E5%88%A0%E9%99%A4%E8%BF%87%E6%9C%9F%E9%94%AE/</url>
+    <content><![CDATA[<p>通过EXPIRE，PEXPIRE，SETEX等指令，Redis可以为数据库中的某键设置生存时间，在经过指定时间之后，服务器就会删除生存时间为0的键。</p>
+<h2 id="设置过期时间"><a href="#设置过期时间" class="headerlink" title="设置过期时间"></a>设置过期时间</h2><h3 id="保存过期时间"><a href="#保存过期时间" class="headerlink" title="保存过期时间"></a>保存过期时间</h3><p>redisDb结构的expires字典保存了数据库中所有键的过期时间。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisDb</span> &#123;</span></span><br><span class="line">    <span class="comment">// 数据库键空间，保存着数据库中的所有键值对</span></span><br><span class="line">    dict *dict;                 <span class="comment">/* The keyspace for this DB */</span></span><br><span class="line">    <span class="comment">// 键的过期时间，字典的键为键，字典的值为过期事件 UNIX 时间戳</span></span><br><span class="line">    dict *expires;              <span class="comment">/* Timeout of keys with a timeout set */</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125; redisDb;</span><br></pre></td></tr></table></figure>
+
+<p>过期字典的键是一个指针指向键空间中的某一个键对象，值是一个long long类型的整数，保存了毫秒精度的UNIX时间戳。当执行设置过期时间的命令时，服务器会在数据库的过期字典中关联给定的数据库键以及过期时间。</p>
+<h3 id="移除过期时间"><a href="#移除过期时间" class="headerlink" title="移除过期时间"></a>移除过期时间</h3><p>PERSIST命令可以移除一个键的过期时间。当需要移除过期时间时，会从expires字典之中移除给定键的键值对关联。</p>
+<h3 id="返回过期时间"><a href="#返回过期时间" class="headerlink" title="返回过期时间"></a>返回过期时间</h3><p>TTL和PTTL命令可以返回秒或毫秒为单位的剩余生存时间。其都是通过计算两个键的过期时间与当前时间之差来实现的。    </p>
+<h2 id="过期键删除策略"><a href="#过期键删除策略" class="headerlink" title="过期键删除策略"></a>过期键删除策略</h2><h3 id="可能的删除策略"><a href="#可能的删除策略" class="headerlink" title="可能的删除策略"></a>可能的删除策略</h3><h4 id="定时删除"><a href="#定时删除" class="headerlink" title="定时删除"></a>定时删除</h4><p>通过在设置键的同时，创建一个定时器。在定时器结束时，立即删除该键。该策略对内存友好，可以保证过期键最快的被删除。但是在比较多过期键的情况下，会很占用CPU资源，导致服务器的响应时间降低。</p>
+<h4 id="惰性删除"><a href="#惰性删除" class="headerlink" title="惰性删除"></a>惰性删除</h4><p>惰性删除指的是当从键空间中获取值时，检查该键是否过期，如果过期的话，则删除该键，否则返回该键。惰性删除策略不会在删除其他无关键上花费CPU时间，属于CPU友好型策略。但是如果一个键已经过期但是一致没有被访问到，那么该键永远不会过期，所占用的内存永远不会释放。</p>
+<h4 id="定期删除"><a href="#定期删除" class="headerlink" title="定期删除"></a>定期删除</h4><p>每隔一段时间，对数据库进行检查，删除其中的过期键。其难点在于确定执行的时长与频率。如果执行的太频繁，会导致占用过多CPU，如果执行的太少，会导致内存浪费的情况。</p>
+<h3 id="Redis中的删除策略实现"><a href="#Redis中的删除策略实现" class="headerlink" title="Redis中的删除策略实现"></a>Redis中的删除策略实现</h3><p>Redis中整合了惰性删除和定期删除两种策略，取得了合理使用CPU时间和内存空间之间的平衡。</p>
+<h4 id="惰性删除实现"><a href="#惰性删除实现" class="headerlink" title="惰性删除实现"></a>惰性删除实现</h4><p>所有读写redis命令在执行之前都会调用惰性删除的代码进行判断，惰性删除的代码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 检查 key 是否已经过期，如果是的话，将它从数据库中删除。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 返回 0 表示键没有过期时间，或者键未过期。</span></span><br><span class="line"><span class="comment"> * 返回 1 表示键已经因为过期而被删除了。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">expireIfNeeded</span><span class="params">(redisDb *db, robj *key)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 取出键的过期时间</span></span><br><span class="line">    <span class="keyword">mstime_t</span> when = getExpire(db,key);</span><br><span class="line">    <span class="keyword">mstime_t</span> now;</span><br><span class="line">    <span class="comment">// 没有过期时间</span></span><br><span class="line">    <span class="keyword">if</span> (when &lt; <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>; </span><br><span class="line">    <span class="comment">// 如果服务器正在进行载入，那么不进行任何过期检查</span></span><br><span class="line">    <span class="keyword">if</span> (server.loading) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	<span class="comment">// 当前时间</span></span><br><span class="line">    now = server.lua_caller ? server.lua_time_start : mstime();</span><br><span class="line">    <span class="comment">// 当服务器运行在 replication 模式时</span></span><br><span class="line">    <span class="comment">// 附属节点并不主动删除 key</span></span><br><span class="line">    <span class="comment">// 它只返回一个逻辑上正确的返回值</span></span><br><span class="line">    <span class="comment">// 真正的删除操作要等待主节点发来删除命令时才执行</span></span><br><span class="line">    <span class="comment">// 从而保证数据的同步</span></span><br><span class="line">    <span class="keyword">if</span> (server.masterhost != <span class="literal">NULL</span>) <span class="keyword">return</span> now &gt; when;</span><br><span class="line">    <span class="comment">// 运行到这里，表示键带有过期时间，并且服务器为主节点</span></span><br><span class="line">    <span class="comment">// 如果未过期，返回 0</span></span><br><span class="line">    <span class="keyword">if</span> (now &lt;= when) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    server.stat_expiredkeys++;</span><br><span class="line">    <span class="comment">// 向 AOF 文件和附属节点传播过期信息</span></span><br><span class="line">    propagateExpire(db,key);</span><br><span class="line">    <span class="comment">// 发送事件通知</span></span><br><span class="line">    notifyKeyspaceEvent(REDIS_NOTIFY_EXPIRED,</span><br><span class="line">        <span class="string">&quot;expired&quot;</span>,key,db-&gt;id);</span><br><span class="line">    <span class="comment">// 将过期键从数据库中删除</span></span><br><span class="line">    <span class="keyword">return</span> dbDelete(db,key);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果键已经过期，那么该函数会将输入的键从数据库之中删除，否则不做任何动作。当处理后的键仍然存在时，命令会按照存在的情况继续执行，否则按照不存在的情况执行。</p>
+<h4 id="定期删除实现"><a href="#定期删除实现" class="headerlink" title="定期删除实现"></a>定期删除实现</h4><p>每当Redis的周期操作函数serverCron函数执行时，会调用activeExpireCycle函数进行过期键的清理。其会在规定的时间内，分次遍历数据库中的各个数据库，从expires字典中随机检查一部分过期时间，并删除其中的过期键。在扫描的时候，会提供一个全局变量记录上一次扫描的进度，并在下一次调用时，接着上一次的进度进行新一轮的检查工作。</p>
+<h2 id="AOF-RDB和复制功能处理过期键"><a href="#AOF-RDB和复制功能处理过期键" class="headerlink" title="AOF,RDB和复制功能处理过期键"></a>AOF,RDB和复制功能处理过期键</h2><h3 id="AOF文件处理"><a href="#AOF文件处理" class="headerlink" title="AOF文件处理"></a>AOF文件处理</h3><p>当一个键已经过期时并被删除时，Redis会像AOF日志之中添加一条DEL命令，来记录该键已经被删除。在进行AOF重写的时候，程序会对数据库中的键进行检查，已过期的键不会保存到重写以后的AOF日志之中。</p>
+<h3 id="RDB文件处理"><a href="#RDB文件处理" class="headerlink" title="RDB文件处理"></a>RDB文件处理</h3><p>在生成RDB文件的时候，如果一个键已经过期，那么不会被保存到RDB文件之中。在载入RDB文件的时候，如果以主服务器的方式运行，那么过期的键不会被载入到数据库之中。如果以从服务器的方式运行，那么无论键是否过期都会被载入，因为在于主服务器同步的时候，从服务器的数据就会清空，所以对从服务器也没有影响。</p>
+<h3 id="复制功能处理"><a href="#复制功能处理" class="headerlink" title="复制功能处理"></a>复制功能处理</h3><p>当处于服务器处于复制模式下时，服务器的过期删除键由主服务器控制。在主服务器删除一个过期键之后，会向从服务器发送一个DEL命令，告诉从服务器删除该键。从服务器即使键到达了过期时间也不会删除，知道收到DEL命令时才进行删除。通过主服务器统一的删除过期键可以保证主从一致性。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>TCP的拥塞控制算法</title>
+    <url>/2020/08/31/TCP%E7%9A%84%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在解释TCP的拥塞控制算法之前，需要了解TCP的两个窗口RWND接收窗口和CWND拥塞窗口。  </p>
+<p>接收端会维护接收窗口，会告诉发送端自己能够处理多少的数据，在发送ACK的时候，会告诉发送端自己的接收窗口的大小。    </p>
+<p>发送端会维护拥塞窗口，当网络上出现丢包等表明网络拥塞的情况时的情况时，需要修改自己的窗口大小来进行调整。  </p>
+<p>接收窗口的数值接收端能够明确的告诉发送端具体的大小，但是拥塞窗口没有明确的数值告诉发送方应该设置为多大。</p>
+<p>为了解决这一问题，需要使用到拥塞控制算法，来告诉发送方应该设置窗口为多大来避免出现网络拥塞。</p>
+<h2 id="Tahoe和RENO算法"><a href="#Tahoe和RENO算法" class="headerlink" title="Tahoe和RENO算法"></a>Tahoe和RENO算法</h2><p>在最原始的拥塞控制算法Tahoe中，将整个拥塞控制算法分为慢启动和拥塞避免两个部分。  </p>
+<p>慢启动指的是TCP连接刚建立的时候，一点一点的提速，试探网络的承受能力。每过一个RTT，拥塞窗口的大小翻倍，直到CWND大小达到了设置的慢启动阈值ssthresh或者发生了丢包，进入到拥塞避免算法。  </p>
+<p>在拥塞避免的过程中，每过一个RTT，CWND的大小加一。当网络中发生丢包时，将ssthresh设置为当前CWND的一半，CWND重置为1进入慢启动过程。</p>
+<p><img data-src="Tahoe.png" alt="Tahoe算法图示"></p>
+<p>RENO算法在Tahoe上进行了改进，当网络中出现了重复确认的情况时，Reno算法只会降低CWND为当前CWND大小的一半，来提高网络的利用率。</p>
+<p><img data-src="Reno.png" alt="RENO算法图示"></p>
+<p>Reno的问题主要有以下几点：</p>
+<ul>
+<li>在于受链路Buffer的影响很大。</li>
+<li>因为其CWND大小每次只能加一,对于高带宽网络可能需要很长的时间才能够到达合适的拥塞窗口大小，在过程中会浪费大量的网络带宽，对于高带宽的网络利用率相当低。</li>
+<li>每收到一个ACK就将CWND加一，对于RTT小的连接，其CWND的增长速度会很快，但是对于RTT大的连接，其在链路上占用的资源会比较小。RTT小的连接会不公平的占用更多的带宽。</li>
+</ul>
+<h2 id="BIC和CUBIC算法"><a href="#BIC和CUBIC算法" class="headerlink" title="BIC和CUBIC算法"></a>BIC和CUBIC算法</h2><p>BIC算法在RENO的基础上做了一些改进，将拥塞避免的过程分为三部分</p>
+<ul>
+<li>在丢包后将CWND降为丢包时 CWND 的常数倍（一般为0.8),并选择上次丢包时的CWND和本次丢包的CWND作为饱和点，然后以一个较快的速度增长CWND大小。</li>
+<li>在接近饱和点，使用二分算法来去逐步的接近饱和点。</li>
+<li>到达饱和点之后转为二次函数去探测下一个极限。当出现丢包时重复第一部分。</li>
+</ul>
+<p>BIC的好处在于丢包后能够迅速的进行恢复，在稳定期能够保持更长的时间，同时能够继续探测更高的带宽值。</p>
+<p><img data-src="BIC.png" alt="BIC算法图示"></p>
+<p>CUBIC比BIC算法在搜索拥塞窗口最大值的过程中更加的温和，使用三次函数来代替二分算法并且使用拐点值作为拥塞窗口的大小。</p>
+<p><img data-src="CUBIC.png" alt="CUBIC算法图示"></p>
+<p>CUBIC 的优势在于因为其算法与RTT无关，所以更加公平，同时适合于网络带宽大的网络。</p>
+<p>但是CUBIC依旧有缺点，其缺点在于当网络的传输带宽出现变化时，需要比较长的时间才能达到Wmax，同时CUBIC更容易加重链路的负担。</p>
+<h2 id="VEGAS-算法"><a href="#VEGAS-算法" class="headerlink" title="VEGAS 算法"></a>VEGAS 算法</h2><p>基于丢包的算法可以达到最大的传输速率，但是它是以高延迟和高丢包率作为代价的，但是它是以高延迟和高丢包率作为代价的。随着内存价格降低，交换机的Buffer越来越大后，容易导致Bufferfloat，</p>
+<p>与之前基于丢包的算法不同，VEGAS 算法会监控RTT，在尝试增加发送速率时如果发现丢包或者RTT增加就降低发送速率，认为网络中出现拥塞，就将降低发送速率。</p>
+<p>但是其致命的缺点在于不能很好的跟基于丢包的算法共存，在同时使用时会导致竞争不过基于丢包的算法，因此没有得到大规模的应用。</p>
+<h2 id="PRR-算法"><a href="#PRR-算法" class="headerlink" title="PRR 算法"></a>PRR 算法</h2><p>TODO</p>
+<h2 id="BBR算法"><a href="#BBR算法" class="headerlink" title="BBR算法"></a>BBR算法</h2><p>TODO</p>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://zh.wikipedia.org/wiki/TCP%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6">TCP拥塞控制-维基百科</a><br><a href="https://juejin.im/post/6844904164837818382">常见 TCP 拥塞避免算法浏览-掘金</a><br><a href="https://zhuanlan.zhihu.com/p/144273871">TCP拥塞控制详解-知乎</a></p>
+]]></content>
+      <categories>
+        <category>网络</category>
+      </categories>
+      <tags>
+        <tag>TCP</tag>
+        <tag>拥塞控制</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Redis实现主从复制原理</title>
     <url>/2020/09/11/Redis%E5%AE%9E%E7%8E%B0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%8E%9F%E7%90%86/</url>
     <content><![CDATA[<p>在Redis中可以通过SLAVEOF（5.0版本以后可使用REPLICAOF）命令让一个服务器去复制另一个服务器。被复制的服务器被称为主服务器，对主服务器进行复制的服务器成为从服务器。Redis进行主从同步的过程如下：</p>
@@ -804,50 +932,30 @@
       </tags>
   </entry>
   <entry>
-    <title>TCP的拥塞控制算法</title>
-    <url>/2020/08/31/TCP%E7%9A%84%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%AE%97%E6%B3%95/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在解释TCP的拥塞控制算法之前，需要了解TCP的两个窗口RWND接收窗口和CWND拥塞窗口。  </p>
-<p>接收端会维护接收窗口，会告诉发送端自己能够处理多少的数据，在发送ACK的时候，会告诉发送端自己的接收窗口的大小。    </p>
-<p>发送端会维护拥塞窗口，当网络上出现丢包等表明网络拥塞的情况时的情况时，需要修改自己的窗口大小来进行调整。  </p>
-<p>接收窗口的数值接收端能够明确的告诉发送端具体的大小，但是拥塞窗口没有明确的数值告诉发送方应该设置为多大。</p>
-<p>为了解决这一问题，需要使用到拥塞控制算法，来告诉发送方应该设置窗口为多大来避免出现网络拥塞。</p>
-<h2 id="Tahoe和RENO算法"><a href="#Tahoe和RENO算法" class="headerlink" title="Tahoe和RENO算法"></a>Tahoe和RENO算法</h2><p>在最原始的拥塞控制算法Tahoe中，将整个拥塞控制算法分为慢启动和拥塞避免两个部分。  </p>
-<p>慢启动指的是TCP连接刚建立的时候，一点一点的提速，试探网络的承受能力。每过一个RTT，拥塞窗口的大小翻倍，直到CWND大小达到了设置的慢启动阈值ssthresh或者发生了丢包，进入到拥塞避免算法。  </p>
-<p>在拥塞避免的过程中，每过一个RTT，CWND的大小加一。当网络中发生丢包时，将ssthresh设置为当前CWND的一半，CWND重置为1进入慢启动过程。</p>
-<p><img data-src="Tahoe.png" alt="Tahoe算法图示"></p>
-<p>RENO算法在Tahoe上进行了改进，当网络中出现了重复确认的情况时，Reno算法只会降低CWND为当前CWND大小的一半，来提高网络的利用率。</p>
-<p><img data-src="Reno.png" alt="RENO算法图示"></p>
-<p>Reno的问题主要有以下几点：</p>
-<ul>
-<li>在于受链路Buffer的影响很大。</li>
-<li>因为其CWND大小每次只能加一,对于高带宽网络可能需要很长的时间才能够到达合适的拥塞窗口大小，在过程中会浪费大量的网络带宽，对于高带宽的网络利用率相当低。</li>
-<li>每收到一个ACK就将CWND加一，对于RTT小的连接，其CWND的增长速度会很快，但是对于RTT大的连接，其在链路上占用的资源会比较小。RTT小的连接会不公平的占用更多的带宽。</li>
-</ul>
-<h2 id="BIC和CUBIC算法"><a href="#BIC和CUBIC算法" class="headerlink" title="BIC和CUBIC算法"></a>BIC和CUBIC算法</h2><p>BIC算法在RENO的基础上做了一些改进，将拥塞避免的过程分为三部分</p>
-<ul>
-<li>在丢包后将CWND降为丢包时 CWND 的常数倍（一般为0.8),并选择上次丢包时的CWND和本次丢包的CWND作为饱和点，然后以一个较快的速度增长CWND大小。</li>
-<li>在接近饱和点，使用二分算法来去逐步的接近饱和点。</li>
-<li>到达饱和点之后转为二次函数去探测下一个极限。当出现丢包时重复第一部分。</li>
-</ul>
-<p>BIC的好处在于丢包后能够迅速的进行恢复，在稳定期能够保持更长的时间，同时能够继续探测更高的带宽值。</p>
-<p><img data-src="BIC.png" alt="BIC算法图示"></p>
-<p>CUBIC比BIC算法在搜索拥塞窗口最大值的过程中更加的温和，使用三次函数来代替二分算法并且使用拐点值作为拥塞窗口的大小。</p>
-<p><img data-src="CUBIC.png" alt="CUBIC算法图示"></p>
-<p>CUBIC 的优势在于因为其算法与RTT无关，所以更加公平，同时适合于网络带宽大的网络。</p>
-<p>但是CUBIC依旧有缺点，其缺点在于当网络的传输带宽出现变化时，需要比较长的时间才能达到Wmax，同时CUBIC更容易加重链路的负担。</p>
-<h2 id="VEGAS-算法"><a href="#VEGAS-算法" class="headerlink" title="VEGAS 算法"></a>VEGAS 算法</h2><p>基于丢包的算法可以达到最大的传输速率，但是它是以高延迟和高丢包率作为代价的，但是它是以高延迟和高丢包率作为代价的。随着内存价格降低，交换机的Buffer越来越大后，容易导致Bufferfloat，</p>
-<p>与之前基于丢包的算法不同，VEGAS 算法会监控RTT，在尝试增加发送速率时如果发现丢包或者RTT增加就降低发送速率，认为网络中出现拥塞，就将降低发送速率。</p>
-<p>但是其致命的缺点在于不能很好的跟基于丢包的算法共存，在同时使用时会导致竞争不过基于丢包的算法，因此没有得到大规模的应用。</p>
-<h2 id="PRR-算法"><a href="#PRR-算法" class="headerlink" title="PRR 算法"></a>PRR 算法</h2><p>TODO</p>
-<h2 id="BBR算法"><a href="#BBR算法" class="headerlink" title="BBR算法"></a>BBR算法</h2><p>TODO</p>
-<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://zh.wikipedia.org/wiki/TCP%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6">TCP拥塞控制-维基百科</a><br><a href="https://juejin.im/post/6844904164837818382">常见 TCP 拥塞避免算法浏览-掘金</a><br><a href="https://zhuanlan.zhihu.com/p/144273871">TCP拥塞控制详解-知乎</a></p>
+    <title>netty常用概念</title>
+    <url>/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h2 id="channel"><a href="#channel" class="headerlink" title="channel"></a>channel</h2><p>Channel接口是Netty对网络操作的抽象类，代表一个到实体（如硬件设备、网络套接字、文件等等）的开放连接，包含基本的读写操作。常用的Channel接口实现类包括NioServerSocketChannel和NioSocketChannel。这两个相当于BIO编程模型中的ServerSocket以及Socket两个概念。</p>
+<h2 id="Future"><a href="#Future" class="headerlink" title="Future"></a>Future</h2><p>Netty是异步非阻塞的，所有的IO操作都是异步的，因此无法立即得到操作是否执行成功。通过Future提供了一种在操作完成时通知应用程序的方法，这个对象可以看作是一个异步操作的结果的占位符。</p>
+<p>Netty提供了自己的实现ChannelFuture，其中addListener()方法可以注册一个ChannelFutureListener，当操作执行完成时，会自动触发返回结果。还可以通过sync()方法将异步的操作转换为同步的。</p>
+<h2 id="ChannelHandler"><a href="#ChannelHandler" class="headerlink" title="ChannelHandler"></a>ChannelHandler</h2><p>Netty使用不同的事件来通知我们状态的改变或者是操作的状态。ChannelHandler 是消息的具体处理器。他负责处理读写操作、客户端连接等事情。</p>
+<p>ChannelPipeline是ChannelHandler构成的链条，可以通过ChannelPipeline的add()方法添加ChannelHandler。</p>
+<p>Netty也提供了预定义的ChannelHandler实现，包括实现HTTP,TLS的ChannelHandler。</p>
+<h2 id="Eventloop"><a href="#Eventloop" class="headerlink" title="Eventloop"></a>Eventloop</h2><p>EventLoop 的主要作用实际就是负责监听网络事件并调用事件处理器进行相关 I/O 操作的处理。</p>
+<p>EventLoopGroup 包含多个 EventLoop。</p>
+<p>当客户端连接服务端时，bossGroup会处理客户端连接请求。当客户端处理完成后，会将这个连接提交workerGroup来处理，然后workerGroup负责处理其 IO 相关操作。</p>
+<h2 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h2><p>Bootstrap 是客户端的启动引导类，通过connect()方法连接到远程的主机和端口，作为TCP连接的客户端，也可以通过bind()方法绑定一个本地端口，作为UDP协议通信中的一端。</p>
+<p>ServerBootstrap是服务端的启动引导类，使用bind放大绑定到本地端口上，等待客户端的连接。 </p>
+<h2 id="线程模型"><a href="#线程模型" class="headerlink" title="线程模型"></a>线程模型</h2><p>Netty线程模型基于Reactor模式设计开发。Reactor 模式基于事件驱动，采用多路复用将事件分发给相应的Handler处理。Netty主要靠NioEventLoopGroup线程池来实现具体的线程模型的。在实现服务端的时候，一般会初始化两个线程组，分别为bossGroup用于接受连接以及workerGroup负责具体的处理。其中bossGroup和workerGroup可以共用同一个EventLoopGroup。</p>
+<h2 id="长连接与心跳机制"><a href="#长连接与心跳机制" class="headerlink" title="长连接与心跳机制"></a>长连接与心跳机制</h2><p>短连接指的是server与client端建立连接以后，读写完成之后就关闭掉连接，如果下次还需要继续发送消息，那么就要重新建立连接。</p>
+<p>长连接说的就是 client 向 server 双方建立连接之后，它们之间的连接并不会主动关闭，后续的读写操作会继续使用这个连接。长连接的可以省去较多的 TCP 建立和关闭的操作，降低对网络资源的消耗。</p>
+<p>在保存长连接的过程中，如果遇到断网等情况，需要使用到心跳机制判断对方是否已经掉线。如果client与server之间在一定时间内没有数据交互时，会发送一个特殊的数据包给对方，当接收方收到这个数据报文后, 也立即发送一个特殊的数据报文。当某一端收到心跳消息以后，就可以知道对方仍然在线，确保TCP连接的有效性。</p>
 ]]></content>
       <categories>
-        <category>网络</category>
+        <category>Netty</category>
       </categories>
       <tags>
-        <tag>TCP</tag>
-        <tag>拥塞控制</tag>
+        <tag>网络</tag>
+        <tag>Netty</tag>
       </tags>
   </entry>
   <entry>
@@ -907,36 +1015,6 @@
       </categories>
       <tags>
         <tag>Kafka</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Redis如何删除过期键</title>
-    <url>/2020/09/09/Redis%E5%A6%82%E4%BD%95%E5%88%A0%E9%99%A4%E8%BF%87%E6%9C%9F%E9%94%AE/</url>
-    <content><![CDATA[<p>通过EXPIRE，PEXPIRE，SETEX等指令，Redis可以为数据库中的某键设置生存时间，在经过指定时间之后，服务器就会删除生存时间为0的键。</p>
-<h2 id="设置过期时间"><a href="#设置过期时间" class="headerlink" title="设置过期时间"></a>设置过期时间</h2><h3 id="保存过期时间"><a href="#保存过期时间" class="headerlink" title="保存过期时间"></a>保存过期时间</h3><p>redisDb结构的expires字典保存了数据库中所有键的过期时间。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisDb</span> &#123;</span></span><br><span class="line">    <span class="comment">// 数据库键空间，保存着数据库中的所有键值对</span></span><br><span class="line">    dict *dict;                 <span class="comment">/* The keyspace for this DB */</span></span><br><span class="line">    <span class="comment">// 键的过期时间，字典的键为键，字典的值为过期事件 UNIX 时间戳</span></span><br><span class="line">    dict *expires;              <span class="comment">/* Timeout of keys with a timeout set */</span></span><br><span class="line">    <span class="comment">// ...</span></span><br><span class="line">&#125; redisDb;</span><br></pre></td></tr></table></figure>
-
-<p>过期字典的键是一个指针指向键空间中的某一个键对象，值是一个long long类型的整数，保存了毫秒精度的UNIX时间戳。当执行设置过期时间的命令时，服务器会在数据库的过期字典中关联给定的数据库键以及过期时间。</p>
-<h3 id="移除过期时间"><a href="#移除过期时间" class="headerlink" title="移除过期时间"></a>移除过期时间</h3><p>PERSIST命令可以移除一个键的过期时间。当需要移除过期时间时，会从expires字典之中移除给定键的键值对关联。</p>
-<h3 id="返回过期时间"><a href="#返回过期时间" class="headerlink" title="返回过期时间"></a>返回过期时间</h3><p>TTL和PTTL命令可以返回秒或毫秒为单位的剩余生存时间。其都是通过计算两个键的过期时间与当前时间之差来实现的。    </p>
-<h2 id="过期键删除策略"><a href="#过期键删除策略" class="headerlink" title="过期键删除策略"></a>过期键删除策略</h2><h3 id="可能的删除策略"><a href="#可能的删除策略" class="headerlink" title="可能的删除策略"></a>可能的删除策略</h3><h4 id="定时删除"><a href="#定时删除" class="headerlink" title="定时删除"></a>定时删除</h4><p>通过在设置键的同时，创建一个定时器。在定时器结束时，立即删除该键。该策略对内存友好，可以保证过期键最快的被删除。但是在比较多过期键的情况下，会很占用CPU资源，导致服务器的响应时间降低。</p>
-<h4 id="惰性删除"><a href="#惰性删除" class="headerlink" title="惰性删除"></a>惰性删除</h4><p>惰性删除指的是当从键空间中获取值时，检查该键是否过期，如果过期的话，则删除该键，否则返回该键。惰性删除策略不会在删除其他无关键上花费CPU时间，属于CPU友好型策略。但是如果一个键已经过期但是一致没有被访问到，那么该键永远不会过期，所占用的内存永远不会释放。</p>
-<h4 id="定期删除"><a href="#定期删除" class="headerlink" title="定期删除"></a>定期删除</h4><p>每隔一段时间，对数据库进行检查，删除其中的过期键。其难点在于确定执行的时长与频率。如果执行的太频繁，会导致占用过多CPU，如果执行的太少，会导致内存浪费的情况。</p>
-<h3 id="Redis中的删除策略实现"><a href="#Redis中的删除策略实现" class="headerlink" title="Redis中的删除策略实现"></a>Redis中的删除策略实现</h3><p>Redis中整合了惰性删除和定期删除两种策略，取得了合理使用CPU时间和内存空间之间的平衡。</p>
-<h4 id="惰性删除实现"><a href="#惰性删除实现" class="headerlink" title="惰性删除实现"></a>惰性删除实现</h4><p>所有读写redis命令在执行之前都会调用惰性删除的代码进行判断，惰性删除的代码如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * 检查 key 是否已经过期，如果是的话，将它从数据库中删除。</span></span><br><span class="line"><span class="comment"> *</span></span><br><span class="line"><span class="comment"> * 返回 0 表示键没有过期时间，或者键未过期。</span></span><br><span class="line"><span class="comment"> * 返回 1 表示键已经因为过期而被删除了。</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">expireIfNeeded</span><span class="params">(redisDb *db, robj *key)</span> </span>&#123;</span><br><span class="line">    <span class="comment">// 取出键的过期时间</span></span><br><span class="line">    <span class="keyword">mstime_t</span> when = getExpire(db,key);</span><br><span class="line">    <span class="keyword">mstime_t</span> now;</span><br><span class="line">    <span class="comment">// 没有过期时间</span></span><br><span class="line">    <span class="keyword">if</span> (when &lt; <span class="number">0</span>) <span class="keyword">return</span> <span class="number">0</span>; </span><br><span class="line">    <span class="comment">// 如果服务器正在进行载入，那么不进行任何过期检查</span></span><br><span class="line">    <span class="keyword">if</span> (server.loading) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">	<span class="comment">// 当前时间</span></span><br><span class="line">    now = server.lua_caller ? server.lua_time_start : mstime();</span><br><span class="line">    <span class="comment">// 当服务器运行在 replication 模式时</span></span><br><span class="line">    <span class="comment">// 附属节点并不主动删除 key</span></span><br><span class="line">    <span class="comment">// 它只返回一个逻辑上正确的返回值</span></span><br><span class="line">    <span class="comment">// 真正的删除操作要等待主节点发来删除命令时才执行</span></span><br><span class="line">    <span class="comment">// 从而保证数据的同步</span></span><br><span class="line">    <span class="keyword">if</span> (server.masterhost != <span class="literal">NULL</span>) <span class="keyword">return</span> now &gt; when;</span><br><span class="line">    <span class="comment">// 运行到这里，表示键带有过期时间，并且服务器为主节点</span></span><br><span class="line">    <span class="comment">// 如果未过期，返回 0</span></span><br><span class="line">    <span class="keyword">if</span> (now &lt;= when) <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    server.stat_expiredkeys++;</span><br><span class="line">    <span class="comment">// 向 AOF 文件和附属节点传播过期信息</span></span><br><span class="line">    propagateExpire(db,key);</span><br><span class="line">    <span class="comment">// 发送事件通知</span></span><br><span class="line">    notifyKeyspaceEvent(REDIS_NOTIFY_EXPIRED,</span><br><span class="line">        <span class="string">&quot;expired&quot;</span>,key,db-&gt;id);</span><br><span class="line">    <span class="comment">// 将过期键从数据库中删除</span></span><br><span class="line">    <span class="keyword">return</span> dbDelete(db,key);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果键已经过期，那么该函数会将输入的键从数据库之中删除，否则不做任何动作。当处理后的键仍然存在时，命令会按照存在的情况继续执行，否则按照不存在的情况执行。</p>
-<h4 id="定期删除实现"><a href="#定期删除实现" class="headerlink" title="定期删除实现"></a>定期删除实现</h4><p>每当Redis的周期操作函数serverCron函数执行时，会调用activeExpireCycle函数进行过期键的清理。其会在规定的时间内，分次遍历数据库中的各个数据库，从expires字典中随机检查一部分过期时间，并删除其中的过期键。在扫描的时候，会提供一个全局变量记录上一次扫描的进度，并在下一次调用时，接着上一次的进度进行新一轮的检查工作。</p>
-<h2 id="AOF-RDB和复制功能处理过期键"><a href="#AOF-RDB和复制功能处理过期键" class="headerlink" title="AOF,RDB和复制功能处理过期键"></a>AOF,RDB和复制功能处理过期键</h2><h3 id="AOF文件处理"><a href="#AOF文件处理" class="headerlink" title="AOF文件处理"></a>AOF文件处理</h3><p>当一个键已经过期时并被删除时，Redis会像AOF日志之中添加一条DEL命令，来记录该键已经被删除。在进行AOF重写的时候，程序会对数据库中的键进行检查，已过期的键不会保存到重写以后的AOF日志之中。</p>
-<h3 id="RDB文件处理"><a href="#RDB文件处理" class="headerlink" title="RDB文件处理"></a>RDB文件处理</h3><p>在生成RDB文件的时候，如果一个键已经过期，那么不会被保存到RDB文件之中。在载入RDB文件的时候，如果以主服务器的方式运行，那么过期的键不会被载入到数据库之中。如果以从服务器的方式运行，那么无论键是否过期都会被载入，因为在于主服务器同步的时候，从服务器的数据就会清空，所以对从服务器也没有影响。</p>
-<h3 id="复制功能处理"><a href="#复制功能处理" class="headerlink" title="复制功能处理"></a>复制功能处理</h3><p>当处于服务器处于复制模式下时，服务器的过期删除键由主服务器控制。在主服务器删除一个过期键之后，会向从服务器发送一个DEL命令，告诉从服务器删除该键。从服务器即使键到达了过期时间也不会删除，知道收到DEL命令时才进行删除。通过主服务器统一的删除过期键可以保证主从一致性。</p>
-]]></content>
-      <categories>
-        <category>Redis</category>
-      </categories>
-      <tags>
-        <tag>Redis</tag>
       </tags>
   </entry>
   <entry>
@@ -1057,99 +1135,6 @@
       </tags>
   </entry>
   <entry>
-    <title>netty常用概念</title>
-    <url>/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/</url>
-    <content><![CDATA[<h2 id="channel"><a href="#channel" class="headerlink" title="channel"></a>channel</h2><p>Channel接口是Netty对网络操作的抽象类，代表一个到实体（如硬件设备、网络套接字、文件等等）的开放连接，包含基本的读写操作。常用的Channel接口实现类包括NioServerSocketChannel和NioSocketChannel。这两个相当于BIO编程模型中的ServerSocket以及Socket两个概念。</p>
-<h2 id="Future"><a href="#Future" class="headerlink" title="Future"></a>Future</h2><p>Netty是异步非阻塞的，所有的IO操作都是异步的，因此无法立即得到操作是否执行成功。通过Future提供了一种在操作完成时通知应用程序的方法，这个对象可以看作是一个异步操作的结果的占位符。</p>
-<p>Netty提供了自己的实现ChannelFuture，其中addListener()方法可以注册一个ChannelFutureListener，当操作执行完成时，会自动触发返回结果。还可以通过sync()方法将异步的操作转换为同步的。</p>
-<h2 id="ChannelHandler"><a href="#ChannelHandler" class="headerlink" title="ChannelHandler"></a>ChannelHandler</h2><p>Netty使用不同的事件来通知我们状态的改变或者是操作的状态。ChannelHandler 是消息的具体处理器。他负责处理读写操作、客户端连接等事情。</p>
-<p>ChannelPipeline是ChannelHandler构成的链条，可以通过ChannelPipeline的add()方法添加ChannelHandler。</p>
-<p>Netty也提供了预定义的ChannelHandler实现，包括实现HTTP,TLS的ChannelHandler。</p>
-<h2 id="Eventloop"><a href="#Eventloop" class="headerlink" title="Eventloop"></a>Eventloop</h2><p>EventLoop 的主要作用实际就是负责监听网络事件并调用事件处理器进行相关 I/O 操作的处理。</p>
-<p>EventLoopGroup 包含多个 EventLoop。</p>
-<p>当客户端连接服务端时，bossGroup会处理客户端连接请求。当客户端处理完成后，会将这个连接提交workerGroup来处理，然后workerGroup负责处理其 IO 相关操作。</p>
-<h2 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h2><p>Bootstrap 是客户端的启动引导类，通过connect()方法连接到远程的主机和端口，作为TCP连接的客户端，也可以通过bind()方法绑定一个本地端口，作为UDP协议通信中的一端。</p>
-<p>ServerBootstrap是服务端的启动引导类，使用bind放大绑定到本地端口上，等待客户端的连接。 </p>
-<h2 id="线程模型"><a href="#线程模型" class="headerlink" title="线程模型"></a>线程模型</h2><p>Netty线程模型基于Reactor模式设计开发。Reactor 模式基于事件驱动，采用多路复用将事件分发给相应的Handler处理。Netty主要靠NioEventLoopGroup线程池来实现具体的线程模型的。在实现服务端的时候，一般会初始化两个线程组，分别为bossGroup用于接受连接以及workerGroup负责具体的处理。其中bossGroup和workerGroup可以共用同一个EventLoopGroup。</p>
-<h2 id="长连接与心跳机制"><a href="#长连接与心跳机制" class="headerlink" title="长连接与心跳机制"></a>长连接与心跳机制</h2><p>短连接指的是server与client端建立连接以后，读写完成之后就关闭掉连接，如果下次还需要继续发送消息，那么就要重新建立连接。</p>
-<p>长连接说的就是 client 向 server 双方建立连接之后，它们之间的连接并不会主动关闭，后续的读写操作会继续使用这个连接。长连接的可以省去较多的 TCP 建立和关闭的操作，降低对网络资源的消耗。</p>
-<p>在保存长连接的过程中，如果遇到断网等情况，需要使用到心跳机制判断对方是否已经掉线。如果client与server之间在一定时间内没有数据交互时，会发送一个特殊的数据包给对方，当接收方收到这个数据报文后, 也立即发送一个特殊的数据报文。当某一端收到心跳消息以后，就可以知道对方仍然在线，确保TCP连接的有效性。</p>
-]]></content>
-      <categories>
-        <category>Netty</category>
-      </categories>
-      <tags>
-        <tag>网络</tag>
-        <tag>Netty</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>操作系统文件管理</title>
-    <url>/2020/12/10/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86/</url>
-    <content><![CDATA[<p>文件系统是操作系统中文件的管理者。文件系统为上层用户提供文件抽象并实现文件访问所需要的接口，同时以特定的存储格式在下层存储设备中维护每个文件的数据以及元数据。操作系统将存储设备抽象为块设备，块设备上的的存储空间被划分为固定大小的存储块，每个存储块有一个地址被称为块号。</p>
-<h2 id="基于inode的文件系统"><a href="#基于inode的文件系统" class="headerlink" title="基于inode的文件系统"></a>基于inode的文件系统</h2><h3 id="inode"><a href="#inode" class="headerlink" title="inode"></a>inode</h3><p>inode是“index node”的简写，即索引节点，记录了一个文件所对应的所有存储块号。inode中保存了三种存储指针，第一种指针为直接指针，其直接指向数据块，数据块中保存了文件数据；第二种指针为间接指针，指向了一个一级索引块，一级索引块中存放者指向数据块的指针。第三种指针为二级间接指针，指向一个二级索引块，二级索引块的每个指针都指向一个一级索引块，进而指向多个数据块。</p>
-<p><img data-src="%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%5Cinode%E6%95%B0%E6%8D%AE%E7%B4%A2%E5%BC%95.png" alt="inode数据索引"></p>
-<p>通过上述的组织方式可以看出，一个文件系统所支持的最大文件大小收到文件数据组织方式的限制，通过调整inode的设计可以改变其能够管理的最大文件大小。为了支持更大的文件，inode还可以启用三级或者四级间接指针。</p>
-<p>inode还会记录该文件的其他元数据，例如文件模式、链接数、文件大小、文件访问时间等。</p>
-<h3 id="存储结构"><a href="#存储结构" class="headerlink" title="存储结构"></a>存储结构</h3><p>文件系统以特定的存储布局将文件数据以及元数据保存在存储设备之中。为了高效的管理这些文件数据以及元数据，文件系统通常将存储空间划分为不同区域，分别用于不同功能。通常一个存储设备会被划分为超级块、块分配信息、inode分配信息、inode表以及文件数据块等区域。</p>
-<p>超级块记录了整个文件系统的全局元数据，例如文件系统的版本、所管理空间大小、最后一次的挂载时间以及一些统计信息（例如最大inode数、空闲inode数、最大块数量、空闲块数量）。</p>
-<p>块分配信息使用位图（bitmap）的格式来标记文件数据块区域中各个块的使用情况，如果为比特位为1则表示对应的数据块已经被分配和使用，若为0则代表对应的数据块空闲。inode分配信息与块分配信息类似，其对应的是每个inode的使用情况。</p>
-<p>inode表以数组的形式存放整个文件系统的所有inode结构，文件系统使用inode在此表中的索引对不同inode进行区分。</p>
-<p>剩余的存储空间为文件数据块区域，用于保存文件的数据。</p>
-<h2 id="虚拟文件系统VFS"><a href="#虚拟文件系统VFS" class="headerlink" title="虚拟文件系统VFS"></a>虚拟文件系统VFS</h2><p>在一个计算机之中可能存在多个文件系统，需要使用到虚拟文件系统（VFS）对多种文件系统进行管理和协调，允许它们在同一个操作系统上共同工作。VFS定义了一系列内存数据结构，并要求底层的不同文件系统提供指定的方法，利用这些方法将不同文件系统的元数据统一转化为VFS的内存数据结构。</p>
-]]></content>
-      <categories>
-        <category>操作系统</category>
-      </categories>
-      <tags>
-        <tag>操作系统</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>操作系统调度</title>
-    <url>/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/</url>
-    <content><![CDATA[<p>操作系统会同时处理多个请求，但是硬件的运行资源是有限的。调度就是用来协调每个请求对于资源的使用方法。</p>
-<p>一般调度器会通过维护运行队列来管理任务。运行队列不一定需要使用先进先出的队列，例如在Linux中使用的调度器就会使用红黑树来运行队列。当任务在执行时出发一定的条件（例如运行了指定的时间片以后或者发起了IO请求），那么会被加入到运行队列之中，等待再次被调度执行。</p>
-<h2 id="调度指标"><a href="#调度指标" class="headerlink" title="调度指标"></a>调度指标</h2><p>在计算机处理的任务之中，有一类任务被称为批处理任务（比如复杂的科学计算等等），这些任务在执行时无需与用户进行交互，其主要的调度指标为任务处理的吞吐量，需要让吞吐量尽可能高，周转周期（即花费的时间）尽可能短。</p>
-<p>还有一类任务为交互式任务，，需要在执行过程中对用户的操作做出响应。这类任务需要保证响应时间足够短使用户获得良好体验。</p>
-<p>同时还有一类有截止时间要求的实时任务（例如车载操作系统需要检测汽车与外部物体的距离）。调度器必须让逝世人物在截止时间前完成，满足实时性的要求。</p>
-<p>同时在移动设备中，调度器还需要尽可能地降低能耗。在通常情况下，调度器需要保证每个任务都有执行的机会，即满足公平性。调度器做出决策的时间也必须短，降低调度开销。</p>
-<p>因此调度器在不同场景下有着不同的调度指标，需要在诸多方面做出权衡。</p>
-<h2 id="调度机制"><a href="#调度机制" class="headerlink" title="调度机制"></a>调度机制</h2><p>进程可能处于不同的状态，这些状态包括新生、预备、运行、阻塞、终止。进程调度机制就负责在这些状态间进行转换。进程调度根据职责的不同，分为长期、中期、短期调度。</p>
-<p>当用户像操作系统提交了执行某个程序的请求以后，系统可能不会立即处理该请求，这一决策由长期调度负责。长期调度用于限制系统中真正被短期调度管理的进程数量，避免短期调度的开销过大。只有当长期调度为某个程序创建了进程并且将状态设置为预备状态以后，才会由短期调度进一步管理该线程。</p>
-<p>短期调度负责进程在预备状态、运行状态以及阻塞状态之间的转换。在短期调度决定执行某个进程以后，会将该进程从预备状态设置为运行状态。短期调度会使用适当的调度策略，尽可能地满足系统的调度指标。</p>
-<p>中期调度实际上是换页机制的一部分。当系统中的进程已经占用了大量的内存资源以后，中期调度会挂起系统中被短期调度管理的进程，从而降低进程占用的内存总量。中期调度策略会根据策略来选择将要被挂起的进程，设置为对应的挂起状态，使其不再被调度执行。同时中期调度也会监控当前的内存使用情况，在适当的时机激活此前挂起的进程，使其可以重新被调度。</p>
-<p>在引入了调度机制以后，进程转换的示意图变为如下所示。与之前的示意图相比，其区别在与引入了两个额外的进程状态：预备挂起状态以及挂起阻塞状态。</p>
-<p><img data-src="%E5%9F%BA%E4%BA%8E%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E7%9A%84%E8%BF%9B%E7%A8%8B%E8%BD%AC%E6%8D%A2.png" alt="基于进程调度的进程转换"></p>
-<p>在进程调度中，长期中期短期相互协作，分别以不同的目标对进程进行调度。长期调度负责决定是否将一个新的进程纳入调度管理。中期调度负责限制系统中进程的内存占用。短期调度细粒度的调度进程的执行，做出对应的调度策略。</p>
-<h2 id="单核调度策略"><a href="#单核调度策略" class="headerlink" title="单核调度策略"></a>单核调度策略</h2><h3 id="经典调度"><a href="#经典调度" class="headerlink" title="经典调度"></a>经典调度</h3><h4 id="先到先得"><a href="#先到先得" class="headerlink" title="先到先得"></a>先到先得</h4><p>先到先得策略也叫先进先出策略。该策略在系统中维护一个运行队列，在执行任务的时候，选取队列中的第一个任务，将其移除队列并且执行，当任务阻塞时，将其放入运行队列队尾，当一个任务执行完后，再执行下一个任务。</p>
-<p>该策略的弊端在于在长短任务的场景下对于短任务不友好，会导致短任务的周转时间与运行时间之比过大。同时其对IO密集型任务也不够友好，可能会导致I/O密集型任务长时间内无法执行。</p>
-<h4 id="最短时间优先-最短完成时间任务优先"><a href="#最短时间优先-最短完成时间任务优先" class="headerlink" title="最短时间优先/最短完成时间任务优先"></a>最短时间优先/最短完成时间任务优先</h4><p>先到先得策略出现的问题提示我们需要让短任务立即进行执行。根据这一思想，得出的策略就是最短任务优先和最短完成时间任务优先。这两种策略的区别在于是否是抢占式的。前者必须等一个任务执行完成才能开始下一调度，后者会中断正在执行的进程转而执行其他任务。</p>
-<p>这两种调度的弊端在于必须先预知任务的运行时间。同时前者调度策略其表现与任务到达时间点有着严重的依赖，后者调度策略会导致长任务饥饿。</p>
-<h4 id="时间片轮转"><a href="#时间片轮转" class="headerlink" title="时间片轮转"></a>时间片轮转</h4><p>在时间片流转策略中需要为任务设置时间片，限定任务每次执行的时间。当任务执行完时间片以后，就切换到运行队列的下一个任务，这就是时间片轮转策略。由于时间片一般会设的足够小，所有任务都可以在一定时间内执行并且响应用户，从而将响应时间在可接受范围内。</p>
-<p>该策略的弊端在于任务运行时间形似的场景下平均周转周期高，但是如果仅考虑响应时间，那么该策略会有很好的效果。</p>
-<h3 id="优先级调度"><a href="#优先级调度" class="headerlink" title="优先级调度"></a>优先级调度</h3><p>如果操作系统可以分别交互式任务以及批处理任务，那么可以设置让交互式任务优先执行的调度策略，为此调度器引入了优先级的概念。通过优先级概念，调度器可以确定哪些任务应该优先执行。</p>
-<h4 id="多级队列"><a href="#多级队列" class="headerlink" title="多级队列"></a>多级队列</h4><p>每个任务都会被分配预先设置好的优先级，每个优先级一个队列，任务会被存储在对应的优先级队列之中。如果优先级不同的任务同时处于预备状态，那么调度器会选择优先级较高的任务进行调度。一个任务必须等到所有优先级比它高的任务调度完才可以被调度。</p>
-<p>该策略会导致低优先级任务饥饿的问题，很容易出现因为大量的高优先级任务不断地进入系统导致低优先级任务饥饿。</p>
-<h4 id="多级反馈队列"><a href="#多级反馈队列" class="headerlink" title="多级反馈队列"></a>多级反馈队列</h4><p>在多级队列的基础上，多级反馈队列增加了动态设置任务优先级的策略。该策略会先对人物的运行时间进行评估，其中短任务会拥有更高的优先级。但是在真实世界中无法预知任务的完成时间，为此多级反馈队列策略会统计每个任务已经执行多长的时间，以此判断该任务是长任务还是短任务。当任务进入系统时，该策略会默认该任务为短任务，为其设置最高优先级。然后该策略会为每个任务队列设置任务的最大运行时间，如果任务在当前队列运行的总时间最终超过了队列允许的最大时间，那么会认为该任务是运行时间较长的任务，将该任务的优先级减一。</p>
-<p>多级反馈队列策略能够动态的评估任务的运行时间，适配大致的任务优先级。同时在该策略中会定时的将所有任务的优先级提升至最高，保证不会出现任务饥饿的情况。该调度策略能够达到低平均周转周期的同时保证任务的响应时间，避免任务饥饿，在许多的操作系统中得到了应用，例如早期的Linux。</p>
-<h2 id="多核调度策略"><a href="#多核调度策略" class="headerlink" title="多核调度策略"></a>多核调度策略</h2><p>相比于单核调度，多核调度策略还需要解决在哪个CPU上执行的问题。</p>
-<h3 id="负载分担"><a href="#负载分担" class="headerlink" title="负载分担"></a>负载分担</h3><p>沿用单核跳读策略的思路，假设多核共享一个全局运行队列，当一个CPU核心需要调度任务时，从全局运行队列中获取一个任务作为下一个由他执行的任务。</p>
-<p>该策略的优点在于设计实现简单，可以将多和调度策略问题规约为单核调度策略问题，同时不会出现CPU资源浪费的情况。但是也存在对应的问题，例如在多核处理器中，多核之间如何同步全局共享运行队列的信息或导致调度开销变得不可忽视。同时在多个CPU核心之间来回切换的开销很大，人物在不同CPU核心之间切换会导致诸如重新载入缓存、TLB刷新等问题。</p>
-<h3 id="协同调度"><a href="#协同调度" class="headerlink" title="协同调度"></a>协同调度</h3><p>多线程为了充分利用多核处理器，通常会将工作量较大的任务切分为多个子任务，这些子任务中可能会存在依赖关系。协同调度的目的是尽可能让一组任务并行执行，避免调度器调度有依赖关系的两组任务。</p>
-<p>群组调度是协同调度的一个经典策略，其基本思想是将关联任务设置为一组，并且以组为单位调度人物在多个CPU核心上执行，使他们的开始时间与结束时间尽可能保持接近。通过将任务以组为单位在多核处理器上进行调度，群组调度策略可以提升特定应用场景下的任务执行性能。</p>
-<h3 id="两级调度"><a href="#两级调度" class="headerlink" title="两级调度"></a>两级调度</h3><p>由于全局调度器在不同CPU核心上切换执行会造成切换开销，为了减少开销，每个人物都尽可能只在一个CPU核心上进行调度。因此新的调度策略改为每个CPU核心都引入一个本地调度器，并用它管理对应核心上执行的任务。这种调度策略同时使用全局调度器和本地调度器，被称为两级调度。</p>
-<p>当一个任务进入系统时，会根据系统的当前信息，决定该任务在哪个CPU核心上被执行。当一个任务被分配到给定的CPU核心时，将一直被该核心的本地调度器管理，不会迁移到其他CPU核心上运行。</p>
-<h3 id="负载均衡"><a href="#负载均衡" class="headerlink" title="负载均衡"></a>负载均衡</h3><p>两级调度将任务绑定在特定的CPU核心上调度执行，避免了任务在多核间切换，有着良好的性能。但是两级调度没有任务在CPU核心间切换的机制，会导致多核间的负载不均匀。为了解决这一问题，引入了负载均衡策略，通过追踪每个CPU核心的负载情况，将处于高CPU负载核心管理的任务迁移到低负载CPU核心上，保证每个核心负载大致相同。</p>
-]]></content>
-      <categories>
-        <category>操作系统</category>
-      </categories>
-      <tags>
-        <tag>操作系统</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>设计模式之创建型模式</title>
     <url>/2020/09/03/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E5%88%9B%E5%BB%BA%E5%9E%8B%E6%A8%A1%E5%BC%8F/</url>
     <content><![CDATA[<p>创建型模式关注点是如何创建对象，其核心思想是要把对象的创建和使用相分离，这样使得两者能相对独立地变换。</p>
@@ -1233,6 +1218,72 @@
       </categories>
       <tags>
         <tag>设计模式</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>操作系统文件管理</title>
+    <url>/2020/12/10/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86/</url>
+    <content><![CDATA[<p>文件系统是操作系统中文件的管理者。文件系统为上层用户提供文件抽象并实现文件访问所需要的接口，同时以特定的存储格式在下层存储设备中维护每个文件的数据以及元数据。操作系统将存储设备抽象为块设备，块设备上的的存储空间被划分为固定大小的存储块，每个存储块有一个地址被称为块号。</p>
+<h2 id="基于inode的文件系统"><a href="#基于inode的文件系统" class="headerlink" title="基于inode的文件系统"></a>基于inode的文件系统</h2><h3 id="inode"><a href="#inode" class="headerlink" title="inode"></a>inode</h3><p>inode是“index node”的简写，即索引节点，记录了一个文件所对应的所有存储块号。inode中保存了三种存储指针，第一种指针为直接指针，其直接指向数据块，数据块中保存了文件数据；第二种指针为间接指针，指向了一个一级索引块，一级索引块中存放者指向数据块的指针。第三种指针为二级间接指针，指向一个二级索引块，二级索引块的每个指针都指向一个一级索引块，进而指向多个数据块。</p>
+<p><img data-src="%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%5Cinode%E6%95%B0%E6%8D%AE%E7%B4%A2%E5%BC%95.png" alt="inode数据索引"></p>
+<p>通过上述的组织方式可以看出，一个文件系统所支持的最大文件大小收到文件数据组织方式的限制，通过调整inode的设计可以改变其能够管理的最大文件大小。为了支持更大的文件，inode还可以启用三级或者四级间接指针。</p>
+<p>inode还会记录该文件的其他元数据，例如文件模式、链接数、文件大小、文件访问时间等。</p>
+<h3 id="存储结构"><a href="#存储结构" class="headerlink" title="存储结构"></a>存储结构</h3><p>文件系统以特定的存储布局将文件数据以及元数据保存在存储设备之中。为了高效的管理这些文件数据以及元数据，文件系统通常将存储空间划分为不同区域，分别用于不同功能。通常一个存储设备会被划分为超级块、块分配信息、inode分配信息、inode表以及文件数据块等区域。</p>
+<p>超级块记录了整个文件系统的全局元数据，例如文件系统的版本、所管理空间大小、最后一次的挂载时间以及一些统计信息（例如最大inode数、空闲inode数、最大块数量、空闲块数量）。</p>
+<p>块分配信息使用位图（bitmap）的格式来标记文件数据块区域中各个块的使用情况，如果为比特位为1则表示对应的数据块已经被分配和使用，若为0则代表对应的数据块空闲。inode分配信息与块分配信息类似，其对应的是每个inode的使用情况。</p>
+<p>inode表以数组的形式存放整个文件系统的所有inode结构，文件系统使用inode在此表中的索引对不同inode进行区分。</p>
+<p>剩余的存储空间为文件数据块区域，用于保存文件的数据。</p>
+<h2 id="虚拟文件系统VFS"><a href="#虚拟文件系统VFS" class="headerlink" title="虚拟文件系统VFS"></a>虚拟文件系统VFS</h2><p>在一个计算机之中可能存在多个文件系统，需要使用到虚拟文件系统（VFS）对多种文件系统进行管理和协调，允许它们在同一个操作系统上共同工作。VFS定义了一系列内存数据结构，并要求底层的不同文件系统提供指定的方法，利用这些方法将不同文件系统的元数据统一转化为VFS的内存数据结构。</p>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>操作系统调度</title>
+    <url>/2020/11/25/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E8%B0%83%E5%BA%A6/</url>
+    <content><![CDATA[<p>操作系统会同时处理多个请求，但是硬件的运行资源是有限的。调度就是用来协调每个请求对于资源的使用方法。</p>
+<p>一般调度器会通过维护运行队列来管理任务。运行队列不一定需要使用先进先出的队列，例如在Linux中使用的调度器就会使用红黑树来运行队列。当任务在执行时出发一定的条件（例如运行了指定的时间片以后或者发起了IO请求），那么会被加入到运行队列之中，等待再次被调度执行。</p>
+<h2 id="调度指标"><a href="#调度指标" class="headerlink" title="调度指标"></a>调度指标</h2><p>在计算机处理的任务之中，有一类任务被称为批处理任务（比如复杂的科学计算等等），这些任务在执行时无需与用户进行交互，其主要的调度指标为任务处理的吞吐量，需要让吞吐量尽可能高，周转周期（即花费的时间）尽可能短。</p>
+<p>还有一类任务为交互式任务，，需要在执行过程中对用户的操作做出响应。这类任务需要保证响应时间足够短使用户获得良好体验。</p>
+<p>同时还有一类有截止时间要求的实时任务（例如车载操作系统需要检测汽车与外部物体的距离）。调度器必须让逝世人物在截止时间前完成，满足实时性的要求。</p>
+<p>同时在移动设备中，调度器还需要尽可能地降低能耗。在通常情况下，调度器需要保证每个任务都有执行的机会，即满足公平性。调度器做出决策的时间也必须短，降低调度开销。</p>
+<p>因此调度器在不同场景下有着不同的调度指标，需要在诸多方面做出权衡。</p>
+<h2 id="调度机制"><a href="#调度机制" class="headerlink" title="调度机制"></a>调度机制</h2><p>进程可能处于不同的状态，这些状态包括新生、预备、运行、阻塞、终止。进程调度机制就负责在这些状态间进行转换。进程调度根据职责的不同，分为长期、中期、短期调度。</p>
+<p>当用户像操作系统提交了执行某个程序的请求以后，系统可能不会立即处理该请求，这一决策由长期调度负责。长期调度用于限制系统中真正被短期调度管理的进程数量，避免短期调度的开销过大。只有当长期调度为某个程序创建了进程并且将状态设置为预备状态以后，才会由短期调度进一步管理该线程。</p>
+<p>短期调度负责进程在预备状态、运行状态以及阻塞状态之间的转换。在短期调度决定执行某个进程以后，会将该进程从预备状态设置为运行状态。短期调度会使用适当的调度策略，尽可能地满足系统的调度指标。</p>
+<p>中期调度实际上是换页机制的一部分。当系统中的进程已经占用了大量的内存资源以后，中期调度会挂起系统中被短期调度管理的进程，从而降低进程占用的内存总量。中期调度策略会根据策略来选择将要被挂起的进程，设置为对应的挂起状态，使其不再被调度执行。同时中期调度也会监控当前的内存使用情况，在适当的时机激活此前挂起的进程，使其可以重新被调度。</p>
+<p>在引入了调度机制以后，进程转换的示意图变为如下所示。与之前的示意图相比，其区别在与引入了两个额外的进程状态：预备挂起状态以及挂起阻塞状态。</p>
+<p><img data-src="%E5%9F%BA%E4%BA%8E%E8%BF%9B%E7%A8%8B%E8%B0%83%E5%BA%A6%E7%9A%84%E8%BF%9B%E7%A8%8B%E8%BD%AC%E6%8D%A2.png" alt="基于进程调度的进程转换"></p>
+<p>在进程调度中，长期中期短期相互协作，分别以不同的目标对进程进行调度。长期调度负责决定是否将一个新的进程纳入调度管理。中期调度负责限制系统中进程的内存占用。短期调度细粒度的调度进程的执行，做出对应的调度策略。</p>
+<h2 id="单核调度策略"><a href="#单核调度策略" class="headerlink" title="单核调度策略"></a>单核调度策略</h2><h3 id="经典调度"><a href="#经典调度" class="headerlink" title="经典调度"></a>经典调度</h3><h4 id="先到先得"><a href="#先到先得" class="headerlink" title="先到先得"></a>先到先得</h4><p>先到先得策略也叫先进先出策略。该策略在系统中维护一个运行队列，在执行任务的时候，选取队列中的第一个任务，将其移除队列并且执行，当任务阻塞时，将其放入运行队列队尾，当一个任务执行完后，再执行下一个任务。</p>
+<p>该策略的弊端在于在长短任务的场景下对于短任务不友好，会导致短任务的周转时间与运行时间之比过大。同时其对IO密集型任务也不够友好，可能会导致I/O密集型任务长时间内无法执行。</p>
+<h4 id="最短时间优先-最短完成时间任务优先"><a href="#最短时间优先-最短完成时间任务优先" class="headerlink" title="最短时间优先/最短完成时间任务优先"></a>最短时间优先/最短完成时间任务优先</h4><p>先到先得策略出现的问题提示我们需要让短任务立即进行执行。根据这一思想，得出的策略就是最短任务优先和最短完成时间任务优先。这两种策略的区别在于是否是抢占式的。前者必须等一个任务执行完成才能开始下一调度，后者会中断正在执行的进程转而执行其他任务。</p>
+<p>这两种调度的弊端在于必须先预知任务的运行时间。同时前者调度策略其表现与任务到达时间点有着严重的依赖，后者调度策略会导致长任务饥饿。</p>
+<h4 id="时间片轮转"><a href="#时间片轮转" class="headerlink" title="时间片轮转"></a>时间片轮转</h4><p>在时间片流转策略中需要为任务设置时间片，限定任务每次执行的时间。当任务执行完时间片以后，就切换到运行队列的下一个任务，这就是时间片轮转策略。由于时间片一般会设的足够小，所有任务都可以在一定时间内执行并且响应用户，从而将响应时间在可接受范围内。</p>
+<p>该策略的弊端在于任务运行时间形似的场景下平均周转周期高，但是如果仅考虑响应时间，那么该策略会有很好的效果。</p>
+<h3 id="优先级调度"><a href="#优先级调度" class="headerlink" title="优先级调度"></a>优先级调度</h3><p>如果操作系统可以分别交互式任务以及批处理任务，那么可以设置让交互式任务优先执行的调度策略，为此调度器引入了优先级的概念。通过优先级概念，调度器可以确定哪些任务应该优先执行。</p>
+<h4 id="多级队列"><a href="#多级队列" class="headerlink" title="多级队列"></a>多级队列</h4><p>每个任务都会被分配预先设置好的优先级，每个优先级一个队列，任务会被存储在对应的优先级队列之中。如果优先级不同的任务同时处于预备状态，那么调度器会选择优先级较高的任务进行调度。一个任务必须等到所有优先级比它高的任务调度完才可以被调度。</p>
+<p>该策略会导致低优先级任务饥饿的问题，很容易出现因为大量的高优先级任务不断地进入系统导致低优先级任务饥饿。</p>
+<h4 id="多级反馈队列"><a href="#多级反馈队列" class="headerlink" title="多级反馈队列"></a>多级反馈队列</h4><p>在多级队列的基础上，多级反馈队列增加了动态设置任务优先级的策略。该策略会先对人物的运行时间进行评估，其中短任务会拥有更高的优先级。但是在真实世界中无法预知任务的完成时间，为此多级反馈队列策略会统计每个任务已经执行多长的时间，以此判断该任务是长任务还是短任务。当任务进入系统时，该策略会默认该任务为短任务，为其设置最高优先级。然后该策略会为每个任务队列设置任务的最大运行时间，如果任务在当前队列运行的总时间最终超过了队列允许的最大时间，那么会认为该任务是运行时间较长的任务，将该任务的优先级减一。</p>
+<p>多级反馈队列策略能够动态的评估任务的运行时间，适配大致的任务优先级。同时在该策略中会定时的将所有任务的优先级提升至最高，保证不会出现任务饥饿的情况。该调度策略能够达到低平均周转周期的同时保证任务的响应时间，避免任务饥饿，在许多的操作系统中得到了应用，例如早期的Linux。</p>
+<h2 id="多核调度策略"><a href="#多核调度策略" class="headerlink" title="多核调度策略"></a>多核调度策略</h2><p>相比于单核调度，多核调度策略还需要解决在哪个CPU上执行的问题。</p>
+<h3 id="负载分担"><a href="#负载分担" class="headerlink" title="负载分担"></a>负载分担</h3><p>沿用单核跳读策略的思路，假设多核共享一个全局运行队列，当一个CPU核心需要调度任务时，从全局运行队列中获取一个任务作为下一个由他执行的任务。</p>
+<p>该策略的优点在于设计实现简单，可以将多和调度策略问题规约为单核调度策略问题，同时不会出现CPU资源浪费的情况。但是也存在对应的问题，例如在多核处理器中，多核之间如何同步全局共享运行队列的信息或导致调度开销变得不可忽视。同时在多个CPU核心之间来回切换的开销很大，人物在不同CPU核心之间切换会导致诸如重新载入缓存、TLB刷新等问题。</p>
+<h3 id="协同调度"><a href="#协同调度" class="headerlink" title="协同调度"></a>协同调度</h3><p>多线程为了充分利用多核处理器，通常会将工作量较大的任务切分为多个子任务，这些子任务中可能会存在依赖关系。协同调度的目的是尽可能让一组任务并行执行，避免调度器调度有依赖关系的两组任务。</p>
+<p>群组调度是协同调度的一个经典策略，其基本思想是将关联任务设置为一组，并且以组为单位调度人物在多个CPU核心上执行，使他们的开始时间与结束时间尽可能保持接近。通过将任务以组为单位在多核处理器上进行调度，群组调度策略可以提升特定应用场景下的任务执行性能。</p>
+<h3 id="两级调度"><a href="#两级调度" class="headerlink" title="两级调度"></a>两级调度</h3><p>由于全局调度器在不同CPU核心上切换执行会造成切换开销，为了减少开销，每个人物都尽可能只在一个CPU核心上进行调度。因此新的调度策略改为每个CPU核心都引入一个本地调度器，并用它管理对应核心上执行的任务。这种调度策略同时使用全局调度器和本地调度器，被称为两级调度。</p>
+<p>当一个任务进入系统时，会根据系统的当前信息，决定该任务在哪个CPU核心上被执行。当一个任务被分配到给定的CPU核心时，将一直被该核心的本地调度器管理，不会迁移到其他CPU核心上运行。</p>
+<h3 id="负载均衡"><a href="#负载均衡" class="headerlink" title="负载均衡"></a>负载均衡</h3><p>两级调度将任务绑定在特定的CPU核心上调度执行，避免了任务在多核间切换，有着良好的性能。但是两级调度没有任务在CPU核心间切换的机制，会导致多核间的负载不均匀。为了解决这一问题，引入了负载均衡策略，通过追踪每个CPU核心的负载情况，将处于高CPU负载核心管理的任务迁移到低负载CPU核心上，保证每个核心负载大致相同。</p>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
       </tags>
   </entry>
   <entry>
@@ -1329,6 +1380,80 @@
       </tags>
   </entry>
   <entry>
+    <title>进程线程与纤程</title>
+    <url>/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/</url>
+    <content><![CDATA[<h2 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h2><h3 id="进程状态"><a href="#进程状态" class="headerlink" title="进程状态"></a>进程状态</h3><p>线程可以处于以下几种状态</p>
+<ul>
+<li>新生状态：表示一个线程刚被创建出来还未完成初始化，不能被调度执行。在初始化完成以后，进入预备状态。</li>
+<li>预备状态：表示进程可以被调度运行，但还未被调度器选择。在被调度器选择以后进入运行状态。</li>
+<li>运行状态：表示线程正在CPU上运行。当运行一段时间后，调度器可以将其重新放回调度队列之中，就会迁移至预备状态。进程结束时迁移至终止状态。当需要等待外部事件时，迁移至阻塞状态。</li>
+<li>阻塞状态：表示线程需要等待外部事件，暂时无法被调度。当线程等待的外部事件完成以后，迁移至预备状态。</li>
+<li>终止状态：表示进程已经完成执行，不会再被调度。</li>
+</ul>
+<p><img data-src="%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81.png" alt="进程状态"></p>
+<h3 id="进程内存空间布局"><a href="#进程内存空间布局" class="headerlink" title="进程内存空间布局"></a>进程内存空间布局</h3><p>进程拥有独立的虚拟内存空间。包括以下几个部分</p>
+<ul>
+<li>用户栈：保存进程需要使用的各种临时数据。其扩展方向为自顶向下，栈底在高地址上。</li>
+<li>代码库：进程执行所依赖的共享的代码库（比如libc），这些地址会映射在用户栈下方并标记为只读。</li>
+<li>用户堆：管理进程动态分配的内存。其扩展方向为自底向上，堆顶在高地址上。</li>
+<li>数据与代码段：保存全局变量的值以及进程执行所需要的代码，处于较低地址。</li>
+<li>内核部分：每个进程的虚拟地址空间都映射了相同的地址空间，处于进程地址空间的最顶端。只有当程序进入内核态时才能访问内核内存。</li>
+</ul>
+<p><img data-src="%E8%BF%9B%E7%A8%8B%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80.png" alt="进程内存空间布局"></p>
+<h3 id="进程控制块"><a href="#进程控制块" class="headerlink" title="进程控制块"></a>进程控制块</h3><p>在内核中，每一个进程都通过一个名为进程控制块的数据结构来保存相关状态。在Linux系统中PCB对应的数据结构为task_struct,定义在[<a href="https://github.com/torvalds/linux/blob/master/include/linux/sched.h">sched.h</a>]文件中。下面代码列举了几个重要字段。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>&#123;</span></span><br><span class="line">    <span class="comment">/* 进程状态 */</span></span><br><span class="line">	<span class="keyword">volatile</span> <span class="keyword">long</span>			state;</span><br><span class="line">    <span class="comment">/* 虚拟内存状态 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">mm</span>;</span></span><br><span class="line">    <span class="comment">/* 进程标识符 */</span></span><br><span class="line">    <span class="keyword">pid_t</span> pid;</span><br><span class="line">    <span class="comment">/* 进程组标识符 */</span></span><br><span class="line">    <span class="keyword">pid_t</span> tgid;</span><br><span class="line">    <span class="comment">/* 进程间关系 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> __<span class="title">rcu</span> *<span class="title">parent</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">children</span>;</span></span><br><span class="line">    <span class="comment">/* 打开的文件 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">files_struct</span> *<span class="title">files</span>;</span></span><br><span class="line">    <span class="comment">/* 省略 */</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h3><p>进程的上下文包括进程运行时的寄存器状态，能够用于保存和恢复一个进程在处理器上运行的状态。当操作系统需要切换当前执行的进程时，就会使用上下文切换机制，将起一个进程的寄存器保存到PCB之中，从而切换该线程执行。</p>
+<p>下图展示了线程的上下文切换过程，当进程1用于中断或者系统调用进入内核以后，操作系统将进行上下文切换，保存将线程1的上下文保存到对应的PCB之中去，之后取出线程2对应的PCB的上下文，将其中的值恢复到寄存器中，最后操作系统回到用户态，继续进程2的运行。</p>
+<p><img data-src="%E8%BF%9B%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2.png" alt="进程上下文切换"></p>
+<h3 id="Linux进程操作"><a href="#Linux进程操作" class="headerlink" title="Linux进程操作"></a>Linux进程操作</h3><h4 id="进程创建fork"><a href="#进程创建fork" class="headerlink" title="进程创建fork"></a>进程创建fork</h4><p>在Linux中使用fork函数创建新进程，对于父进程fork函数返回当前进程的PID，子进程的返回值为0。以下是fork的一个示例。</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">pid_t</span> rc = fork();</span><br><span class="line">    <span class="keyword">if</span> (rc &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;fork 失败&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;当前为子进程， pid: &quot;</span> &lt;&lt; getpid() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;当前为父进程， pid: &quot;</span> &lt;&lt; getpid() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h4 id="进程执行exec"><a href="#进程执行exec" class="headerlink" title="进程执行exec"></a>进程执行exec</h4><p>exec由一系列接口组成，存在多个变种，功能最全面的是execve：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execve</span> <span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *__path, <span class="keyword">char</span> *<span class="keyword">const</span> __argv[], <span class="keyword">char</span> *<span class="keyword">const</span> __envp[])</span></span></span><br></pre></td></tr></table></figure>
+
+<p>其共接受三个参数，第一个参数path是进程执行需要载入的可执行文件的路径，第二个参数argv是进程执行所需的参数，第三个参数envp是进程的环境变量，一般以键值对字符串的形式传入。</p>
+<h4 id="进程管理"><a href="#进程管理" class="headerlink" title="进程管理"></a>进程管理</h4><p>在Linux中，进程都由fork创建，操作系统会以fork作为线索记录进程之间的关系，PID会记录每个进程的父进程和子进程。</p>
+<p>处于进程树根部的是init进程，是操作系统创建的第一个进程，之后所有的进程都是由他直接或间接创建出来的。</p>
+<p>为了方便应用程序进行管理，内核还定义了多个进程组合而成的进程组和会话。</p>
+<p>进程组是进程的集合，由一个或多个进程组成。task_struct结构中的tgid即为进程对应的进程组标识符。如果进程想要脱离当前的进程组，可以通过调用setpgid修改自己所在的进程组。</p>
+<p>会话是进程组的集合。由一个或多个进程组构成。会话将进程组根据执行状态分为了前台进程组、后台进程组。控制终端是会话与外界进行交互的窗口，负责接受由用户发来的输入。</p>
+<h4 id="进程监控wait"><a href="#进程监控wait" class="headerlink" title="进程监控wait"></a>进程监控wait</h4><p>进程可以通过wait操作来对子进程进行监控。wait函数有很多变种，以waitpid为例：</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;sts/wait.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">__pid_t</span> <span class="title">waitpid</span> <span class="params">(<span class="keyword">__pid_t</span> __pid, <span class="keyword">int</span> *__stat_loc, <span class="keyword">int</span> __options)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>其中第一个参数表示需要等待的子进程，第二个参数用来表示子进程的状态，第三个参数表示选项。wait可以回收已经运行结束的子进程和释放资源。使用wait的一个示例如下</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">pid_t</span> rc = fork();</span><br><span class="line">    <span class="keyword">if</span> (rc &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;fork 失败&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;子进程退出&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">int</span> status = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (waitpid(rc, &amp;status, <span class="number">0</span>) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;waitpid 失败&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (WIFEXITED(status)) &#123;</span><br><span class="line">                <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;父进程： 子进程退出&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果父进程没有调用wait操作，就算子进程已经终止，所占用的资源不会完全释放，这种进程被称为僵尸进程。内核会为僵尸进程保留其进程描述符和中止时信息，以便父进程在调用wait时监控子进程的状态。如果一个进程大量创建子进程且不调用wait，那么会导致僵尸进程占据可用的PID，使得后续的fork因为内核资源不足而失败。直到父线程退出，那么子进程将不会再被父进程使用，所有父进程创建的僵尸进程都会被内核的init进程调用wait进行回收。</p>
+<h2 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h2><p>随着计算机技术的发展，进程显得过于笨重，主要体现在以下几点。</p>
+<ol>
+<li>创建进程的开销较大，需要完成创建独立的地址空间、载入数据和代码段、初始化堆等步骤。</li>
+<li>进程用于独立的地址空间，在进程间进行数据的共享和同步比较麻烦</li>
+</ol>
+<p>因此提出了在进程之内添加可独立执行的单元，他们共享进程的地址空间，但又各自保存运行时的上下文状态，称为线程。</p>
+<h3 id="线程地址空间布局"><a href="#线程地址空间布局" class="headerlink" title="线程地址空间布局"></a>线程地址空间布局</h3><p>进程为每个线程都准备了不同的栈，供它们存放临时的数据。进程除了栈只玩的所有其他区域都由该进程的所有线程共享，包括堆数据段以及代码段。</p>
+<h3 id="线程控制块"><a href="#线程控制块" class="headerlink" title="线程控制块"></a>线程控制块</h3><p>与进程类似，线程也有自己的线程控制块(TCB)，用于保存与自身相关的信息。</p>
+<h2 id="纤程"><a href="#纤程" class="headerlink" title="纤程"></a>纤程</h2><p>随着计算机的发展，应用程序变得越来越复杂，在复杂。与操作系统调度器相比，应用程序对于线程的语义以及执行状态更加了解，因此可以做出更加的调度策略。此外用户态线程更加轻量级，创建与上下文切换的开销更小。在这样的背景下，操作系统开始提供对用户态线程（即纤程）的支持。</p>
+<p>纤程的上下文切换的触发机制与内核态线程有较大不同。内核态线程的切换时强制的，因此称为抢占式多任务处理。而纤程在遇到阻塞时会放弃CPU，允许其他纤程的调度，这种调度方式称为合作式多任务处理。</p>
+<p>除了操作系统以外，很多程序语言也提供了对于纤程的支持，方便应用程序创建和管理轻量级的上下文，从而支持更复杂的应用。一般将程序语言提供的纤程支持称为协程。</p>
+<h3 id="POSIX的协程支持"><a href="#POSIX的协程支持" class="headerlink" title="POSIX的协程支持"></a>POSIX的协程支持</h3><p>POSIX中用来支持纤程的是ucontext.h中的接口。</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;ucontext.h&gt;</span></span></span><br><span class="line"><span class="comment">/* 保存当前上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">getcontext</span> <span class="params">(<span class="keyword">ucontext_t</span> *__ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 切换到另一个上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">setcontext</span> <span class="params">(<span class="keyword">const</span> <span class="keyword">ucontext_t</span> *__ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 切换上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">swapcontext</span> <span class="params">(<span class="keyword">ucontext_t</span> *__restrict __oucp,<span class="keyword">const</span> <span class="keyword">ucontext_t</span> *__restrict __ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 创建全新的上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">makecontext</span> <span class="params">(<span class="keyword">ucontext_t</span> *__ucp, <span class="keyword">void</span> (*__func) (<span class="keyword">void</span>),<span class="keyword">int</span> __argc, ...)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>下面的代码实现了生产者消费者模型。在主函数中使用makecontext创建了两个上下文context1和context2，分别用于调用produce和consume函数。此后程序通过setcontext不断在produce和consume函数之间跳转，不断重复的生产和消费。</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;ucontext.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ucontext_t</span> context1, context2;</span><br><span class="line"><span class="keyword">int</span> current = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">produce</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    current++;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;生产者当前值为&quot;</span> &lt;&lt; current &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    setcontext(&amp;context2);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">consumer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;消费者当前值为&quot;</span> &lt;&lt; current &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    setcontext(&amp;context1);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">char</span> iteratorStack1[SIGSTKSZ];</span><br><span class="line">    <span class="keyword">char</span> iteratorStack2[SIGSTKSZ];</span><br><span class="line">    getcontext(&amp;context1);</span><br><span class="line">    context1.uc_link = <span class="literal">nullptr</span>;</span><br><span class="line">    context1.uc_stack.ss_sp = iteratorStack1;</span><br><span class="line">    context1.uc_stack.ss_size = <span class="keyword">sizeof</span>(iteratorStack1);</span><br><span class="line">    makecontext(&amp;context1, produce, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    getcontext(&amp;context2);</span><br><span class="line">    context2.uc_link = <span class="literal">nullptr</span>;</span><br><span class="line">    context2.uc_stack.ss_sp = iteratorStack2;</span><br><span class="line">    context2.uc_stack.ss_size = <span class="keyword">sizeof</span>(iteratorStack2);</span><br><span class="line">    makecontext(&amp;context2, consumer, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    setcontext(&amp;context1);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>通过利用纤程，可以对生产者消费者这样的多个模块协作的场景进行有效的支持。在生产者完成任务以后，可以立即切换到消费者继续执行。由于该切换由用户态线程库完成，不需要操作系统调用，可以达到很好的性能。</p>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
+        <tag>线程</tag>
+        <tag>协程</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>进程间通信方式</title>
     <url>/2020/12/03/%E8%BF%9B%E7%A8%8B%E9%97%B4%E9%80%9A%E4%BF%A1%E6%96%B9%E5%BC%8F/</url>
     <content><![CDATA[<p>进程间通信是多进程协作的基础。在该过程中至少需要两个进程参与，这两方分别被称为发送者和接收者，也可以被称为调用者与被调用者、客户端和服务端。常见的进程间通信方式主要有七种。</p>
@@ -1408,80 +1533,6 @@
       <tags>
         <tag>操作系统</tag>
         <tag>进程</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>进程线程与纤程</title>
-    <url>/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/</url>
-    <content><![CDATA[<h2 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h2><h3 id="进程状态"><a href="#进程状态" class="headerlink" title="进程状态"></a>进程状态</h3><p>线程可以处于以下几种状态</p>
-<ul>
-<li>新生状态：表示一个线程刚被创建出来还未完成初始化，不能被调度执行。在初始化完成以后，进入预备状态。</li>
-<li>预备状态：表示进程可以被调度运行，但还未被调度器选择。在被调度器选择以后进入运行状态。</li>
-<li>运行状态：表示线程正在CPU上运行。当运行一段时间后，调度器可以将其重新放回调度队列之中，就会迁移至预备状态。进程结束时迁移至终止状态。当需要等待外部事件时，迁移至阻塞状态。</li>
-<li>阻塞状态：表示线程需要等待外部事件，暂时无法被调度。当线程等待的外部事件完成以后，迁移至预备状态。</li>
-<li>终止状态：表示进程已经完成执行，不会再被调度。</li>
-</ul>
-<p><img data-src="%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81.png" alt="进程状态"></p>
-<h3 id="进程内存空间布局"><a href="#进程内存空间布局" class="headerlink" title="进程内存空间布局"></a>进程内存空间布局</h3><p>进程拥有独立的虚拟内存空间。包括以下几个部分</p>
-<ul>
-<li>用户栈：保存进程需要使用的各种临时数据。其扩展方向为自顶向下，栈底在高地址上。</li>
-<li>代码库：进程执行所依赖的共享的代码库（比如libc），这些地址会映射在用户栈下方并标记为只读。</li>
-<li>用户堆：管理进程动态分配的内存。其扩展方向为自底向上，堆顶在高地址上。</li>
-<li>数据与代码段：保存全局变量的值以及进程执行所需要的代码，处于较低地址。</li>
-<li>内核部分：每个进程的虚拟地址空间都映射了相同的地址空间，处于进程地址空间的最顶端。只有当程序进入内核态时才能访问内核内存。</li>
-</ul>
-<p><img data-src="%E8%BF%9B%E7%A8%8B%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80.png" alt="进程内存空间布局"></p>
-<h3 id="进程控制块"><a href="#进程控制块" class="headerlink" title="进程控制块"></a>进程控制块</h3><p>在内核中，每一个进程都通过一个名为进程控制块的数据结构来保存相关状态。在Linux系统中PCB对应的数据结构为task_struct,定义在[<a href="https://github.com/torvalds/linux/blob/master/include/linux/sched.h">sched.h</a>]文件中。下面代码列举了几个重要字段。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>&#123;</span></span><br><span class="line">    <span class="comment">/* 进程状态 */</span></span><br><span class="line">	<span class="keyword">volatile</span> <span class="keyword">long</span>			state;</span><br><span class="line">    <span class="comment">/* 虚拟内存状态 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">mm</span>;</span></span><br><span class="line">    <span class="comment">/* 进程标识符 */</span></span><br><span class="line">    <span class="keyword">pid_t</span> pid;</span><br><span class="line">    <span class="comment">/* 进程组标识符 */</span></span><br><span class="line">    <span class="keyword">pid_t</span> tgid;</span><br><span class="line">    <span class="comment">/* 进程间关系 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> __<span class="title">rcu</span> *<span class="title">parent</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">children</span>;</span></span><br><span class="line">    <span class="comment">/* 打开的文件 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">files_struct</span> *<span class="title">files</span>;</span></span><br><span class="line">    <span class="comment">/* 省略 */</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h3><p>进程的上下文包括进程运行时的寄存器状态，能够用于保存和恢复一个进程在处理器上运行的状态。当操作系统需要切换当前执行的进程时，就会使用上下文切换机制，将起一个进程的寄存器保存到PCB之中，从而切换该线程执行。</p>
-<p>下图展示了线程的上下文切换过程，当进程1用于中断或者系统调用进入内核以后，操作系统将进行上下文切换，保存将线程1的上下文保存到对应的PCB之中去，之后取出线程2对应的PCB的上下文，将其中的值恢复到寄存器中，最后操作系统回到用户态，继续进程2的运行。</p>
-<p><img data-src="%E8%BF%9B%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2.png" alt="进程上下文切换"></p>
-<h3 id="Linux进程操作"><a href="#Linux进程操作" class="headerlink" title="Linux进程操作"></a>Linux进程操作</h3><h4 id="进程创建fork"><a href="#进程创建fork" class="headerlink" title="进程创建fork"></a>进程创建fork</h4><p>在Linux中使用fork函数创建新进程，对于父进程fork函数返回当前进程的PID，子进程的返回值为0。以下是fork的一个示例。</p>
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">pid_t</span> rc = fork();</span><br><span class="line">    <span class="keyword">if</span> (rc &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;fork 失败&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;当前为子进程， pid: &quot;</span> &lt;&lt; getpid() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;当前为父进程， pid: &quot;</span> &lt;&lt; getpid() &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h4 id="进程执行exec"><a href="#进程执行exec" class="headerlink" title="进程执行exec"></a>进程执行exec</h4><p>exec由一系列接口组成，存在多个变种，功能最全面的是execve：</p>
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">execve</span> <span class="params">(<span class="keyword">const</span> <span class="keyword">char</span> *__path, <span class="keyword">char</span> *<span class="keyword">const</span> __argv[], <span class="keyword">char</span> *<span class="keyword">const</span> __envp[])</span></span></span><br></pre></td></tr></table></figure>
-
-<p>其共接受三个参数，第一个参数path是进程执行需要载入的可执行文件的路径，第二个参数argv是进程执行所需的参数，第三个参数envp是进程的环境变量，一般以键值对字符串的形式传入。</p>
-<h4 id="进程管理"><a href="#进程管理" class="headerlink" title="进程管理"></a>进程管理</h4><p>在Linux中，进程都由fork创建，操作系统会以fork作为线索记录进程之间的关系，PID会记录每个进程的父进程和子进程。</p>
-<p>处于进程树根部的是init进程，是操作系统创建的第一个进程，之后所有的进程都是由他直接或间接创建出来的。</p>
-<p>为了方便应用程序进行管理，内核还定义了多个进程组合而成的进程组和会话。</p>
-<p>进程组是进程的集合，由一个或多个进程组成。task_struct结构中的tgid即为进程对应的进程组标识符。如果进程想要脱离当前的进程组，可以通过调用setpgid修改自己所在的进程组。</p>
-<p>会话是进程组的集合。由一个或多个进程组构成。会话将进程组根据执行状态分为了前台进程组、后台进程组。控制终端是会话与外界进行交互的窗口，负责接受由用户发来的输入。</p>
-<h4 id="进程监控wait"><a href="#进程监控wait" class="headerlink" title="进程监控wait"></a>进程监控wait</h4><p>进程可以通过wait操作来对子进程进行监控。wait函数有很多变种，以waitpid为例：</p>
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;sts/wait.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="keyword">__pid_t</span> <span class="title">waitpid</span> <span class="params">(<span class="keyword">__pid_t</span> __pid, <span class="keyword">int</span> *__stat_loc, <span class="keyword">int</span> __options)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>其中第一个参数表示需要等待的子进程，第二个参数用来表示子进程的状态，第三个参数表示选项。wait可以回收已经运行结束的子进程和释放资源。使用wait的一个示例如下</p>
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">pid_t</span> rc = fork();</span><br><span class="line">    <span class="keyword">if</span> (rc &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;fork 失败&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">        <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;子进程退出&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="keyword">int</span> status = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (waitpid(rc, &amp;status, <span class="number">0</span>) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;waitpid 失败&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (WIFEXITED(status)) &#123;</span><br><span class="line">                <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;父进程： 子进程退出&quot;</span> &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果父进程没有调用wait操作，就算子进程已经终止，所占用的资源不会完全释放，这种进程被称为僵尸进程。内核会为僵尸进程保留其进程描述符和中止时信息，以便父进程在调用wait时监控子进程的状态。如果一个进程大量创建子进程且不调用wait，那么会导致僵尸进程占据可用的PID，使得后续的fork因为内核资源不足而失败。直到父线程退出，那么子进程将不会再被父进程使用，所有父进程创建的僵尸进程都会被内核的init进程调用wait进行回收。</p>
-<h2 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h2><p>随着计算机技术的发展，进程显得过于笨重，主要体现在以下几点。</p>
-<ol>
-<li>创建进程的开销较大，需要完成创建独立的地址空间、载入数据和代码段、初始化堆等步骤。</li>
-<li>进程用于独立的地址空间，在进程间进行数据的共享和同步比较麻烦</li>
-</ol>
-<p>因此提出了在进程之内添加可独立执行的单元，他们共享进程的地址空间，但又各自保存运行时的上下文状态，称为线程。</p>
-<h3 id="线程地址空间布局"><a href="#线程地址空间布局" class="headerlink" title="线程地址空间布局"></a>线程地址空间布局</h3><p>进程为每个线程都准备了不同的栈，供它们存放临时的数据。进程除了栈只玩的所有其他区域都由该进程的所有线程共享，包括堆数据段以及代码段。</p>
-<h3 id="线程控制块"><a href="#线程控制块" class="headerlink" title="线程控制块"></a>线程控制块</h3><p>与进程类似，线程也有自己的线程控制块(TCB)，用于保存与自身相关的信息。</p>
-<h2 id="纤程"><a href="#纤程" class="headerlink" title="纤程"></a>纤程</h2><p>随着计算机的发展，应用程序变得越来越复杂，在复杂。与操作系统调度器相比，应用程序对于线程的语义以及执行状态更加了解，因此可以做出更加的调度策略。此外用户态线程更加轻量级，创建与上下文切换的开销更小。在这样的背景下，操作系统开始提供对用户态线程（即纤程）的支持。</p>
-<p>纤程的上下文切换的触发机制与内核态线程有较大不同。内核态线程的切换时强制的，因此称为抢占式多任务处理。而纤程在遇到阻塞时会放弃CPU，允许其他纤程的调度，这种调度方式称为合作式多任务处理。</p>
-<p>除了操作系统以外，很多程序语言也提供了对于纤程的支持，方便应用程序创建和管理轻量级的上下文，从而支持更复杂的应用。一般将程序语言提供的纤程支持称为协程。</p>
-<h3 id="POSIX的协程支持"><a href="#POSIX的协程支持" class="headerlink" title="POSIX的协程支持"></a>POSIX的协程支持</h3><p>POSIX中用来支持纤程的是ucontext.h中的接口。</p>
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span><span class="meta-string">&lt;ucontext.h&gt;</span></span></span><br><span class="line"><span class="comment">/* 保存当前上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">getcontext</span> <span class="params">(<span class="keyword">ucontext_t</span> *__ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 切换到另一个上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">setcontext</span> <span class="params">(<span class="keyword">const</span> <span class="keyword">ucontext_t</span> *__ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 切换上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">swapcontext</span> <span class="params">(<span class="keyword">ucontext_t</span> *__restrict __oucp,<span class="keyword">const</span> <span class="keyword">ucontext_t</span> *__restrict __ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 创建全新的上下文 */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">makecontext</span> <span class="params">(<span class="keyword">ucontext_t</span> *__ucp, <span class="keyword">void</span> (*__func) (<span class="keyword">void</span>),<span class="keyword">int</span> __argc, ...)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>下面的代码实现了生产者消费者模型。在主函数中使用makecontext创建了两个上下文context1和context2，分别用于调用produce和consume函数。此后程序通过setcontext不断在produce和consume函数之间跳转，不断重复的生产和消费。</p>
-<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;ucontext.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">ucontext_t</span> context1, context2;</span><br><span class="line"><span class="keyword">int</span> current = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">produce</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    current++;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;生产者当前值为&quot;</span> &lt;&lt; current &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    setcontext(&amp;context2);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">consumer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="built_in">std</span>::<span class="built_in">cout</span> &lt;&lt; <span class="string">&quot;消费者当前值为&quot;</span> &lt;&lt; current &lt;&lt; <span class="built_in">std</span>::<span class="built_in">endl</span>;</span><br><span class="line">    setcontext(&amp;context1);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">char</span> iteratorStack1[SIGSTKSZ];</span><br><span class="line">    <span class="keyword">char</span> iteratorStack2[SIGSTKSZ];</span><br><span class="line">    getcontext(&amp;context1);</span><br><span class="line">    context1.uc_link = <span class="literal">nullptr</span>;</span><br><span class="line">    context1.uc_stack.ss_sp = iteratorStack1;</span><br><span class="line">    context1.uc_stack.ss_size = <span class="keyword">sizeof</span>(iteratorStack1);</span><br><span class="line">    makecontext(&amp;context1, produce, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    getcontext(&amp;context2);</span><br><span class="line">    context2.uc_link = <span class="literal">nullptr</span>;</span><br><span class="line">    context2.uc_stack.ss_sp = iteratorStack2;</span><br><span class="line">    context2.uc_stack.ss_size = <span class="keyword">sizeof</span>(iteratorStack2);</span><br><span class="line">    makecontext(&amp;context2, consumer, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    setcontext(&amp;context1);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>通过利用纤程，可以对生产者消费者这样的多个模块协作的场景进行有效的支持。在生产者完成任务以后，可以立即切换到消费者继续执行。由于该切换由用户态线程库完成，不需要操作系统调用，可以达到很好的性能。</p>
-]]></content>
-      <categories>
-        <category>操作系统</category>
-      </categories>
-      <tags>
-        <tag>操作系统</tag>
-        <tag>线程</tag>
-        <tag>协程</tag>
       </tags>
   </entry>
 </search>
