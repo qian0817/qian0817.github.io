@@ -450,9 +450,9 @@
     <category term="Redis" scheme="http://qian0817.top/categories/Redis/"/>
     
     
-    <category term="Redis" scheme="http://qian0817.top/tags/Redis/"/>
-    
     <category term="日志" scheme="http://qian0817.top/tags/%E6%97%A5%E5%BF%97/"/>
+    
+    <category term="Redis" scheme="http://qian0817.top/tags/Redis/"/>
     
     <category term="持久化" scheme="http://qian0817.top/tags/%E6%8C%81%E4%B9%85%E5%8C%96/"/>
     
