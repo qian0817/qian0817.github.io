@@ -95,6 +95,50 @@
       </tags>
   </entry>
   <entry>
+    <title>JVM如何进行类加载</title>
+    <url>/2020/09/01/JVM%E5%A6%82%E4%BD%95%E5%8A%A0%E8%BD%BDJava%E7%B1%BB/</url>
+    <content><![CDATA[<p>Jvm在进行类加载时分为三个环节，分别为加载，链接以及初始化。</p>
+<h2 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h2><p>加载是指查找字节流，并且据此创建类的过程。加载的class文件可以来源于本地磁盘，也可以来自于网络或者运行时计算生成等等。在加载阶段需要完成以下三件事：</p>
+<ol>
+<li>通过一个类的全限定名来获取定义此类的二进制字节流。</li>
+<li>将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。</li>
+<li>在内存中生成代表这个类的java.lang.Class对象，作为方法区这个类的各种数据的访问入口。</li>
+</ol>
+<p>在加载完成以后，外部的二进制流就会按照设定的格式存储在方法区之中。</p>
+<h3 id="加载器"><a href="#加载器" class="headerlink" title="加载器"></a>加载器</h3><p>对于任意一个类，都必须由加载它的类加载器和这个类本身一起确立其在Java虚拟机中的唯一性。这会影响例如equals()方法，isAssignableForm()方法以及instanceof的判定。下面的代码就演示了不同的类加载器对instanceof的影响，其中Java虚拟机中同时存在了两个Main类，一个由虚拟机的应用程序加载类进行加载，另一个使用自定义的ClassLoader进行加载。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ClassLoader loader = <span class="keyword">new</span> ClassLoader() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    InputStream in = getClass().getResourceAsStream(name+<span class="string">&quot;.class&quot;</span>);</span><br><span class="line">                    <span class="keyword">if</span> (in == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">super</span>.loadClass(name);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">byte</span>[] b = in.readAllBytes();</span><br><span class="line">                    <span class="keyword">return</span> defineClass(name, b, <span class="number">0</span>, b.length);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ClassNotFoundException(name);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        Object obj = loader.loadClass(<span class="string">&quot;Main&quot;</span>).newInstance();</span><br><span class="line">        System.out.println(obj.getClass());  <span class="comment">//class Main</span></span><br><span class="line">        System.out.println(obj <span class="keyword">instanceof</span> Main);  <span class="comment">//false</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>除了启动类加载器，其余的加载器都是java.lang.ClassLoader的子类。</p>
+<p>启动类加载器（bootstrap class loader）由C++实现，没有对应的Java对象。其他的类加载器都需要先由另一个类加载器加载至java虚拟机中，才能执行类加载的工作。</p>
+<p>启动类加载器负责加载最为基础重要的类（比如JAVA_HOME/jre/lib/rt.jar、resource.jar或sun.boot.class.path路径下的内容）。启动类加载器只会加载包名为java，javax和sun开头的类。</p>
+<p>扩展类加载器（JAVA9以后称为平台类加载器）的父类加载器是启动类加载器，在sun.misc.Launcher$ExtClassLoader中以Java实现。它负责加载相对次要、但又通用的类，（从java.ext.dirs系统属性所指定的目录中加载类库，或从JDK的安装目录的jre/lib/ext子目录（扩展目录）下加载类库）。</p>
+<p>应用类加载器的父类加载器则是扩展类加载器，在sun.misc.Launcher$AppClassLoader中以Java实现。。它负责加载应用程序路径下的类。（负责加载环境变量classpath或系统属性java.class.path指定路径下的类库）。如果应用程序中没有定义过自己的加载器，那么会是程序中默认的加载器。</p>
+<p>除了Java提供的类加载器之外，还可以加入自定义的类加载器，来实现特殊的加载方式。例如可以对class文件进行加密，加载时再利用自定义的类加载器进行解密。</p>
+<h3 id="双亲委派机制"><a href="#双亲委派机制" class="headerlink" title="双亲委派机制"></a>双亲委派机制</h3><p>当一个类加载器接收到加载请求时，它会先将请求转发给父类加载器。在父类加载器没有找到所请求的类的情况下，该类加载器才会尝试去加载。这一规则被称为双亲委派机制。双亲委派模型要求除了启动类加载器，都必须要有自己的父类加载器。双亲委派机制可以避免类的重复加载，同时可以防止核心API库被篡改。双亲委派模型的代码在loadClass之中。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">protected</span> Class&lt;?&gt; loadClass(String name, <span class="keyword">boolean</span> resolve)</span><br><span class="line">    <span class="keyword">throws</span> ClassNotFoundException</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (getClassLoadingLock(name)) &#123;</span><br><span class="line">        <span class="comment">// First, check if the class has already been loaded</span></span><br><span class="line">        <span class="comment">// 判断是否已经被加载了</span></span><br><span class="line">        Class&lt;?&gt; c = findLoadedClass(name);</span><br><span class="line">        <span class="keyword">if</span> (c == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">long</span> t0 = System.nanoTime();</span><br><span class="line">        	<span class="comment">// 从父加载器加载</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    c = parent.loadClass(name, <span class="keyword">false</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="comment">// 父类是启动类加载器</span></span><br><span class="line">                    c = findBootstrapClassOrNull(name);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                <span class="comment">// 父类加载失败</span></span><br><span class="line">                <span class="comment">// ClassNotFoundException thrown if class not found</span></span><br><span class="line">                <span class="comment">// from the non-null parent class loader</span></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (c == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="comment">// If still not found, then invoke findClass in order</span></span><br><span class="line">                <span class="comment">// to find the class.</span></span><br><span class="line">                <span class="keyword">long</span> t1 = System.nanoTime();</span><br><span class="line">                c = findClass(name);</span><br><span class="line">                </span><br><span class="line">                <span class="comment">// this is the defining class loader; record the stats</span></span><br><span class="line">                sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);</span><br><span class="line">                sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);</span><br><span class="line">                sun.misc.PerfCounter.getFindClasses().increment();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (resolve) &#123;</span><br><span class="line">            resolveClass(c);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> c;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上面的代码也可以看出破环双亲委派模式的方法，就是直接在子加载器中覆盖loadClass()方法。在编写自己的类加载逻辑时，应该尽量去重写findClass方法来完成加载，来防止双亲委派模型被破坏。</p>
+<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>链接，是指将创建成的类合并至 Java 虚拟机中，使之能够执行的过程。它可分为验证、准备以及解析三个阶段。</p>
+<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>在验证阶段，需要确保被加载的类能够满足java虚拟机的约束条件。</p>
+<h3 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h3><p>准备阶段的目的是为了给被加载类的静态字段分配内存，将其初始化为默认值。例如以下一段Java代码</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> value=<span class="number">1</span>; <span class="comment">//在准备阶段赋值为0</span></span><br></pre></td></tr></table></figure>
+<p>该代码在准备阶段只会将value的值设置为0，而将value设置为1则会在之后的初始化阶段进行。而如果该字段加上了final修饰，那么会在准备阶段赋值为1。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> value=<span class="number">1</span>; <span class="comment">//在准备阶段赋值为1</span></span><br></pre></td></tr></table></figure>
+
+<h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>在加载至JVM之前，这个类无法知道其他类及其方法，字段所对应的具体位置。因此在引用这些成员时，需要生成符号引用。</p>
+<p>解析阶段的目的在于将这些符号引用解析成为实际引用。如果在该过程中出现符号引用指向了一个未被加载的类，字段或者方法，那么将触发这个类的加载（不一定触发链接以及初始化）。</p>
+<h2 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h2><p>对于静态字段的直接赋值操作以及所有静态代码块的代码，JVM会将其置于同一个方法中，成为<clinit>，然后在初始化阶段运行。在初始化阶段，JVM会通过加锁的方式来保证<clinit>方法只会执行一次。只有当初始化完成以后，类才正式的成为了可执行的状态。</p>
+<p>接下来分析一下单例模式延迟初始化。当调用Singleton.getInstance()方法时，程序会访问LazyHolder.INSTANCE这一静态字段，触发对于LazyHolder的初始化，继而创建一个新的Singleton实例。由于类初始化是线程安全的，因此可以保证在任何情况下，有且只有一个Singleton实例。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">()</span></span>&#123;&#125;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">LazyHolder</span></span>&#123;</span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> Singleton INSTANCE=<span class="keyword">new</span> Singleton();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> LazyHolder.INSTANCE;</span><br><span class="line">    &#125;   </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span>&#123;</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>]]></content>
+      <categories>
+        <category>Java</category>
+      </categories>
+      <tags>
+        <tag>Java</tag>
+        <tag>JVM</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>JVM中的垃圾回收算法</title>
     <url>/2020/10/03/JVM%E4%B8%AD%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%AE%97%E6%B3%95/</url>
     <content><![CDATA[<p>JVM内存运行时区域分为程序计数区、虚拟机栈、本地方法栈、堆区和方法区，其中前三个区域随着线程的生命周期而变化，对于这些区域不需要过多考虑内存回收的问题，当线程结束时，内存也就会被释放了。但是Java堆和方法区则需要使用到垃圾回收器去进行回收。</p>
@@ -166,47 +210,32 @@
       </tags>
   </entry>
   <entry>
-    <title>JVM如何进行类加载</title>
-    <url>/2020/09/01/JVM%E5%A6%82%E4%BD%95%E5%8A%A0%E8%BD%BDJava%E7%B1%BB/</url>
-    <content><![CDATA[<p>Jvm在进行类加载时分为三个环节，分别为加载，链接以及初始化。</p>
-<h2 id="加载"><a href="#加载" class="headerlink" title="加载"></a>加载</h2><p>加载是指查找字节流，并且据此创建类的过程。加载的class文件可以来源于本地磁盘，也可以来自于网络或者运行时计算生成等等。在加载阶段需要完成以下三件事：</p>
-<ol>
-<li>通过一个类的全限定名来获取定义此类的二进制字节流。</li>
-<li>将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构。</li>
-<li>在内存中生成代表这个类的java.lang.Class对象，作为方法区这个类的各种数据的访问入口。</li>
-</ol>
-<p>在加载完成以后，外部的二进制流就会按照设定的格式存储在方法区之中。</p>
-<h3 id="加载器"><a href="#加载器" class="headerlink" title="加载器"></a>加载器</h3><p>对于任意一个类，都必须由加载它的类加载器和这个类本身一起确立其在Java虚拟机中的唯一性。这会影响例如equals()方法，isAssignableForm()方法以及instanceof的判定。下面的代码就演示了不同的类加载器对instanceof的影响，其中Java虚拟机中同时存在了两个Main类，一个由虚拟机的应用程序加载类进行加载，另一个使用自定义的ClassLoader进行加载。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">        ClassLoader loader = <span class="keyword">new</span> ClassLoader() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="keyword">public</span> Class&lt;?&gt; loadClass(String name) <span class="keyword">throws</span> ClassNotFoundException &#123;</span><br><span class="line">                <span class="keyword">try</span> &#123;</span><br><span class="line">                    InputStream in = getClass().getResourceAsStream(name+<span class="string">&quot;.class&quot;</span>);</span><br><span class="line">                    <span class="keyword">if</span> (in == <span class="keyword">null</span>) &#123;</span><br><span class="line">                        <span class="keyword">return</span> <span class="keyword">super</span>.loadClass(name);</span><br><span class="line">                    &#125;</span><br><span class="line">                    <span class="keyword">byte</span>[] b = in.readAllBytes();</span><br><span class="line">                    <span class="keyword">return</span> defineClass(name, b, <span class="number">0</span>, b.length);</span><br><span class="line">                &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                    <span class="keyword">throw</span> <span class="keyword">new</span> ClassNotFoundException(name);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;;</span><br><span class="line">        Object obj = loader.loadClass(<span class="string">&quot;Main&quot;</span>).newInstance();</span><br><span class="line">        System.out.println(obj.getClass());  <span class="comment">//class Main</span></span><br><span class="line">        System.out.println(obj <span class="keyword">instanceof</span> Main);  <span class="comment">//false</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>除了启动类加载器，其余的加载器都是java.lang.ClassLoader的子类。</p>
-<p>启动类加载器（bootstrap class loader）由C++实现，没有对应的Java对象。其他的类加载器都需要先由另一个类加载器加载至java虚拟机中，才能执行类加载的工作。</p>
-<p>启动类加载器负责加载最为基础重要的类（比如JAVA_HOME/jre/lib/rt.jar、resource.jar或sun.boot.class.path路径下的内容）。启动类加载器只会加载包名为java，javax和sun开头的类。</p>
-<p>扩展类加载器（JAVA9以后称为平台类加载器）的父类加载器是启动类加载器，在sun.misc.Launcher$ExtClassLoader中以Java实现。它负责加载相对次要、但又通用的类，（从java.ext.dirs系统属性所指定的目录中加载类库，或从JDK的安装目录的jre/lib/ext子目录（扩展目录）下加载类库）。</p>
-<p>应用类加载器的父类加载器则是扩展类加载器，在sun.misc.Launcher$AppClassLoader中以Java实现。。它负责加载应用程序路径下的类。（负责加载环境变量classpath或系统属性java.class.path指定路径下的类库）。如果应用程序中没有定义过自己的加载器，那么会是程序中默认的加载器。</p>
-<p>除了Java提供的类加载器之外，还可以加入自定义的类加载器，来实现特殊的加载方式。例如可以对class文件进行加密，加载时再利用自定义的类加载器进行解密。</p>
-<h3 id="双亲委派机制"><a href="#双亲委派机制" class="headerlink" title="双亲委派机制"></a>双亲委派机制</h3><p>当一个类加载器接收到加载请求时，它会先将请求转发给父类加载器。在父类加载器没有找到所请求的类的情况下，该类加载器才会尝试去加载。这一规则被称为双亲委派机制。双亲委派模型要求除了启动类加载器，都必须要有自己的父类加载器。双亲委派机制可以避免类的重复加载，同时可以防止核心API库被篡改。双亲委派模型的代码在loadClass之中。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">protected</span> Class&lt;?&gt; loadClass(String name, <span class="keyword">boolean</span> resolve)</span><br><span class="line">    <span class="keyword">throws</span> ClassNotFoundException</span><br><span class="line">&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (getClassLoadingLock(name)) &#123;</span><br><span class="line">        <span class="comment">// First, check if the class has already been loaded</span></span><br><span class="line">        <span class="comment">// 判断是否已经被加载了</span></span><br><span class="line">        Class&lt;?&gt; c = findLoadedClass(name);</span><br><span class="line">        <span class="keyword">if</span> (c == <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">long</span> t0 = System.nanoTime();</span><br><span class="line">        	<span class="comment">// 从父加载器加载</span></span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                <span class="keyword">if</span> (parent != <span class="keyword">null</span>) &#123;</span><br><span class="line">                    c = parent.loadClass(name, <span class="keyword">false</span>);</span><br><span class="line">                &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                    <span class="comment">// 父类是启动类加载器</span></span><br><span class="line">                    c = findBootstrapClassOrNull(name);</span><br><span class="line">                &#125;</span><br><span class="line">            &#125; <span class="keyword">catch</span> (ClassNotFoundException e) &#123;</span><br><span class="line">                <span class="comment">// 父类加载失败</span></span><br><span class="line">                <span class="comment">// ClassNotFoundException thrown if class not found</span></span><br><span class="line">                <span class="comment">// from the non-null parent class loader</span></span><br><span class="line">            &#125;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">if</span> (c == <span class="keyword">null</span>) &#123;</span><br><span class="line">                <span class="comment">// If still not found, then invoke findClass in order</span></span><br><span class="line">                <span class="comment">// to find the class.</span></span><br><span class="line">                <span class="keyword">long</span> t1 = System.nanoTime();</span><br><span class="line">                c = findClass(name);</span><br><span class="line">                </span><br><span class="line">                <span class="comment">// this is the defining class loader; record the stats</span></span><br><span class="line">                sun.misc.PerfCounter.getParentDelegationTime().addTime(t1 - t0);</span><br><span class="line">                sun.misc.PerfCounter.getFindClassTime().addElapsedTimeFrom(t1);</span><br><span class="line">                sun.misc.PerfCounter.getFindClasses().increment();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (resolve) &#123;</span><br><span class="line">            resolveClass(c);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> c;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>从上面的代码也可以看出破环双亲委派模式的方法，就是直接在子加载器中覆盖loadClass()方法。在编写自己的类加载逻辑时，应该尽量去重写findClass方法来完成加载，来防止双亲委派模型被破坏。</p>
-<h2 id="链接"><a href="#链接" class="headerlink" title="链接"></a>链接</h2><p>链接，是指将创建成的类合并至 Java 虚拟机中，使之能够执行的过程。它可分为验证、准备以及解析三个阶段。</p>
-<h3 id="验证"><a href="#验证" class="headerlink" title="验证"></a>验证</h3><p>在验证阶段，需要确保被加载的类能够满足java虚拟机的约束条件。</p>
-<h3 id="准备"><a href="#准备" class="headerlink" title="准备"></a>准备</h3><p>准备阶段的目的是为了给被加载类的静态字段分配内存，将其初始化为默认值。例如以下一段Java代码</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">int</span> value=<span class="number">1</span>; <span class="comment">//在准备阶段赋值为0</span></span><br></pre></td></tr></table></figure>
-<p>该代码在准备阶段只会将value的值设置为0，而将value设置为1则会在之后的初始化阶段进行。而如果该字段加上了final修饰，那么会在准备阶段赋值为1。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> value=<span class="number">1</span>; <span class="comment">//在准备阶段赋值为1</span></span><br></pre></td></tr></table></figure>
-
-<h3 id="解析"><a href="#解析" class="headerlink" title="解析"></a>解析</h3><p>在加载至JVM之前，这个类无法知道其他类及其方法，字段所对应的具体位置。因此在引用这些成员时，需要生成符号引用。</p>
-<p>解析阶段的目的在于将这些符号引用解析成为实际引用。如果在该过程中出现符号引用指向了一个未被加载的类，字段或者方法，那么将触发这个类的加载（不一定触发链接以及初始化）。</p>
-<h2 id="初始化"><a href="#初始化" class="headerlink" title="初始化"></a>初始化</h2><p>对于静态字段的直接赋值操作以及所有静态代码块的代码，JVM会将其置于同一个方法中，成为<clinit>，然后在初始化阶段运行。在初始化阶段，JVM会通过加锁的方式来保证<clinit>方法只会执行一次。只有当初始化完成以后，类才正式的成为了可执行的状态。</p>
-<p>接下来分析一下单例模式延迟初始化。当调用Singleton.getInstance()方法时，程序会访问LazyHolder.INSTANCE这一静态字段，触发对于LazyHolder的初始化，继而创建一个新的Singleton实例。由于类初始化是线程安全的，因此可以保证在任何情况下，有且只有一个Singleton实例。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">Singleton</span><span class="params">()</span></span>&#123;&#125;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">LazyHolder</span></span>&#123;</span><br><span class="line">        <span class="keyword">static</span> <span class="keyword">final</span> Singleton INSTANCE=<span class="keyword">new</span> Singleton();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> LazyHolder.INSTANCE;</span><br><span class="line">    &#125;   </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">()</span></span>&#123;</span><br><span class="line">        </span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>]]></content>
+    <title>Kubernetes调度器</title>
+    <url>/2021/02/01/Kubernetes%E8%B0%83%E5%BA%A6%E5%99%A8/</url>
+    <content><![CDATA[<p>在Kubernetes中，调度器的主要职责就是为一个新创建出来的Pod寻找一个合适的节点Node，其工作流程可以下图表示。</p>
+<p><img data-src="%E8%B0%83%E5%BA%A6%E6%9C%BA%E5%88%B6.jpg" alt="img"></p>
+<p>Kubernetes 的调度器由两个相互独立的控制循环组成。</p>
+<p>第一个控制循环称为Informer Path,其主要目的在于启动一系列的Informer，用来监听Etcd中的Pod、Node、Service等对象的变化。例如当一个Pod被创建出来后，调度器会通过Pod Informer将待调度的Pod添加到调度队列之中。</p>
+<p>第二个控制循环称为Scheduling Path。其作用是不断的从调度队列中出对一个Pod，调用Predicates算法进行过滤。通过这一步过滤得到的一组Node就是所有可以运行这个Pod的宿主机列表。接下来就可以调用Priorities算法为Node打分，分数从0到10，得分最高的Node就会作为本次调度的结果。在调度算法完成以后，调度器就会将Pod对象的nodeName字段修改为Node的名字，该步骤称为Bind。</p>
+<h2 id="Predicates"><a href="#Predicates" class="headerlink" title="Predicates"></a>Predicates</h2><p>Predicates在调度过程中的作用就是从所有节点中去除一系列符合条件的节点。Kubernetes默认的调度策略有三种。</p>
+<h3 id="GeneralPredicates"><a href="#GeneralPredicates" class="headerlink" title="GeneralPredicates"></a>GeneralPredicates</h3><p>GeneralPredicates负责最基础的调度策略，例如计算宿主机剩余的CPU和内存资源是否足够使用，检查宿主机的名字是否和Pod的spec.nodeName一致，申请的宿主机端口是否跟已经被使用的端口冲突，Pod 的 nodeSelector 或者 nodeAffinity 指定的节点，是否与待考察节点匹配。GeneralPredicates检查的是一个Pod能不能运行在Node上最基本的过滤条件。</p>
+<h3 id="Volume-相关的过滤规则"><a href="#Volume-相关的过滤规则" class="headerlink" title="Volume 相关的过滤规则"></a>Volume 相关的过滤规则</h3><p>负责与容器持久化Volume相关的调度策略。例如多个 Pod 声明挂载的持久化 Volume 是否有冲突、一个节点上某种类型的持久化 Volume 是不是已经超过了一定数目、持久化 Volume 的 Zone（高可用域）标签，是否与待考察节点的 Zone 标签相匹配、Pod 对应的 PV 的 nodeAffinity 字段，是否跟某个节点的标签相匹配。</p>
+<h3 id="宿主机相关的过滤规则"><a href="#宿主机相关的过滤规则" class="headerlink" title="宿主机相关的过滤规则"></a>宿主机相关的过滤规则</h3><p>检查Pod是否满足Node本身的一些条件，例如检查Pod 的Toleration字段与Node的Taint字段是否匹配，当前节点的内存是否足够。</p>
+<h3 id="Pod-相关的过滤规则"><a href="#Pod-相关的过滤规则" class="headerlink" title="Pod 相关的过滤规则"></a>Pod 相关的过滤规则</h3><p>大部分与GeneralPredicates重合，特殊的在于还需检查待调度 Pod 与 Node 上的已有 Pod 之间的亲密（affinity）和反亲密（anti-affinity）关系。</p>
+<p>上面四种类型的Predicates就构成了调度器确定一个 Node 可以运行待调度 Pod 的基本策略。</p>
+<h2 id="Priorities"><a href="#Priorities" class="headerlink" title="Priorities"></a>Priorities</h2><p>Priorities阶段会根据不同Node的空闲资源，所有节点里各种资源分配最均衡，容器镜像是否存在以及容器镜像大小进行打分，打分的范围是 0-10 分，得分最高的节点就是最后被 Pod 绑定的最佳节点。</p>
+<h2 id="优先级和抢占机制"><a href="#优先级和抢占机制" class="headerlink" title="优先级和抢占机制"></a>优先级和抢占机制</h2><p>正常情况下，当一个Pod调度失败后，会被暂时搁置起来，直到Pod被更新或者集群状态发生变化，调度器才会对这个Pod进行重新调度。但是有时候希望一个高级别的Pod调度失败以后，该Pod并不会被搁置，而是挤走某个Node上的低优先级Pod，保证这个高优先级的Pod调度成功。</p>
+<p>在调度其中维护着一个调度队列，当Pod拥有了优先级以后，高优先级的Pod可能会比低优先级的Pod提前出队，从而尽早地完成调度过程。</p>
+<p>当一个高优先级的Pod调度失败的时候，调度器的抢占能力就会被出发，调度器试图从当前集群中寻找一个节点，使得当这个节点上的低优先级Pod被删除后，待调度的高优先级Pod能够被调度到该节点上，这个过程就被称为抢占。</p>
+<p>在Kubernetes中，在调度队列的视线中有两个不同的队列，第一个队列叫做activeQ，存储在下一个调度周期需要调度的对象。第二个队列叫做unschedulableQ，专门存放调度失败的Pod。当一个 unschedulableQ 里的 Pod 被更新之后，调度器会自动把这个 Pod 移动到 activeQ 里，重新进行调度。</p>
+<p>当发生调度失败时，该Pod就会被放到unschedulableQ中，触发调度器为抢占者寻找牺牲者的流程。首先会检查这次失败事件的原因，确认抢占是不是可以帮助抢占者找到一个新节点。如果确定抢占可以发生，那么调度器就会把自己缓存的所有节点信息复制一份，然后使用这个副本来模拟抢占过程。在模拟过程中，调度器会检查每一个节点，从节点的最低优先级的Pod开始，逐一删除这些Pod，每删除一个低优先级Pod，调度器就会检查抢占者能够运行在该Node上。调度器会在模拟的所有抢占结果中做出一个选择，判断抢占对整个系统的影响，找出最佳结果。</p>
+<p>当得到了最佳的抢占结果后，调度器就会真正的开始抢占的操作，删除被抢占者，让抢占者在下一个调度周期重新进入调度流程，之后调度器就会通过正常的调度流程把抢占者调度成功。</p>
+]]></content>
       <categories>
-        <category>Java</category>
+        <category>Kubernetes</category>
       </categories>
       <tags>
-        <tag>JVM</tag>
-        <tag>Java</tag>
+        <tag>Kubernetes</tag>
       </tags>
   </entry>
   <entry>
@@ -246,6 +275,77 @@
         <tag>MYSQL</tag>
         <tag>数据库</tag>
         <tag>日志</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Redis中的客户端与服务器实现</title>
+    <url>/2020/09/10/Redis%E4%B8%AD%E7%9A%84%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%B8%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%9E%E7%8E%B0/</url>
+    <content><![CDATA[<p>Redis服务器可以与多个客户端建立网络连接，每个客户端也可以向服务器发送命令请求。Redis服务器使用单线程单进程的方式来处理命令请求，并与多个客户端进行网络通信。</p>
+<h2 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h2><h3 id="客户端结构"><a href="#客户端结构" class="headerlink" title="客户端结构"></a>客户端结构</h3><p>每个进行连接的客户端，都会创建一个redisClient结构，保存了客户端当前的信息。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisClient</span> &#123;</span></span><br><span class="line">    <span class="comment">// 套接字描述符</span></span><br><span class="line">    <span class="comment">// -1代表伪客户端，来自于AOF文件或者LUA脚本</span></span><br><span class="line">    <span class="comment">// 普通客户端为大于-1的整数，记录套接字描述符</span></span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库</span></span><br><span class="line">    redisDb *db;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库的 id （号码）</span></span><br><span class="line">    <span class="keyword">int</span> dictid;</span><br><span class="line">    <span class="comment">// 客户端的名字</span></span><br><span class="line">    robj *name;             <span class="comment">/* As set by CLIENT SETNAME */</span></span><br><span class="line">    <span class="comment">// 查询缓冲区</span></span><br><span class="line">    sds querybuf;</span><br><span class="line">    <span class="comment">// 查询缓冲区长度峰值</span></span><br><span class="line">    <span class="keyword">size_t</span> querybuf_peak;   <span class="comment">/* Recent (100ms or more) peak of querybuf size */</span></span><br><span class="line">    <span class="comment">// 参数数量</span></span><br><span class="line">    <span class="keyword">int</span> argc;</span><br><span class="line">    <span class="comment">// 参数对象数组</span></span><br><span class="line">    robj **argv;</span><br><span class="line">    <span class="comment">// 记录被客户端执行的命令</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> *<span class="title">cmd</span>, *<span class="title">lastcmd</span>;</span></span><br><span class="line">    <span class="comment">// 请求的类型：内联命令还是多条命令</span></span><br><span class="line">    <span class="keyword">int</span> reqtype;</span><br><span class="line">    <span class="comment">// 剩余未读取的命令内容数量</span></span><br><span class="line">    <span class="keyword">int</span> multibulklen;       <span class="comment">/* number of multi bulk arguments left to read */</span></span><br><span class="line">    <span class="comment">// 命令内容的长度</span></span><br><span class="line">    <span class="keyword">long</span> bulklen;           <span class="comment">/* length of bulk argument in multi bulk request */</span></span><br><span class="line">    <span class="comment">// 回复链表</span></span><br><span class="line">    <span class="built_in">list</span> *reply;</span><br><span class="line">    <span class="comment">// 回复链表中对象的总大小</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> reply_bytes; <span class="comment">/* Tot bytes of objects in reply list */</span></span><br><span class="line">    <span class="comment">// 已发送字节，处理 short write 用</span></span><br><span class="line">    <span class="keyword">int</span> sentlen;            <span class="comment">/* Amount of bytes already sent in the current</span></span><br><span class="line"><span class="comment">                               buffer or object being sent. */</span></span><br><span class="line">    <span class="comment">// 创建客户端的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> ctime;           <span class="comment">/* Client creation time */</span></span><br><span class="line">    <span class="comment">// 客户端最后一次和服务器互动的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> lastinteraction; <span class="comment">/* time of the last interaction, used for timeout */</span></span><br><span class="line">    <span class="comment">// 客户端的输出缓冲区超过软性限制的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> obuf_soft_limit_reached_time;</span><br><span class="line">    <span class="comment">// 客户端状态标志</span></span><br><span class="line">    <span class="comment">// 记录客户端的角色以及客户端所处状态</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="keyword">int</span> flags;              <span class="comment">/* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */</span></span><br><span class="line">    <span class="comment">// 当 server.requirepass 不为 NULL 时</span></span><br><span class="line">    <span class="comment">// 代表认证的状态</span></span><br><span class="line">    <span class="comment">// 0 代表未认证， 1 代表已认证</span></span><br><span class="line">    <span class="keyword">int</span> authenticated;      <span class="comment">/* when requirepass is non-NULL */</span></span><br><span class="line">    <span class="comment">// 复制状态</span></span><br><span class="line">    <span class="keyword">int</span> replstate;          <span class="comment">/* replication state if this is a slave */</span></span><br><span class="line">    <span class="comment">// 用于保存主服务器传来的 RDB 文件的文件描述符</span></span><br><span class="line">    <span class="keyword">int</span> repldbfd;           <span class="comment">/* replication DB file descriptor */</span></span><br><span class="line">    <span class="comment">// 读取主服务器传来的 RDB 文件的偏移量</span></span><br><span class="line">    <span class="keyword">off_t</span> repldboff;        <span class="comment">/* replication DB file offset */</span></span><br><span class="line">    <span class="comment">// 主服务器传来的 RDB 文件的大小</span></span><br><span class="line">    <span class="keyword">off_t</span> repldbsize;       <span class="comment">/* replication DB file size */</span></span><br><span class="line">    sds replpreamble;       <span class="comment">/* replication DB preamble. */</span></span><br><span class="line">    <span class="comment">// 主服务器的复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> reploff;      <span class="comment">/* replication offset if this is our master */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 时的偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_off; <span class="comment">/* replication ack offset, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 的时间</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_time;<span class="comment">/* replication ack time, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 主服务器的 master run ID</span></span><br><span class="line">    <span class="comment">// 保存在客户端，用于执行部分重同步</span></span><br><span class="line">    <span class="keyword">char</span> replrunid[REDIS_RUN_ID_SIZE+<span class="number">1</span>]; <span class="comment">/* master run id if this is a master */</span></span><br><span class="line">    <span class="comment">// 从服务器的监听端口号</span></span><br><span class="line">    <span class="keyword">int</span> slave_listening_port; <span class="comment">/* As configured with: SLAVECONF listening-port */</span></span><br><span class="line">    <span class="comment">// 事务状态</span></span><br><span class="line">    multiState mstate;      <span class="comment">/* MULTI/EXEC state */</span></span><br><span class="line">    <span class="comment">// 阻塞类型</span></span><br><span class="line">    <span class="keyword">int</span> btype;              <span class="comment">/* Type of blocking op if REDIS_BLOCKED. */</span></span><br><span class="line">    <span class="comment">// 阻塞状态</span></span><br><span class="line">    blockingState bpop;     <span class="comment">/* blocking state */</span></span><br><span class="line">    <span class="comment">// 最后被写入的全局复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> woff;         <span class="comment">/* Last write global replication offset. */</span></span><br><span class="line">    <span class="comment">// 被监视的键</span></span><br><span class="line">    <span class="built_in">list</span> *watched_keys;     <span class="comment">/* Keys WATCHED for MULTI/EXEC CAS */</span></span><br><span class="line">    <span class="comment">// 这个字典记录了客户端所有订阅的频道</span></span><br><span class="line">    <span class="comment">// 键为频道名字，值为 NULL</span></span><br><span class="line">    <span class="comment">// 也即是，一个频道的集合</span></span><br><span class="line">    dict *pubsub_channels;  <span class="comment">/* channels a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    <span class="comment">// 链表，包含多个 pubsubPattern 结构</span></span><br><span class="line">    <span class="comment">// 记录了所有订阅频道的客户端的信息</span></span><br><span class="line">    <span class="comment">// 新 pubsubPattern 结构总是被添加到表尾</span></span><br><span class="line">    <span class="built_in">list</span> *pubsub_patterns;  <span class="comment">/* patterns a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    sds peerid;             <span class="comment">/* Cached peer ID. */</span></span><br><span class="line">    <span class="comment">// 固定大小的缓冲区</span></span><br><span class="line">    <span class="comment">// 回复偏移量</span></span><br><span class="line">    <span class="keyword">int</span> bufpos;</span><br><span class="line">    <span class="comment">// 回复缓冲区</span></span><br><span class="line">    <span class="keyword">char</span> buf[REDIS_REPLY_CHUNK_BYTES];</span><br><span class="line">&#125; redisClient;</span><br></pre></td></tr></table></figure>
+
+<p>Redis服务器的clients属性是一个链表，保存了所有客户端的状态。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisServer</span>&#123;</span></span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    <span class="comment">//一个保存所有客户端状态的链表</span></span><br><span class="line">  	<span class="built_in">list</span>* clients;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<h4 id="套接字描述符"><a href="#套接字描述符" class="headerlink" title="套接字描述符"></a>套接字描述符</h4><p>fd属性记录了客户端正在使用的套接字描述符。根据客户端的不同类型，fd的值可以为-1或者大于-1的整数。</p>
+<p>如果fd的值为-1，代表该客户端为伪客户端。伪客户端的请求来源于AOF文件或者LUA脚本而不是来自于网络。这种客户端不需要使用套接字进行连接。普通客户端的fd属性的值为大于-1的整数，记录客户端套接字的描述符。</p>
+<h4 id="名字"><a href="#名字" class="headerlink" title="名字"></a>名字</h4><p>客户端的名称记录在name属性中。在默认情况下，客户端是没有名字的。通过CLIENT SETNAME命令可以设置名字。</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name= ...</span><br><span class="line">127.0.0.1:6379&gt; CLIENT SETNAME test-name</span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name=test-name ...</span><br></pre></td></tr></table></figure>
+
+<p>如果客户端没有设置名字，那么name属性将会指向NULL，否则指向一个字符串对象，保存客户端的名字。</p>
+<h4 id="标志"><a href="#标志" class="headerlink" title="标志"></a>标志</h4><p>客户端的flag属性记录了客户端的角色，其值可以为单个标志或者多个标志的二进制值。</p>
+<h4 id="命令请求"><a href="#命令请求" class="headerlink" title="命令请求"></a>命令请求</h4><p>客户端的输入输出缓冲区用于保存客户端发送的命令请求，用querybuf属性进行保存。</p>
+<p>例如当客户端发送了SET key value命令，那么querybuf的内容将为以下值</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$3</span><br><span class="line">key</span><br><span class="line">$3</span><br><span class="line">value</span><br></pre></td></tr></table></figure>
+
+<p>querybuf的大小最大为1GB，如果超过，Redis会关闭该连接。</p>
+<p>在保存到缓冲区之后，会对请求的内容进行分析，并将得出的命令参数和个数保存到argv属性和argc属性中去。   例如对于刚才的命令，argc的值会设置为3，argv会设置为[set,key,value]数组。</p>
+<p>当分析出argc和argv之后，服务器会根据argv[0]的值，在命令表中查找对应的命令实现函数，然后将cmd属性指向该命令结构。然后使用cmd属性所指向的redisCommand结构并设置命令参数信息，调用命令实现函数，执行对应的命令。</p>
+<h4 id="输出缓冲区"><a href="#输出缓冲区" class="headerlink" title="输出缓冲区"></a>输出缓冲区</h4><p>执行命令完成后，命令回复会被保存到输出缓冲区之中。每个客户端都有一个可变大小的缓冲区和固定大小的缓冲区。</p>
+<p>其中固定大小的缓冲区有buf和bufpos两个属性组成。buf属性是一个字节数组，bufpos记录了buf数组目前已使用的字节数量。其作用是保存那些长度比较少的回复。</p>
+<p>可变大小的缓冲区有reply属性保存。reply是一个链表连接多个字符串对象，用于保存那些长度比较大的回复，例如非常长的字符串，很多项组成的列表，很多元素的集合。</p>
+<h4 id="身份验证"><a href="#身份验证" class="headerlink" title="身份验证"></a>身份验证</h4><p>authenticated属性记录了客户端是否通过了身份验证。如果其值为0代表未通过身份验证。</p>
+<h3 id="客户端的创建与关闭"><a href="#客户端的创建与关闭" class="headerlink" title="客户端的创建与关闭"></a>客户端的创建与关闭</h3><h4 id="创建普通客户端"><a href="#创建普通客户端" class="headerlink" title="创建普通客户端"></a>创建普通客户端</h4><p>客户端使用connect函数创建连接时，服务器会调用连接事件处理器，为客户端创建相应的客户端状态，并将该客户端状态添加到服务器状态结构clients链表的末尾。</p>
+<h4 id="关闭普通客户端"><a href="#关闭普通客户端" class="headerlink" title="关闭普通客户端"></a>关闭普通客户端</h4><p>当出现以下情况时会出现客户端关闭：</p>
+<ul>
+<li>客户端与服务器的网络连接被关闭。</li>
+<li>发送了带有不符合协议格式的命令请求。</li>
+<li>客户端成为CLIENT KILL命令的目标</li>
+<li>发送的命令请求大小超过了输入缓冲区的大小</li>
+<li>命令回复超过了输出缓冲的大小</li>
+<li>用户为服务器设置了timeout配置选项。当空转时间超过该选项值时会被关闭。</li>
+</ul>
+<h4 id="伪客户端"><a href="#伪客户端" class="headerlink" title="伪客户端"></a>伪客户端</h4><p>服务器在初始化时会创建执行Lua脚本的Redis命令的伪客户端，并将该伪客户端关联在服务器状态的lua_client属性值中。在服务器关闭时，该客户端才会被关闭。</p>
+<p>服务器在载入AOF文件时，会创建执行AOF文件的伪客户端，在执行完成后，立即关闭该客户端。</p>
+<h2 id="服务器"><a href="#服务器" class="headerlink" title="服务器"></a>服务器</h2><h3 id="命令请求过程"><a href="#命令请求过程" class="headerlink" title="命令请求过程"></a>命令请求过程</h3><h4 id="发送命令请求"><a href="#发送命令请求" class="headerlink" title="发送命令请求"></a>发送命令请求</h4><p>Redis服务器的命令请求来自与Redis客户端。客户端会将命令请求转化为协议格式，通过连接到服务器的套接字，将协议的命令请求发送给服务器。</p>
+<h4 id="读取命令请求"><a href="#读取命令请求" class="headerlink" title="读取命令请求"></a>读取命令请求</h4><p>当套接字变得可读时，会调用命令处理器来执行以下操作</p>
+<ul>
+<li><p>读取套接字中协议格式的命令请求，并将其保存到客户端状态的输入缓冲区中。</p>
+</li>
+<li><p>对输入缓冲区的命令请求进行分析，提取命令参数。</p>
+</li>
+<li><p>调用命令执行器执行指定的命令。</p>
+</li>
+</ul>
+<h4 id="命令执行器"><a href="#命令执行器" class="headerlink" title="命令执行器"></a>命令执行器</h4><p>先根据客户端的argv[0]参数，在命令表中查找参数指定的命令，并保存到cmd属性值中。cmd的属性是redisCommand，其结构如下:</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> &#123;</span></span><br><span class="line">    <span class="comment">// 命令名字</span></span><br><span class="line">    <span class="keyword">char</span> *name;</span><br><span class="line">    <span class="comment">// 实现函数</span></span><br><span class="line">    redisCommandProc *proc;</span><br><span class="line">    <span class="comment">// 参数个数</span></span><br><span class="line">    <span class="keyword">int</span> arity;</span><br><span class="line">    <span class="comment">// 字符串表示的 FLAG</span></span><br><span class="line">    <span class="keyword">char</span> *sflags;</span><br><span class="line">    <span class="comment">// 实际 FLAG</span></span><br><span class="line">    <span class="keyword">int</span> flags;</span><br><span class="line">    <span class="comment">// 从命令中判断命令的键参数。在 Redis 集群转向时使用。</span></span><br><span class="line">    redisGetKeysProc *getkeys_proc;</span><br><span class="line">    <span class="comment">// 指定哪些参数是 key</span></span><br><span class="line">    <span class="keyword">int</span> firstkey; <span class="comment">/* The first argument that&#x27;s a key (0 = no keys) */</span></span><br><span class="line">    <span class="keyword">int</span> lastkey;  <span class="comment">/* The last argument that&#x27;s a key */</span></span><br><span class="line">    <span class="keyword">int</span> keystep;  <span class="comment">/* The step between first and last key */</span></span><br><span class="line">    <span class="comment">// microseconds 记录了命令执行耗费的总毫微秒数</span></span><br><span class="line">    <span class="comment">// calls 是命令被执行的总次数</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> microseconds, calls;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>在查找到命令以后，执行预备操作，例如检查cmd指针是否为NULL，参数个数是否正确等等。当完成预备操作后，服务器才开始真正的执行命令。redisCommandProc是一个函数指针的别名，参数为redisClient。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">typedef</span> <span class="keyword">void</span> <span class="title">redisCommandProc</span><span class="params">(redisClient *c)</span></span>;</span><br></pre></td></tr></table></figure>
+
+<p>在服务器真正实行命令时，只需要调用以下语句即可。</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">client-&gt;cmd-&gt;proc(client);</span><br></pre></td></tr></table></figure>
+
+<p>被调用的命令实现函数会执行指定的操作，产生相应的命令回复，保存到输出缓冲区之中。</p>
+<p>在执行完成以后，服务器还需要执行一些后续操作，例如打印慢日志，AOF日志输出。完成后续操作以后，就可以处理下一个命令请求了。</p>
+<h3 id="serverCron函数"><a href="#serverCron函数" class="headerlink" title="serverCron函数"></a>serverCron函数</h3><p>Redis中的serverCron函数会每隔一段执行一次，负责管理服务器的资源，保证服务器运转良好。</p>
+<p>在serverCron会进行例如更新服务器时间缓存，执行持久化操作，关闭客户端等等。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
       </tags>
   </entry>
   <entry>
@@ -442,74 +542,86 @@
       </tags>
   </entry>
   <entry>
-    <title>Redis中的客户端与服务器实现</title>
-    <url>/2020/09/10/Redis%E4%B8%AD%E7%9A%84%E5%AE%A2%E6%88%B7%E7%AB%AF%E4%B8%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%AE%9E%E7%8E%B0/</url>
-    <content><![CDATA[<p>Redis服务器可以与多个客户端建立网络连接，每个客户端也可以向服务器发送命令请求。Redis服务器使用单线程单进程的方式来处理命令请求，并与多个客户端进行网络通信。</p>
-<h2 id="客户端"><a href="#客户端" class="headerlink" title="客户端"></a>客户端</h2><h3 id="客户端结构"><a href="#客户端结构" class="headerlink" title="客户端结构"></a>客户端结构</h3><p>每个进行连接的客户端，都会创建一个redisClient结构，保存了客户端当前的信息。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisClient</span> &#123;</span></span><br><span class="line">    <span class="comment">// 套接字描述符</span></span><br><span class="line">    <span class="comment">// -1代表伪客户端，来自于AOF文件或者LUA脚本</span></span><br><span class="line">    <span class="comment">// 普通客户端为大于-1的整数，记录套接字描述符</span></span><br><span class="line">    <span class="keyword">int</span> fd;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库</span></span><br><span class="line">    redisDb *db;</span><br><span class="line">    <span class="comment">// 当前正在使用的数据库的 id （号码）</span></span><br><span class="line">    <span class="keyword">int</span> dictid;</span><br><span class="line">    <span class="comment">// 客户端的名字</span></span><br><span class="line">    robj *name;             <span class="comment">/* As set by CLIENT SETNAME */</span></span><br><span class="line">    <span class="comment">// 查询缓冲区</span></span><br><span class="line">    sds querybuf;</span><br><span class="line">    <span class="comment">// 查询缓冲区长度峰值</span></span><br><span class="line">    <span class="keyword">size_t</span> querybuf_peak;   <span class="comment">/* Recent (100ms or more) peak of querybuf size */</span></span><br><span class="line">    <span class="comment">// 参数数量</span></span><br><span class="line">    <span class="keyword">int</span> argc;</span><br><span class="line">    <span class="comment">// 参数对象数组</span></span><br><span class="line">    robj **argv;</span><br><span class="line">    <span class="comment">// 记录被客户端执行的命令</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> *<span class="title">cmd</span>, *<span class="title">lastcmd</span>;</span></span><br><span class="line">    <span class="comment">// 请求的类型：内联命令还是多条命令</span></span><br><span class="line">    <span class="keyword">int</span> reqtype;</span><br><span class="line">    <span class="comment">// 剩余未读取的命令内容数量</span></span><br><span class="line">    <span class="keyword">int</span> multibulklen;       <span class="comment">/* number of multi bulk arguments left to read */</span></span><br><span class="line">    <span class="comment">// 命令内容的长度</span></span><br><span class="line">    <span class="keyword">long</span> bulklen;           <span class="comment">/* length of bulk argument in multi bulk request */</span></span><br><span class="line">    <span class="comment">// 回复链表</span></span><br><span class="line">    <span class="built_in">list</span> *reply;</span><br><span class="line">    <span class="comment">// 回复链表中对象的总大小</span></span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> reply_bytes; <span class="comment">/* Tot bytes of objects in reply list */</span></span><br><span class="line">    <span class="comment">// 已发送字节，处理 short write 用</span></span><br><span class="line">    <span class="keyword">int</span> sentlen;            <span class="comment">/* Amount of bytes already sent in the current</span></span><br><span class="line"><span class="comment">                               buffer or object being sent. */</span></span><br><span class="line">    <span class="comment">// 创建客户端的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> ctime;           <span class="comment">/* Client creation time */</span></span><br><span class="line">    <span class="comment">// 客户端最后一次和服务器互动的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> lastinteraction; <span class="comment">/* time of the last interaction, used for timeout */</span></span><br><span class="line">    <span class="comment">// 客户端的输出缓冲区超过软性限制的时间</span></span><br><span class="line">    <span class="keyword">time_t</span> obuf_soft_limit_reached_time;</span><br><span class="line">    <span class="comment">// 客户端状态标志</span></span><br><span class="line">    <span class="comment">// 记录客户端的角色以及客户端所处状态</span></span><br><span class="line">    <span class="comment">//</span></span><br><span class="line">    <span class="keyword">int</span> flags;              <span class="comment">/* REDIS_SLAVE | REDIS_MONITOR | REDIS_MULTI ... */</span></span><br><span class="line">    <span class="comment">// 当 server.requirepass 不为 NULL 时</span></span><br><span class="line">    <span class="comment">// 代表认证的状态</span></span><br><span class="line">    <span class="comment">// 0 代表未认证， 1 代表已认证</span></span><br><span class="line">    <span class="keyword">int</span> authenticated;      <span class="comment">/* when requirepass is non-NULL */</span></span><br><span class="line">    <span class="comment">// 复制状态</span></span><br><span class="line">    <span class="keyword">int</span> replstate;          <span class="comment">/* replication state if this is a slave */</span></span><br><span class="line">    <span class="comment">// 用于保存主服务器传来的 RDB 文件的文件描述符</span></span><br><span class="line">    <span class="keyword">int</span> repldbfd;           <span class="comment">/* replication DB file descriptor */</span></span><br><span class="line">    <span class="comment">// 读取主服务器传来的 RDB 文件的偏移量</span></span><br><span class="line">    <span class="keyword">off_t</span> repldboff;        <span class="comment">/* replication DB file offset */</span></span><br><span class="line">    <span class="comment">// 主服务器传来的 RDB 文件的大小</span></span><br><span class="line">    <span class="keyword">off_t</span> repldbsize;       <span class="comment">/* replication DB file size */</span></span><br><span class="line">    sds replpreamble;       <span class="comment">/* replication DB preamble. */</span></span><br><span class="line">    <span class="comment">// 主服务器的复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> reploff;      <span class="comment">/* replication offset if this is our master */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 时的偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_off; <span class="comment">/* replication ack offset, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 从服务器最后一次发送 REPLCONF ACK 的时间</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> repl_ack_time;<span class="comment">/* replication ack time, if this is a slave */</span></span><br><span class="line">    <span class="comment">// 主服务器的 master run ID</span></span><br><span class="line">    <span class="comment">// 保存在客户端，用于执行部分重同步</span></span><br><span class="line">    <span class="keyword">char</span> replrunid[REDIS_RUN_ID_SIZE+<span class="number">1</span>]; <span class="comment">/* master run id if this is a master */</span></span><br><span class="line">    <span class="comment">// 从服务器的监听端口号</span></span><br><span class="line">    <span class="keyword">int</span> slave_listening_port; <span class="comment">/* As configured with: SLAVECONF listening-port */</span></span><br><span class="line">    <span class="comment">// 事务状态</span></span><br><span class="line">    multiState mstate;      <span class="comment">/* MULTI/EXEC state */</span></span><br><span class="line">    <span class="comment">// 阻塞类型</span></span><br><span class="line">    <span class="keyword">int</span> btype;              <span class="comment">/* Type of blocking op if REDIS_BLOCKED. */</span></span><br><span class="line">    <span class="comment">// 阻塞状态</span></span><br><span class="line">    blockingState bpop;     <span class="comment">/* blocking state */</span></span><br><span class="line">    <span class="comment">// 最后被写入的全局复制偏移量</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> woff;         <span class="comment">/* Last write global replication offset. */</span></span><br><span class="line">    <span class="comment">// 被监视的键</span></span><br><span class="line">    <span class="built_in">list</span> *watched_keys;     <span class="comment">/* Keys WATCHED for MULTI/EXEC CAS */</span></span><br><span class="line">    <span class="comment">// 这个字典记录了客户端所有订阅的频道</span></span><br><span class="line">    <span class="comment">// 键为频道名字，值为 NULL</span></span><br><span class="line">    <span class="comment">// 也即是，一个频道的集合</span></span><br><span class="line">    dict *pubsub_channels;  <span class="comment">/* channels a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    <span class="comment">// 链表，包含多个 pubsubPattern 结构</span></span><br><span class="line">    <span class="comment">// 记录了所有订阅频道的客户端的信息</span></span><br><span class="line">    <span class="comment">// 新 pubsubPattern 结构总是被添加到表尾</span></span><br><span class="line">    <span class="built_in">list</span> *pubsub_patterns;  <span class="comment">/* patterns a client is interested in (SUBSCRIBE) */</span></span><br><span class="line">    sds peerid;             <span class="comment">/* Cached peer ID. */</span></span><br><span class="line">    <span class="comment">// 固定大小的缓冲区</span></span><br><span class="line">    <span class="comment">// 回复偏移量</span></span><br><span class="line">    <span class="keyword">int</span> bufpos;</span><br><span class="line">    <span class="comment">// 回复缓冲区</span></span><br><span class="line">    <span class="keyword">char</span> buf[REDIS_REPLY_CHUNK_BYTES];</span><br><span class="line">&#125; redisClient;</span><br></pre></td></tr></table></figure>
+    <title>Redis中的持久化机制</title>
+    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
+<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
+<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
 
-<p>Redis服务器的clients属性是一个链表，保存了所有客户端的状态。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisServer</span>&#123;</span></span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    <span class="comment">//一个保存所有客户端状态的链表</span></span><br><span class="line">  	<span class="built_in">list</span>* clients;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
+<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
+<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
+<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
+<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
+<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
+<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
+<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>写回时机</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Always</td>
+<td>同步写回</td>
+<td>可靠性高，数据基本不会丢失</td>
+<td>性能影响大</td>
+</tr>
+<tr>
+<td>No</td>
+<td>操作系统控制的写回</td>
+<td>性能高</td>
+<td>丢失数据多</td>
+</tr>
+<tr>
+<td>Everysec</td>
+<td>每秒写回</td>
+<td>性能适中</td>
+<td>会丢失1秒内的数据</td>
+</tr>
+</tbody></table>
+<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
+<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
 
-<h4 id="套接字描述符"><a href="#套接字描述符" class="headerlink" title="套接字描述符"></a>套接字描述符</h4><p>fd属性记录了客户端正在使用的套接字描述符。根据客户端的不同类型，fd的值可以为-1或者大于-1的整数。</p>
-<p>如果fd的值为-1，代表该客户端为伪客户端。伪客户端的请求来源于AOF文件或者LUA脚本而不是来自于网络。这种客户端不需要使用套接字进行连接。普通客户端的fd属性的值为大于-1的整数，记录客户端套接字的描述符。</p>
-<h4 id="名字"><a href="#名字" class="headerlink" title="名字"></a>名字</h4><p>客户端的名称记录在name属性中。在默认情况下，客户端是没有名字的。通过CLIENT SETNAME命令可以设置名字。</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name= ...</span><br><span class="line">127.0.0.1:6379&gt; CLIENT SETNAME test-name</span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6379&gt; CLIENT LIST</span><br><span class="line">id=5 addr=127.0.0.1:42718 fd=8 name=test-name ...</span><br></pre></td></tr></table></figure>
+<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
+<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
+<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
+<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
+<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
+<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
+<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
+<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
+<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
+<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
+<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
+<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
+<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
+<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
+<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
+<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
+<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
+<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
+<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
+<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
+<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
 
-<p>如果客户端没有设置名字，那么name属性将会指向NULL，否则指向一个字符串对象，保存客户端的名字。</p>
-<h4 id="标志"><a href="#标志" class="headerlink" title="标志"></a>标志</h4><p>客户端的flag属性记录了客户端的角色，其值可以为单个标志或者多个标志的二进制值。</p>
-<h4 id="命令请求"><a href="#命令请求" class="headerlink" title="命令请求"></a>命令请求</h4><p>客户端的输入输出缓冲区用于保存客户端发送的命令请求，用querybuf属性进行保存。</p>
-<p>例如当客户端发送了SET key value命令，那么querybuf的内容将为以下值</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$3</span><br><span class="line">key</span><br><span class="line">$3</span><br><span class="line">value</span><br></pre></td></tr></table></figure>
-
-<p>querybuf的大小最大为1GB，如果超过，Redis会关闭该连接。</p>
-<p>在保存到缓冲区之后，会对请求的内容进行分析，并将得出的命令参数和个数保存到argv属性和argc属性中去。   例如对于刚才的命令，argc的值会设置为3，argv会设置为[set,key,value]数组。</p>
-<p>当分析出argc和argv之后，服务器会根据argv[0]的值，在命令表中查找对应的命令实现函数，然后将cmd属性指向该命令结构。然后使用cmd属性所指向的redisCommand结构并设置命令参数信息，调用命令实现函数，执行对应的命令。</p>
-<h4 id="输出缓冲区"><a href="#输出缓冲区" class="headerlink" title="输出缓冲区"></a>输出缓冲区</h4><p>执行命令完成后，命令回复会被保存到输出缓冲区之中。每个客户端都有一个可变大小的缓冲区和固定大小的缓冲区。</p>
-<p>其中固定大小的缓冲区有buf和bufpos两个属性组成。buf属性是一个字节数组，bufpos记录了buf数组目前已使用的字节数量。其作用是保存那些长度比较少的回复。</p>
-<p>可变大小的缓冲区有reply属性保存。reply是一个链表连接多个字符串对象，用于保存那些长度比较大的回复，例如非常长的字符串，很多项组成的列表，很多元素的集合。</p>
-<h4 id="身份验证"><a href="#身份验证" class="headerlink" title="身份验证"></a>身份验证</h4><p>authenticated属性记录了客户端是否通过了身份验证。如果其值为0代表未通过身份验证。</p>
-<h3 id="客户端的创建与关闭"><a href="#客户端的创建与关闭" class="headerlink" title="客户端的创建与关闭"></a>客户端的创建与关闭</h3><h4 id="创建普通客户端"><a href="#创建普通客户端" class="headerlink" title="创建普通客户端"></a>创建普通客户端</h4><p>客户端使用connect函数创建连接时，服务器会调用连接事件处理器，为客户端创建相应的客户端状态，并将该客户端状态添加到服务器状态结构clients链表的末尾。</p>
-<h4 id="关闭普通客户端"><a href="#关闭普通客户端" class="headerlink" title="关闭普通客户端"></a>关闭普通客户端</h4><p>当出现以下情况时会出现客户端关闭：</p>
-<ul>
-<li>客户端与服务器的网络连接被关闭。</li>
-<li>发送了带有不符合协议格式的命令请求。</li>
-<li>客户端成为CLIENT KILL命令的目标</li>
-<li>发送的命令请求大小超过了输入缓冲区的大小</li>
-<li>命令回复超过了输出缓冲的大小</li>
-<li>用户为服务器设置了timeout配置选项。当空转时间超过该选项值时会被关闭。</li>
-</ul>
-<h4 id="伪客户端"><a href="#伪客户端" class="headerlink" title="伪客户端"></a>伪客户端</h4><p>服务器在初始化时会创建执行Lua脚本的Redis命令的伪客户端，并将该伪客户端关联在服务器状态的lua_client属性值中。在服务器关闭时，该客户端才会被关闭。</p>
-<p>服务器在载入AOF文件时，会创建执行AOF文件的伪客户端，在执行完成后，立即关闭该客户端。</p>
-<h2 id="服务器"><a href="#服务器" class="headerlink" title="服务器"></a>服务器</h2><h3 id="命令请求过程"><a href="#命令请求过程" class="headerlink" title="命令请求过程"></a>命令请求过程</h3><h4 id="发送命令请求"><a href="#发送命令请求" class="headerlink" title="发送命令请求"></a>发送命令请求</h4><p>Redis服务器的命令请求来自与Redis客户端。客户端会将命令请求转化为协议格式，通过连接到服务器的套接字，将协议的命令请求发送给服务器。</p>
-<h4 id="读取命令请求"><a href="#读取命令请求" class="headerlink" title="读取命令请求"></a>读取命令请求</h4><p>当套接字变得可读时，会调用命令处理器来执行以下操作</p>
-<ul>
-<li><p>读取套接字中协议格式的命令请求，并将其保存到客户端状态的输入缓冲区中。</p>
-</li>
-<li><p>对输入缓冲区的命令请求进行分析，提取命令参数。</p>
-</li>
-<li><p>调用命令执行器执行指定的命令。</p>
-</li>
-</ul>
-<h4 id="命令执行器"><a href="#命令执行器" class="headerlink" title="命令执行器"></a>命令执行器</h4><p>先根据客户端的argv[0]参数，在命令表中查找参数指定的命令，并保存到cmd属性值中。cmd的属性是redisCommand，其结构如下:</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">redisCommand</span> &#123;</span></span><br><span class="line">    <span class="comment">// 命令名字</span></span><br><span class="line">    <span class="keyword">char</span> *name;</span><br><span class="line">    <span class="comment">// 实现函数</span></span><br><span class="line">    redisCommandProc *proc;</span><br><span class="line">    <span class="comment">// 参数个数</span></span><br><span class="line">    <span class="keyword">int</span> arity;</span><br><span class="line">    <span class="comment">// 字符串表示的 FLAG</span></span><br><span class="line">    <span class="keyword">char</span> *sflags;</span><br><span class="line">    <span class="comment">// 实际 FLAG</span></span><br><span class="line">    <span class="keyword">int</span> flags;</span><br><span class="line">    <span class="comment">// 从命令中判断命令的键参数。在 Redis 集群转向时使用。</span></span><br><span class="line">    redisGetKeysProc *getkeys_proc;</span><br><span class="line">    <span class="comment">// 指定哪些参数是 key</span></span><br><span class="line">    <span class="keyword">int</span> firstkey; <span class="comment">/* The first argument that&#x27;s a key (0 = no keys) */</span></span><br><span class="line">    <span class="keyword">int</span> lastkey;  <span class="comment">/* The last argument that&#x27;s a key */</span></span><br><span class="line">    <span class="keyword">int</span> keystep;  <span class="comment">/* The step between first and last key */</span></span><br><span class="line">    <span class="comment">// microseconds 记录了命令执行耗费的总毫微秒数</span></span><br><span class="line">    <span class="comment">// calls 是命令被执行的总次数</span></span><br><span class="line">    <span class="keyword">long</span> <span class="keyword">long</span> microseconds, calls;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>在查找到命令以后，执行预备操作，例如检查cmd指针是否为NULL，参数个数是否正确等等。当完成预备操作后，服务器才开始真正的执行命令。redisCommandProc是一个函数指针的别名，参数为redisClient。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">typedef</span> <span class="keyword">void</span> <span class="title">redisCommandProc</span><span class="params">(redisClient *c)</span></span>;</span><br></pre></td></tr></table></figure>
-
-<p>在服务器真正实行命令时，只需要调用以下语句即可。</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line">client-&gt;cmd-&gt;proc(client);</span><br></pre></td></tr></table></figure>
-
-<p>被调用的命令实现函数会执行指定的操作，产生相应的命令回复，保存到输出缓冲区之中。</p>
-<p>在执行完成以后，服务器还需要执行一些后续操作，例如打印慢日志，AOF日志输出。完成后续操作以后，就可以处理下一个命令请求了。</p>
-<h3 id="serverCron函数"><a href="#serverCron函数" class="headerlink" title="serverCron函数"></a>serverCron函数</h3><p>Redis中的serverCron函数会每隔一段执行一次，负责管理服务器的资源，保证服务器运转良好。</p>
-<p>在serverCron会进行例如更新服务器时间缓存，执行持久化操作，关闭客户端等等。</p>
+<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
+<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
 ]]></content>
       <categories>
         <category>Redis</category>
       </categories>
       <tags>
         <tag>Redis</tag>
+        <tag>日志</tag>
+        <tag>持久化</tag>
       </tags>
   </entry>
   <entry>
@@ -717,89 +829,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Redis中的持久化机制</title>
-    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
-<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
-<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
-
-<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
-<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
-<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
-<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
-<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
-<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
-<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
-<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
-<table>
-<thead>
-<tr>
-<th>配置项</th>
-<th>写回时机</th>
-<th>优点</th>
-<th>缺点</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Always</td>
-<td>同步写回</td>
-<td>可靠性高，数据基本不会丢失</td>
-<td>性能影响大</td>
-</tr>
-<tr>
-<td>No</td>
-<td>操作系统控制的写回</td>
-<td>性能高</td>
-<td>丢失数据多</td>
-</tr>
-<tr>
-<td>Everysec</td>
-<td>每秒写回</td>
-<td>性能适中</td>
-<td>会丢失1秒内的数据</td>
-</tr>
-</tbody></table>
-<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
-<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
-
-<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
-<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
-<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
-<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
-<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
-<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
-<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
-<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
-<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
-<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
-<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
-<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
-<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
-<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
-<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
-<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
-<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
-<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
-<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
-<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
-<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
-<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
-]]></content>
-      <categories>
-        <category>Redis</category>
-      </categories>
-      <tags>
-        <tag>Redis</tag>
-        <tag>日志</tag>
-        <tag>持久化</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Redis如何删除过期键</title>
     <url>/2020/09/09/Redis%E5%A6%82%E4%BD%95%E5%88%A0%E9%99%A4%E8%BF%87%E6%9C%9F%E9%94%AE/</url>
     <content><![CDATA[<p>通过EXPIRE，PEXPIRE，SETEX等指令，Redis可以为数据库中的某键设置生存时间，在经过指定时间之后，服务器就会删除生存时间为0的键。</p>
@@ -827,53 +856,6 @@
       </categories>
       <tags>
         <tag>Redis</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>TCP的拥塞控制算法</title>
-    <url>/2020/08/31/TCP%E7%9A%84%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%AE%97%E6%B3%95/</url>
-    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在解释TCP的拥塞控制算法之前，需要了解TCP的两个窗口RWND接收窗口和CWND拥塞窗口。  </p>
-<p>接收端会维护接收窗口，会告诉发送端自己能够处理多少的数据，在发送ACK的时候，会告诉发送端自己的接收窗口的大小。    </p>
-<p>发送端会维护拥塞窗口，当网络上出现丢包等表明网络拥塞的情况时的情况时，需要修改自己的窗口大小来进行调整。  </p>
-<p>接收窗口的数值接收端能够明确的告诉发送端具体的大小，但是拥塞窗口没有明确的数值告诉发送方应该设置为多大。</p>
-<p>为了解决这一问题，需要使用到拥塞控制算法，来告诉发送方应该设置窗口为多大来避免出现网络拥塞。</p>
-<h2 id="Tahoe和RENO算法"><a href="#Tahoe和RENO算法" class="headerlink" title="Tahoe和RENO算法"></a>Tahoe和RENO算法</h2><p>在最原始的拥塞控制算法Tahoe中，将整个拥塞控制算法分为慢启动和拥塞避免两个部分。  </p>
-<p>慢启动指的是TCP连接刚建立的时候，一点一点的提速，试探网络的承受能力。每过一个RTT，拥塞窗口的大小翻倍，直到CWND大小达到了设置的慢启动阈值ssthresh或者发生了丢包，进入到拥塞避免算法。  </p>
-<p>在拥塞避免的过程中，每过一个RTT，CWND的大小加一。当网络中发生丢包时，将ssthresh设置为当前CWND的一半，CWND重置为1进入慢启动过程。</p>
-<p><img data-src="Tahoe.png" alt="Tahoe算法图示"></p>
-<p>RENO算法在Tahoe上进行了改进，当网络中出现了重复确认的情况时，Reno算法只会降低CWND为当前CWND大小的一半，来提高网络的利用率。</p>
-<p><img data-src="Reno.png" alt="RENO算法图示"></p>
-<p>Reno的问题主要有以下几点：</p>
-<ul>
-<li>在于受链路Buffer的影响很大。</li>
-<li>因为其CWND大小每次只能加一,对于高带宽网络可能需要很长的时间才能够到达合适的拥塞窗口大小，在过程中会浪费大量的网络带宽，对于高带宽的网络利用率相当低。</li>
-<li>每收到一个ACK就将CWND加一，对于RTT小的连接，其CWND的增长速度会很快，但是对于RTT大的连接，其在链路上占用的资源会比较小。RTT小的连接会不公平的占用更多的带宽。</li>
-</ul>
-<h2 id="BIC和CUBIC算法"><a href="#BIC和CUBIC算法" class="headerlink" title="BIC和CUBIC算法"></a>BIC和CUBIC算法</h2><p>BIC算法在RENO的基础上做了一些改进，将拥塞避免的过程分为三部分</p>
-<ul>
-<li>在丢包后将CWND降为丢包时 CWND 的常数倍（一般为0.8),并选择上次丢包时的CWND和本次丢包的CWND作为饱和点，然后以一个较快的速度增长CWND大小。</li>
-<li>在接近饱和点，使用二分算法来去逐步的接近饱和点。</li>
-<li>到达饱和点之后转为二次函数去探测下一个极限。当出现丢包时重复第一部分。</li>
-</ul>
-<p>BIC的好处在于丢包后能够迅速的进行恢复，在稳定期能够保持更长的时间，同时能够继续探测更高的带宽值。</p>
-<p><img data-src="BIC.png" alt="BIC算法图示"></p>
-<p>CUBIC比BIC算法在搜索拥塞窗口最大值的过程中更加的温和，使用三次函数来代替二分算法并且使用拐点值作为拥塞窗口的大小。</p>
-<p><img data-src="CUBIC.png" alt="CUBIC算法图示"></p>
-<p>CUBIC 的优势在于因为其算法与RTT无关，所以更加公平，同时适合于网络带宽大的网络。</p>
-<p>但是CUBIC依旧有缺点，其缺点在于当网络的传输带宽出现变化时，需要比较长的时间才能达到Wmax，同时CUBIC更容易加重链路的负担。</p>
-<h2 id="VEGAS-算法"><a href="#VEGAS-算法" class="headerlink" title="VEGAS 算法"></a>VEGAS 算法</h2><p>基于丢包的算法可以达到最大的传输速率，但是它是以高延迟和高丢包率作为代价的，但是它是以高延迟和高丢包率作为代价的。随着内存价格降低，交换机的Buffer越来越大后，容易导致Bufferfloat，</p>
-<p>与之前基于丢包的算法不同，VEGAS 算法会监控RTT，在尝试增加发送速率时如果发现丢包或者RTT增加就降低发送速率，认为网络中出现拥塞，就将降低发送速率。</p>
-<p>但是其致命的缺点在于不能很好的跟基于丢包的算法共存，在同时使用时会导致竞争不过基于丢包的算法，因此没有得到大规模的应用。</p>
-<h2 id="PRR-算法"><a href="#PRR-算法" class="headerlink" title="PRR 算法"></a>PRR 算法</h2><p>TODO</p>
-<h2 id="BBR算法"><a href="#BBR算法" class="headerlink" title="BBR算法"></a>BBR算法</h2><p>TODO</p>
-<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://zh.wikipedia.org/wiki/TCP%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6">TCP拥塞控制-维基百科</a><br><a href="https://juejin.im/post/6844904164837818382">常见 TCP 拥塞避免算法浏览-掘金</a><br><a href="https://zhuanlan.zhihu.com/p/144273871">TCP拥塞控制详解-知乎</a></p>
-]]></content>
-      <categories>
-        <category>网络</category>
-      </categories>
-      <tags>
-        <tag>TCP</tag>
-        <tag>拥塞控制</tag>
       </tags>
   </entry>
   <entry>
@@ -932,30 +914,70 @@
       </tags>
   </entry>
   <entry>
-    <title>netty常用概念</title>
-    <url>/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/</url>
-    <content><![CDATA[<h2 id="channel"><a href="#channel" class="headerlink" title="channel"></a>channel</h2><p>Channel接口是Netty对网络操作的抽象类，代表一个到实体（如硬件设备、网络套接字、文件等等）的开放连接，包含基本的读写操作。常用的Channel接口实现类包括NioServerSocketChannel和NioSocketChannel。这两个相当于BIO编程模型中的ServerSocket以及Socket两个概念。</p>
-<h2 id="Future"><a href="#Future" class="headerlink" title="Future"></a>Future</h2><p>Netty是异步非阻塞的，所有的IO操作都是异步的，因此无法立即得到操作是否执行成功。通过Future提供了一种在操作完成时通知应用程序的方法，这个对象可以看作是一个异步操作的结果的占位符。</p>
-<p>Netty提供了自己的实现ChannelFuture，其中addListener()方法可以注册一个ChannelFutureListener，当操作执行完成时，会自动触发返回结果。还可以通过sync()方法将异步的操作转换为同步的。</p>
-<h2 id="ChannelHandler"><a href="#ChannelHandler" class="headerlink" title="ChannelHandler"></a>ChannelHandler</h2><p>Netty使用不同的事件来通知我们状态的改变或者是操作的状态。ChannelHandler 是消息的具体处理器。他负责处理读写操作、客户端连接等事情。</p>
-<p>ChannelPipeline是ChannelHandler构成的链条，可以通过ChannelPipeline的add()方法添加ChannelHandler。</p>
-<p>Netty也提供了预定义的ChannelHandler实现，包括实现HTTP,TLS的ChannelHandler。</p>
-<h2 id="Eventloop"><a href="#Eventloop" class="headerlink" title="Eventloop"></a>Eventloop</h2><p>EventLoop 的主要作用实际就是负责监听网络事件并调用事件处理器进行相关 I/O 操作的处理。</p>
-<p>EventLoopGroup 包含多个 EventLoop。</p>
-<p>当客户端连接服务端时，bossGroup会处理客户端连接请求。当客户端处理完成后，会将这个连接提交workerGroup来处理，然后workerGroup负责处理其 IO 相关操作。</p>
-<h2 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h2><p>Bootstrap 是客户端的启动引导类，通过connect()方法连接到远程的主机和端口，作为TCP连接的客户端，也可以通过bind()方法绑定一个本地端口，作为UDP协议通信中的一端。</p>
-<p>ServerBootstrap是服务端的启动引导类，使用bind放大绑定到本地端口上，等待客户端的连接。 </p>
-<h2 id="线程模型"><a href="#线程模型" class="headerlink" title="线程模型"></a>线程模型</h2><p>Netty线程模型基于Reactor模式设计开发。Reactor 模式基于事件驱动，采用多路复用将事件分发给相应的Handler处理。Netty主要靠NioEventLoopGroup线程池来实现具体的线程模型的。在实现服务端的时候，一般会初始化两个线程组，分别为bossGroup用于接受连接以及workerGroup负责具体的处理。其中bossGroup和workerGroup可以共用同一个EventLoopGroup。</p>
-<h2 id="长连接与心跳机制"><a href="#长连接与心跳机制" class="headerlink" title="长连接与心跳机制"></a>长连接与心跳机制</h2><p>短连接指的是server与client端建立连接以后，读写完成之后就关闭掉连接，如果下次还需要继续发送消息，那么就要重新建立连接。</p>
-<p>长连接说的就是 client 向 server 双方建立连接之后，它们之间的连接并不会主动关闭，后续的读写操作会继续使用这个连接。长连接的可以省去较多的 TCP 建立和关闭的操作，降低对网络资源的消耗。</p>
-<p>在保存长连接的过程中，如果遇到断网等情况，需要使用到心跳机制判断对方是否已经掉线。如果client与server之间在一定时间内没有数据交互时，会发送一个特殊的数据包给对方，当接收方收到这个数据报文后, 也立即发送一个特殊的数据报文。当某一端收到心跳消息以后，就可以知道对方仍然在线，确保TCP连接的有效性。</p>
+    <title>TCP的拥塞控制算法</title>
+    <url>/2020/08/31/TCP%E7%9A%84%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6%E7%AE%97%E6%B3%95/</url>
+    <content><![CDATA[<h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在解释TCP的拥塞控制算法之前，需要了解TCP的两个窗口RWND接收窗口和CWND拥塞窗口。  </p>
+<p>接收端会维护接收窗口，会告诉发送端自己能够处理多少的数据，在发送ACK的时候，会告诉发送端自己的接收窗口的大小。    </p>
+<p>发送端会维护拥塞窗口，当网络上出现丢包等表明网络拥塞的情况时的情况时，需要修改自己的窗口大小来进行调整。  </p>
+<p>接收窗口的数值接收端能够明确的告诉发送端具体的大小，但是拥塞窗口没有明确的数值告诉发送方应该设置为多大。</p>
+<p>为了解决这一问题，需要使用到拥塞控制算法，来告诉发送方应该设置窗口为多大来避免出现网络拥塞。</p>
+<h2 id="Tahoe和RENO算法"><a href="#Tahoe和RENO算法" class="headerlink" title="Tahoe和RENO算法"></a>Tahoe和RENO算法</h2><p>在最原始的拥塞控制算法Tahoe中，将整个拥塞控制算法分为慢启动和拥塞避免两个部分。  </p>
+<p>慢启动指的是TCP连接刚建立的时候，一点一点的提速，试探网络的承受能力。每过一个RTT，拥塞窗口的大小翻倍，直到CWND大小达到了设置的慢启动阈值ssthresh或者发生了丢包，进入到拥塞避免算法。  </p>
+<p>在拥塞避免的过程中，每过一个RTT，CWND的大小加一。当网络中发生丢包时，将ssthresh设置为当前CWND的一半，CWND重置为1进入慢启动过程。</p>
+<p><img data-src="Tahoe.png" alt="Tahoe算法图示"></p>
+<p>RENO算法在Tahoe上进行了改进，当网络中出现了重复确认的情况时，Reno算法只会降低CWND为当前CWND大小的一半，来提高网络的利用率。</p>
+<p><img data-src="Reno.png" alt="RENO算法图示"></p>
+<p>Reno的问题主要有以下几点：</p>
+<ul>
+<li>在于受链路Buffer的影响很大。</li>
+<li>因为其CWND大小每次只能加一,对于高带宽网络可能需要很长的时间才能够到达合适的拥塞窗口大小，在过程中会浪费大量的网络带宽，对于高带宽的网络利用率相当低。</li>
+<li>每收到一个ACK就将CWND加一，对于RTT小的连接，其CWND的增长速度会很快，但是对于RTT大的连接，其在链路上占用的资源会比较小。RTT小的连接会不公平的占用更多的带宽。</li>
+</ul>
+<h2 id="BIC和CUBIC算法"><a href="#BIC和CUBIC算法" class="headerlink" title="BIC和CUBIC算法"></a>BIC和CUBIC算法</h2><p>BIC算法在RENO的基础上做了一些改进，将拥塞避免的过程分为三部分</p>
+<ul>
+<li>在丢包后将CWND降为丢包时 CWND 的常数倍（一般为0.8),并选择上次丢包时的CWND和本次丢包的CWND作为饱和点，然后以一个较快的速度增长CWND大小。</li>
+<li>在接近饱和点，使用二分算法来去逐步的接近饱和点。</li>
+<li>到达饱和点之后转为二次函数去探测下一个极限。当出现丢包时重复第一部分。</li>
+</ul>
+<p>BIC的好处在于丢包后能够迅速的进行恢复，在稳定期能够保持更长的时间，同时能够继续探测更高的带宽值。</p>
+<p><img data-src="BIC.png" alt="BIC算法图示"></p>
+<p>CUBIC比BIC算法在搜索拥塞窗口最大值的过程中更加的温和，使用三次函数来代替二分算法并且使用拐点值作为拥塞窗口的大小。</p>
+<p><img data-src="CUBIC.png" alt="CUBIC算法图示"></p>
+<p>CUBIC 的优势在于因为其算法与RTT无关，所以更加公平，同时适合于网络带宽大的网络。</p>
+<p>但是CUBIC依旧有缺点，其缺点在于当网络的传输带宽出现变化时，需要比较长的时间才能达到Wmax，同时CUBIC更容易加重链路的负担。</p>
+<h2 id="VEGAS-算法"><a href="#VEGAS-算法" class="headerlink" title="VEGAS 算法"></a>VEGAS 算法</h2><p>基于丢包的算法可以达到最大的传输速率，但是它是以高延迟和高丢包率作为代价的，但是它是以高延迟和高丢包率作为代价的。随着内存价格降低，交换机的Buffer越来越大后，容易导致Bufferfloat，</p>
+<p>与之前基于丢包的算法不同，VEGAS 算法会监控RTT，在尝试增加发送速率时如果发现丢包或者RTT增加就降低发送速率，认为网络中出现拥塞，就将降低发送速率。</p>
+<p>但是其致命的缺点在于不能很好的跟基于丢包的算法共存，在同时使用时会导致竞争不过基于丢包的算法，因此没有得到大规模的应用。</p>
+<h2 id="PRR-算法"><a href="#PRR-算法" class="headerlink" title="PRR 算法"></a>PRR 算法</h2><p>TODO</p>
+<h2 id="BBR算法"><a href="#BBR算法" class="headerlink" title="BBR算法"></a>BBR算法</h2><p>TODO</p>
+<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a href="https://zh.wikipedia.org/wiki/TCP%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6">TCP拥塞控制-维基百科</a><br><a href="https://juejin.im/post/6844904164837818382">常见 TCP 拥塞避免算法浏览-掘金</a><br><a href="https://zhuanlan.zhihu.com/p/144273871">TCP拥塞控制详解-知乎</a></p>
 ]]></content>
       <categories>
-        <category>Netty</category>
+        <category>网络</category>
       </categories>
       <tags>
-        <tag>网络</tag>
-        <tag>Netty</tag>
+        <tag>TCP</tag>
+        <tag>拥塞控制</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kafka基本概念</title>
+    <url>/2021/01/26/kafka%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<p>一个经典的Kafka架构包括若干个Producer、Broker、Consumer和ZooKeeper集群。</p>
+<p>ZooKeeper是Kafka用来负责集群元数据的管理以及控制器的选举。</p>
+<p>Producer将消息发送到Broker中去，Broker负责将收到的消息存储到磁盘当中，然后Consumer负责从Broker订阅并且消费消息。</p>
+<p>Kafka还有两个重要的概念就是主题Topic以及分区Partition。Kafka中的消息以主题为单位进行归类，生产者负责将消息发送到特定的主题，消费者负责订阅主题并进行消费。</p>
+<p>主题是一个逻辑上的概念，还可以细分为多个分区，一个分区只属于单个主题。同一主题下不同分区包含的消息是不同的。分区在存储层面可以看作一个可以追加的日志，消息在追加到分区日志文件的时候会分配一个特定的偏移量offset。offset是消息在分区中的唯一标识，Kafka通过offset来保证消息在分区中的顺序性。但是offset不跨越分区，因此Kafka只保证分区有序而不保证主题有序。</p>
+<p>Kafka的分区可以分布在不同的服务器上，横跨多个Broker，以此来提供比单个Broker更强大的性能。当消息发送到Broker之前，会根据分区规则选择存储到哪个分区。</p>
+<p>Kafka为分区引入了多副本（Replica）机制，通过增加副本数量可以提升容灾能力。同一分区的不同副本中保存的是相同的消息，但在同一时刻副本之间的消息可能并非完全相同，副本之间是一主多从的关系，其中leader副本负责处理读写请求，follower副本只负责与leader副本消息同步。副本处于不同的broker中，当leader副本出现故障时，从follower副本中重新选举新的leader副本继续对外提供服务。通过该机制使得Kafka集群中某个Broker失效时仍然能够对外提供服务。</p>
+<p>分区中所有的副本称为AR（Assigned Replicas），所有与leader副本保持一定程度同步的副本组成ISR（In-Sync-Replicas）。当消费者发送消息时，会先发送到leader节点，然后follower节点才能从leader副本中拉取消息进行同步，同步期间follower副本相对于leader副本会有一定程度上的落后。与leader副本同步滞后过多的副本称为OSR（Out-of-Sync Replicas）。当leader副本发生故障时，只有ISR集合中的副本才有资格选举为新的leader。</p>
+<p>Kafka的消费端也有容灾能力，Consumer使用拉（Pull）模式从服务端拉取消息，并且保存消费的具体位置。当消费者宕机重启时可以根据之前保存的消费位置重新拉取需要的消息进行消费。</p>
+]]></content>
+      <categories>
+        <category>Kafka</category>
+      </categories>
+      <tags>
+        <tag>Kafka</tag>
       </tags>
   </entry>
   <entry>
@@ -998,23 +1020,30 @@
       </tags>
   </entry>
   <entry>
-    <title>Kafka基本概念</title>
-    <url>/2021/01/26/kafka%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</url>
-    <content><![CDATA[<p>一个经典的Kafka架构包括若干个Producer、Broker、Consumer和ZooKeeper集群。</p>
-<p>ZooKeeper是Kafka用来负责集群元数据的管理以及控制器的选举。</p>
-<p>Producer将消息发送到Broker中去，Broker负责将收到的消息存储到磁盘当中，然后Consumer负责从Broker订阅并且消费消息。</p>
-<p>Kafka还有两个重要的概念就是主题Topic以及分区Partition。Kafka中的消息以主题为单位进行归类，生产者负责将消息发送到特定的主题，消费者负责订阅主题并进行消费。</p>
-<p>主题是一个逻辑上的概念，还可以细分为多个分区，一个分区只属于单个主题。同一主题下不同分区包含的消息是不同的。分区在存储层面可以看作一个可以追加的日志，消息在追加到分区日志文件的时候会分配一个特定的偏移量offset。offset是消息在分区中的唯一标识，Kafka通过offset来保证消息在分区中的顺序性。但是offset不跨越分区，因此Kafka只保证分区有序而不保证主题有序。</p>
-<p>Kafka的分区可以分布在不同的服务器上，横跨多个Broker，以此来提供比单个Broker更强大的性能。当消息发送到Broker之前，会根据分区规则选择存储到哪个分区。</p>
-<p>Kafka为分区引入了多副本（Replica）机制，通过增加副本数量可以提升容灾能力。同一分区的不同副本中保存的是相同的消息，但在同一时刻副本之间的消息可能并非完全相同，副本之间是一主多从的关系，其中leader副本负责处理读写请求，follower副本只负责与leader副本消息同步。副本处于不同的broker中，当leader副本出现故障时，从follower副本中重新选举新的leader副本继续对外提供服务。通过该机制使得Kafka集群中某个Broker失效时仍然能够对外提供服务。</p>
-<p>分区中所有的副本称为AR（Assigned Replicas），所有与leader副本保持一定程度同步的副本组成ISR（In-Sync-Replicas）。当消费者发送消息时，会先发送到leader节点，然后follower节点才能从leader副本中拉取消息进行同步，同步期间follower副本相对于leader副本会有一定程度上的落后。与leader副本同步滞后过多的副本称为OSR（Out-of-Sync Replicas）。当leader副本发生故障时，只有ISR集合中的副本才有资格选举为新的leader。</p>
-<p>Kafka的消费端也有容灾能力，Consumer使用拉（Pull）模式从服务端拉取消息，并且保存消费的具体位置。当消费者宕机重启时可以根据之前保存的消费位置重新拉取需要的消息进行消费。</p>
+    <title>netty常用概念</title>
+    <url>/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<h2 id="channel"><a href="#channel" class="headerlink" title="channel"></a>channel</h2><p>Channel接口是Netty对网络操作的抽象类，代表一个到实体（如硬件设备、网络套接字、文件等等）的开放连接，包含基本的读写操作。常用的Channel接口实现类包括NioServerSocketChannel和NioSocketChannel。这两个相当于BIO编程模型中的ServerSocket以及Socket两个概念。</p>
+<h2 id="Future"><a href="#Future" class="headerlink" title="Future"></a>Future</h2><p>Netty是异步非阻塞的，所有的IO操作都是异步的，因此无法立即得到操作是否执行成功。通过Future提供了一种在操作完成时通知应用程序的方法，这个对象可以看作是一个异步操作的结果的占位符。</p>
+<p>Netty提供了自己的实现ChannelFuture，其中addListener()方法可以注册一个ChannelFutureListener，当操作执行完成时，会自动触发返回结果。还可以通过sync()方法将异步的操作转换为同步的。</p>
+<h2 id="ChannelHandler"><a href="#ChannelHandler" class="headerlink" title="ChannelHandler"></a>ChannelHandler</h2><p>Netty使用不同的事件来通知我们状态的改变或者是操作的状态。ChannelHandler 是消息的具体处理器。他负责处理读写操作、客户端连接等事情。</p>
+<p>ChannelPipeline是ChannelHandler构成的链条，可以通过ChannelPipeline的add()方法添加ChannelHandler。</p>
+<p>Netty也提供了预定义的ChannelHandler实现，包括实现HTTP,TLS的ChannelHandler。</p>
+<h2 id="Eventloop"><a href="#Eventloop" class="headerlink" title="Eventloop"></a>Eventloop</h2><p>EventLoop 的主要作用实际就是负责监听网络事件并调用事件处理器进行相关 I/O 操作的处理。</p>
+<p>EventLoopGroup 包含多个 EventLoop。</p>
+<p>当客户端连接服务端时，bossGroup会处理客户端连接请求。当客户端处理完成后，会将这个连接提交workerGroup来处理，然后workerGroup负责处理其 IO 相关操作。</p>
+<h2 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h2><p>Bootstrap 是客户端的启动引导类，通过connect()方法连接到远程的主机和端口，作为TCP连接的客户端，也可以通过bind()方法绑定一个本地端口，作为UDP协议通信中的一端。</p>
+<p>ServerBootstrap是服务端的启动引导类，使用bind放大绑定到本地端口上，等待客户端的连接。 </p>
+<h2 id="线程模型"><a href="#线程模型" class="headerlink" title="线程模型"></a>线程模型</h2><p>Netty线程模型基于Reactor模式设计开发。Reactor 模式基于事件驱动，采用多路复用将事件分发给相应的Handler处理。Netty主要靠NioEventLoopGroup线程池来实现具体的线程模型的。在实现服务端的时候，一般会初始化两个线程组，分别为bossGroup用于接受连接以及workerGroup负责具体的处理。其中bossGroup和workerGroup可以共用同一个EventLoopGroup。</p>
+<h2 id="长连接与心跳机制"><a href="#长连接与心跳机制" class="headerlink" title="长连接与心跳机制"></a>长连接与心跳机制</h2><p>短连接指的是server与client端建立连接以后，读写完成之后就关闭掉连接，如果下次还需要继续发送消息，那么就要重新建立连接。</p>
+<p>长连接说的就是 client 向 server 双方建立连接之后，它们之间的连接并不会主动关闭，后续的读写操作会继续使用这个连接。长连接的可以省去较多的 TCP 建立和关闭的操作，降低对网络资源的消耗。</p>
+<p>在保存长连接的过程中，如果遇到断网等情况，需要使用到心跳机制判断对方是否已经掉线。如果client与server之间在一定时间内没有数据交互时，会发送一个特殊的数据包给对方，当接收方收到这个数据报文后, 也立即发送一个特殊的数据报文。当某一端收到心跳消息以后，就可以知道对方仍然在线，确保TCP连接的有效性。</p>
 ]]></content>
       <categories>
-        <category>Kafka</category>
+        <category>Netty</category>
       </categories>
       <tags>
-        <tag>Kafka</tag>
+        <tag>网络</tag>
+        <tag>Netty</tag>
       </tags>
   </entry>
   <entry>
@@ -1135,92 +1164,6 @@
       </tags>
   </entry>
   <entry>
-    <title>设计模式之创建型模式</title>
-    <url>/2020/09/03/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E5%88%9B%E5%BB%BA%E5%9E%8B%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<p>创建型模式关注点是如何创建对象，其核心思想是要把对象的创建和使用相分离，这样使得两者能相对独立地变换。</p>
-<h2 id="单例模式"><a href="#单例模式" class="headerlink" title="单例模式"></a>单例模式</h2><p>一个类只允许创建一个对象，那这个类就是一个单例类，这种设计模式就叫作单例模式。这个概念理解起来比较简单，单例模式主要用来表示全局唯一类，例如配置信息类。在系统中，应该只有一个配置文件，当配置文件被加载进入内存之中以后，也应该只有一个配置类的对象，这种情况下就可以使用单例模式进行设计。</p>
-<h3 id="单例的Java实现"><a href="#单例的Java实现" class="headerlink" title="单例的Java实现"></a>单例的Java实现</h3><h4 id="饿汉式"><a href="#饿汉式" class="headerlink" title="饿汉式"></a>饿汉式</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Instance instance=<span class="keyword">new</span> Instance();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Instance <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> instance;    </span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>饿汉式的实现方式比较简单，在类加载的时候就已经创建并初始化好了instance实例对象，不过这一实现方式的缺点是不能够实现延迟加载。</p>
-<h4 id="双重检查"><a href="#双重检查" class="headerlink" title="双重检查"></a>双重检查</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> Instance instance;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Instance <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (instance==<span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (Instance.class)&#123;</span><br><span class="line">                <span class="keyword">if</span> (instance==<span class="keyword">null</span>)&#123;</span><br><span class="line">                    instance=<span class="keyword">new</span> Instance();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;    </span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在这种实现方式中，在instance被创建之前，会进入synchronized锁逻辑之中，只要instance被创建之后，就再也不会进入到加锁逻辑之中了。同时因为指令重排序的问题，可能会导致Instance对象被new出来，并且赋值给instance之后，还没来得及初始化，就被使用了，需要给instance成员变量添加上volatile关键字，禁止指令重排序。</p>
-<h4 id="静态内部类"><a href="#静态内部类" class="headerlink" title="静态内部类"></a>静态内部类</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">InstanceHolder</span></span>&#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Instance instance=<span class="keyword">new</span> Instance();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Instance <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> InstanceHolder.instance;</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>利用Java的静态内部类也可以实现单例模式，InstanceHolder是一个静态内部类，当外部类Instance被加载的时候不会创建InstanceHolder对象，只有当调用getInstance时才会被加载创建instance。这种方式既保证了线程安全又做到了延迟加载。</p>
-<h4 id="枚举"><a href="#枚举" class="headerlink" title="枚举"></a>枚举</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">enum</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    INSTANCE</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>枚举是实现最简单的实现方法，通过枚举自身的特性，保证了线程安全性以及实例的唯一性。</p>
-<h2 id="工厂模式"><a href="#工厂模式" class="headerlink" title="工厂模式"></a>工厂模式</h2><p>工厂模式也是比较常见的一种设计模式，一般分为三种：简单工厂、工厂方法、抽象工厂。</p>
-<h3 id="简单工厂"><a href="#简单工厂" class="headerlink" title="简单工厂"></a>简单工厂</h3><p>下面这段代码模拟的是根据配置文件的不同的后缀，获取到不同的解析器，解析存储在文件中的配置信息，这用的就是简单工厂模式。</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="keyword">object</span> ParserFactory &#123;</span><br><span class="line">    <span class="comment">//简单工厂</span></span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">(fileExtension: <span class="type">String</span>)</span></span> =</span><br><span class="line">        <span class="keyword">when</span> (fileExtension.toLowerCase()) &#123;</span><br><span class="line">            <span class="string">&quot;xml&quot;</span> -&gt; XmlParser()</span><br><span class="line">            <span class="string">&quot;json&quot;</span> -&gt; JsonParser()</span><br><span class="line">            <span class="string">&quot;properties&quot;</span> -&gt; PropertiesParser()</span><br><span class="line">            <span class="keyword">else</span> -&gt; <span class="keyword">throw</span> IllegalArgumentException(<span class="string">&quot;未知的类型&quot;</span>)</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Parser</span> </span>&#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JsonParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PropertiesParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> parser = ParserFactory.createParser(<span class="string">&quot;xml&quot;</span>)</span><br><span class="line">    parser.parse(<span class="string">&quot;test.xml&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<h3 id="工厂方法"><a href="#工厂方法" class="headerlink" title="工厂方法"></a>工厂方法</h3><p>如果为了更好地扩展性，可以使用工厂方法模式，代码如下:</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">IParseFactory</span> </span>&#123;</span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> &#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">val</span> map = mapOf(</span><br><span class="line">            <span class="string">&quot;xml&quot;</span> to XmlParserFactory(),</span><br><span class="line">            <span class="string">&quot;json&quot;</span> to JsonParserFactory(),</span><br><span class="line">            <span class="string">&quot;properties&quot;</span> to PropertiesParserFactory()</span><br><span class="line">        )</span><br><span class="line">        <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">(fileExtension: <span class="type">String</span>)</span></span> =</span><br><span class="line">            map[fileExtension.toLowerCase()]</span><br><span class="line">                ?: <span class="keyword">throw</span> IllegalArgumentException(<span class="string">&quot;未知的类型&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span>: Parser</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span> = XmlParser()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JsonParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span> = JsonParser()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PropertiesParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span> = PropertiesParser()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Parser</span> </span>&#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JsonParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PropertiesParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> parserFactory = IParseFactory.createParser(<span class="string">&quot;xml&quot;</span>)</span><br><span class="line">    <span class="keyword">val</span> parser = parserFactory.createParser()</span><br><span class="line">    parser.parse(<span class="string">&quot;test.xml&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>工厂方法需要额外创造诸多的Factory类，会增加代码的复杂性。每个Factory类只是做简单的new操作，没有必要设计成独立的类，所以，在这个应用场景下，简单工厂模式简单好用，比工厂方法模式更加合适。但是如果当对象的创建逻辑比较复杂，需要很多操作时，则可以将复杂的创建逻辑添加到多个工厂类之中，让每个工厂类不过于复杂。而如果使用简单工厂模式，将所有的创建逻辑放到工厂类之中，会导致这个工厂类十分复杂。</p>
-<h3 id="抽象工厂"><a href="#抽象工厂" class="headerlink" title="抽象工厂"></a>抽象工厂</h3><p>在简单工厂和工厂方法之中，类只有一个分类方式。但是如果有两种分类方式，比如不仅按照文件格式来分类（例如Json,Xml,Properties)，还可以通过解析的对象来分类（例如规则配置，系统配置，业务配置等等），就会有3*3个类，会让系统难以维护。抽象工厂就是为了这一场景而诞生的。</p>
-<p>抽象工厂可以让一个工厂负责创建多个不同类型的对象，而不是之创建一种对象，可以有效减少工厂类的个数，具体代码如下：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">IParseFactory</span> </span>&#123;</span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> &#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">val</span> map = mapOf(</span><br><span class="line">            <span class="string">&quot;xml&quot;</span> to XmlParserFactory(),</span><br><span class="line">            <span class="string">&quot;json&quot;</span> to JsonParserFactory(),</span><br><span class="line">            <span class="string">&quot;properties&quot;</span> to PropertiesParserFactory()</span><br><span class="line">        )</span><br><span class="line">        <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">(fileExtension: <span class="type">String</span>)</span></span> =</span><br><span class="line">            map[fileExtension.toLowerCase()]</span><br><span class="line">                ?: <span class="keyword">throw</span> IllegalArgumentException(<span class="string">&quot;未知的类型&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser1</span><span class="params">()</span></span>: Parser</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser2</span><span class="params">()</span></span>: Parser</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser1</span><span class="params">()</span></span> = XmlParser1()</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser2</span><span class="params">()</span></span> = XmlParser2()</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//...其他Factory代码</span></span><br></pre></td></tr></table></figure>
-
-<h2 id="创建者模式"><a href="#创建者模式" class="headerlink" title="创建者模式"></a>创建者模式</h2><p>最常见创建一个对象的方法是调用类的构造函数来完成，但是在有些情况下这种方式就不适用了，就需要使用创建者模式来创建对象。例如对于一个线程池配置类，有以下几个成员变量</p>
-<table>
-<thead>
-<tr>
-<th>成员变量</th>
-<th>解释</th>
-<th>是否必填</th>
-<th>默认值</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>name</td>
-<td>名称</td>
-<td>是</td>
-<td></td>
-</tr>
-<tr>
-<td>maxPoolSize</td>
-<td>最大连接数</td>
-<td>否</td>
-<td>10</td>
-</tr>
-<tr>
-<td>corePoolSize</td>
-<td>线程池大小</td>
-<td>否</td>
-<td>5</td>
-</tr>
-<tr>
-<td>keepAliveTime</td>
-<td>存活时间</td>
-<td>否</td>
-<td>1min</td>
-</tr>
-</tbody></table>
-<p>如果使用构造函数，则代码如下所示</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadPoolConfig</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">var</span> config = <span class="keyword">new</span> ThreadPoolConfig(<span class="string">&quot;test&quot;</span>, <span class="number">10</span>, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> maxPoolSize = <span class="number">10</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> corePoolSize = <span class="number">5</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> keepAliveTime = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolConfig</span><span class="params">(String name, Integer maxPoolSize, Integer corePoolSize, Integer keepAliveTime)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (name == <span class="keyword">null</span> || name.isBlank()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;名称不能为空&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">        <span class="keyword">if</span> (maxPoolSize != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (maxPoolSize &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;maxPoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.maxPoolSize = maxPoolSize;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (corePoolSize != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (corePoolSize &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;corePoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.corePoolSize = corePoolSize;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (keepAliveTime != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (keepAliveTime &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;keepAliveTime 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.keepAliveTime = keepAliveTime;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>如果按照上面的代码，那么随着可配置项的增多，构造函数的列表会变得很长，容易搞错传递参数的顺序。为了解决这一个问题，就需要使用到建造者模式。在建造者模式中，先通过set方法设置建造者的变量值，所有逻辑检验的部分被放到了build方法之中。使用建造者模式重新实现的代码如下所示：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadPoolConfig</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">var</span> config = <span class="keyword">new</span> ThreadPoolConfig.Builder()</span><br><span class="line">                        .setName(<span class="string">&quot;test&quot;</span>)</span><br><span class="line">                        .setKeepAliveTime(<span class="number">100</span>).build();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> maxPoolSize;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> corePoolSize;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> keepAliveTime;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">ThreadPoolConfig</span><span class="params">(Builder builder)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = builder.name;</span><br><span class="line">        <span class="keyword">this</span>.maxPoolSize = builder.maxPoolSize;</span><br><span class="line">        <span class="keyword">this</span>.corePoolSize = builder.corePoolSize;</span><br><span class="line">        <span class="keyword">this</span>.keepAliveTime = builder.keepAliveTime;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Builder</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> maxPoolSize = <span class="number">10</span>;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> corePoolSize = <span class="number">5</span>;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> keepAliveTime = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ThreadPoolConfig <span class="title">build</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (name == <span class="keyword">null</span> || name.isBlank()) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;名称不能为空&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (maxPoolSize &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;maxPoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (corePoolSize &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;corePoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (keepAliveTime &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;keepAliveTime 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ThreadPoolConfig(<span class="keyword">this</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setMaxPoolSize</span><span class="params">(<span class="keyword">int</span> maxPoolSize)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.maxPoolSize = maxPoolSize;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setCorePoolSize</span><span class="params">(<span class="keyword">int</span> corePoolSize)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.corePoolSize = corePoolSize;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setKeepAliveTime</span><span class="params">(<span class="keyword">int</span> keepAliveTime)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.keepAliveTime = keepAliveTime;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h2 id="原型模式"><a href="#原型模式" class="headerlink" title="原型模式"></a>原型模式</h2><p>原型模式指的是在创建新对象的时候，通过现有的一个原型来创建。原型模式的使用如下所示。</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">User</span></span>(</span><br><span class="line">    <span class="keyword">val</span> id: <span class="built_in">Int</span>,</span><br><span class="line">    <span class="keyword">val</span> name: String,</span><br><span class="line">    <span class="keyword">val</span> permission: MutableList&lt;String&gt;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> permissionList = arrayListOf(<span class="string">&quot;user&quot;</span>)</span><br><span class="line">    <span class="keyword">val</span> user1 = User(<span class="number">1</span>, <span class="string">&quot;test&quot;</span>, permissionList)</span><br><span class="line">    <span class="keyword">val</span> user2 = user1.copy()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="深拷贝与浅拷贝"><a href="#深拷贝与浅拷贝" class="headerlink" title="深拷贝与浅拷贝"></a>深拷贝与浅拷贝</h3><p>原型模式有两种实现方法，深拷贝和浅拷贝。浅拷贝和深拷贝的区别在于，浅拷贝只会复制对象中基本数据类型数据和引用对象的内存地址。而深拷贝不仅仅会递归的赋值本身，得到完全独立的对象。kotlin的copy函数在进行拷贝的时候默认使用的是浅拷贝，在上面的代码运行完成之后，向user1中permission的列表添加admin属性，可以看到在user2的permission也出现了admin。</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="comment">//...</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="comment">//...    </span></span><br><span class="line">    user1.permission.add(<span class="string">&quot;admin&quot;</span>)</span><br><span class="line">    println(user2.permission)<span class="comment">//[user, admin]</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>为了解决这个问题，可以在copy调用的时候将一个新的permission列表传递给user2，这样就可以做到深拷贝。</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    <span class="keyword">val</span> user2 = user1.copy(permission = user1.permission.toMutableList())</span><br><span class="line">    user1.permission.add(<span class="string">&quot;admin&quot;</span>)</span><br><span class="line">    println(user2.permission)<span class="comment">//[user]</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>或者也可以通过先序列化后反序列的方式进行深拷贝。例如在javascript中先通过JSON.stringify来进行序列化，后通过JSON.parse来反序列化进行深拷贝。</p>
-<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//javascript</span></span><br><span class="line"><span class="keyword">var</span> user1 = &#123;</span><br><span class="line">    id:<span class="number">1</span>,</span><br><span class="line">    name:<span class="string">&quot;test&quot;</span>,</span><br><span class="line">    permission:[<span class="string">&quot;admin&quot;</span>]</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">var</span> user2 = <span class="built_in">JSON</span>.parse(<span class="built_in">JSON</span>.stringify(user1))</span><br></pre></td></tr></table></figure>]]></content>
-      <categories>
-        <category>设计模式</category>
-      </categories>
-      <tags>
-        <tag>设计模式</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>操作系统文件管理</title>
     <url>/2020/12/10/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86/</url>
     <content><![CDATA[<p>文件系统是操作系统中文件的管理者。文件系统为上层用户提供文件抽象并实现文件访问所需要的接口，同时以特定的存储格式在下层存储设备中维护每个文件的数据以及元数据。操作系统将存储设备抽象为块设备，块设备上的的存储空间被划分为固定大小的存储块，每个存储块有一个地址被称为块号。</p>
@@ -1322,6 +1265,92 @@
 <p>享元模式在Java标准库中有许多的的应用，例如Integer.valueOf这个静态工厂创建实例，当传入的int范围在-128到+127的范围之间时，会直接返回缓存的Integer实例：</p>
 <figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Integer n1 = Integer.valueOf(<span class="number">100</span>);</span><br><span class="line">        Integer n2 = Integer.valueOf(<span class="number">100</span>);</span><br><span class="line">        System.out.println(n1 == n2); <span class="comment">// true</span></span><br><span class="line">        Integer n3 = Integer.valueOf(<span class="number">200</span>);</span><br><span class="line">        Integer n4 = Integer.valueOf(<span class="number">200</span>);</span><br><span class="line">        System.out.println(n3 == n4); <span class="comment">// false</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 ]]></content>
+      <categories>
+        <category>设计模式</category>
+      </categories>
+      <tags>
+        <tag>设计模式</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>设计模式之创建型模式</title>
+    <url>/2020/09/03/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E5%88%9B%E5%BB%BA%E5%9E%8B%E6%A8%A1%E5%BC%8F/</url>
+    <content><![CDATA[<p>创建型模式关注点是如何创建对象，其核心思想是要把对象的创建和使用相分离，这样使得两者能相对独立地变换。</p>
+<h2 id="单例模式"><a href="#单例模式" class="headerlink" title="单例模式"></a>单例模式</h2><p>一个类只允许创建一个对象，那这个类就是一个单例类，这种设计模式就叫作单例模式。这个概念理解起来比较简单，单例模式主要用来表示全局唯一类，例如配置信息类。在系统中，应该只有一个配置文件，当配置文件被加载进入内存之中以后，也应该只有一个配置类的对象，这种情况下就可以使用单例模式进行设计。</p>
+<h3 id="单例的Java实现"><a href="#单例的Java实现" class="headerlink" title="单例的Java实现"></a>单例的Java实现</h3><h4 id="饿汉式"><a href="#饿汉式" class="headerlink" title="饿汉式"></a>饿汉式</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> Instance instance=<span class="keyword">new</span> Instance();</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Instance <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> instance;    </span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>饿汉式的实现方式比较简单，在类加载的时候就已经创建并初始化好了instance实例对象，不过这一实现方式的缺点是不能够实现延迟加载。</p>
+<h4 id="双重检查"><a href="#双重检查" class="headerlink" title="双重检查"></a>双重检查</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> Instance instance;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Instance <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (instance==<span class="keyword">null</span>)&#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (Instance.class)&#123;</span><br><span class="line">                <span class="keyword">if</span> (instance==<span class="keyword">null</span>)&#123;</span><br><span class="line">                    instance=<span class="keyword">new</span> Instance();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;    </span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在这种实现方式中，在instance被创建之前，会进入synchronized锁逻辑之中，只要instance被创建之后，就再也不会进入到加锁逻辑之中了。同时因为指令重排序的问题，可能会导致Instance对象被new出来，并且赋值给instance之后，还没来得及初始化，就被使用了，需要给instance成员变量添加上volatile关键字，禁止指令重排序。</p>
+<h4 id="静态内部类"><a href="#静态内部类" class="headerlink" title="静态内部类"></a>静态内部类</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">InstanceHolder</span></span>&#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> Instance instance=<span class="keyword">new</span> Instance();</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Instance <span class="title">getInstance</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">return</span> InstanceHolder.instance;</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>利用Java的静态内部类也可以实现单例模式，InstanceHolder是一个静态内部类，当外部类Instance被加载的时候不会创建InstanceHolder对象，只有当调用getInstance时才会被加载创建instance。这种方式既保证了线程安全又做到了延迟加载。</p>
+<h4 id="枚举"><a href="#枚举" class="headerlink" title="枚举"></a>枚举</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">enum</span> <span class="title">Instance</span></span>&#123;</span><br><span class="line">    INSTANCE</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>枚举是实现最简单的实现方法，通过枚举自身的特性，保证了线程安全性以及实例的唯一性。</p>
+<h2 id="工厂模式"><a href="#工厂模式" class="headerlink" title="工厂模式"></a>工厂模式</h2><p>工厂模式也是比较常见的一种设计模式，一般分为三种：简单工厂、工厂方法、抽象工厂。</p>
+<h3 id="简单工厂"><a href="#简单工厂" class="headerlink" title="简单工厂"></a>简单工厂</h3><p>下面这段代码模拟的是根据配置文件的不同的后缀，获取到不同的解析器，解析存储在文件中的配置信息，这用的就是简单工厂模式。</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="keyword">object</span> ParserFactory &#123;</span><br><span class="line">    <span class="comment">//简单工厂</span></span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">(fileExtension: <span class="type">String</span>)</span></span> =</span><br><span class="line">        <span class="keyword">when</span> (fileExtension.toLowerCase()) &#123;</span><br><span class="line">            <span class="string">&quot;xml&quot;</span> -&gt; XmlParser()</span><br><span class="line">            <span class="string">&quot;json&quot;</span> -&gt; JsonParser()</span><br><span class="line">            <span class="string">&quot;properties&quot;</span> -&gt; PropertiesParser()</span><br><span class="line">            <span class="keyword">else</span> -&gt; <span class="keyword">throw</span> IllegalArgumentException(<span class="string">&quot;未知的类型&quot;</span>)</span><br><span class="line">        &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Parser</span> </span>&#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JsonParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PropertiesParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> parser = ParserFactory.createParser(<span class="string">&quot;xml&quot;</span>)</span><br><span class="line">    parser.parse(<span class="string">&quot;test.xml&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<h3 id="工厂方法"><a href="#工厂方法" class="headerlink" title="工厂方法"></a>工厂方法</h3><p>如果为了更好地扩展性，可以使用工厂方法模式，代码如下:</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">IParseFactory</span> </span>&#123;</span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> &#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">val</span> map = mapOf(</span><br><span class="line">            <span class="string">&quot;xml&quot;</span> to XmlParserFactory(),</span><br><span class="line">            <span class="string">&quot;json&quot;</span> to JsonParserFactory(),</span><br><span class="line">            <span class="string">&quot;properties&quot;</span> to PropertiesParserFactory()</span><br><span class="line">        )</span><br><span class="line">        <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">(fileExtension: <span class="type">String</span>)</span></span> =</span><br><span class="line">            map[fileExtension.toLowerCase()]</span><br><span class="line">                ?: <span class="keyword">throw</span> IllegalArgumentException(<span class="string">&quot;未知的类型&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span>: Parser</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span> = XmlParser()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JsonParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span> = JsonParser()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PropertiesParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">()</span></span> = PropertiesParser()</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Parser</span> </span>&#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">JsonParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">PropertiesParser</span> : <span class="type">Parser</span></span>() &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">parse</span><span class="params">(path: <span class="type">String</span>)</span></span> = TODO(<span class="string">&quot;省略逻辑&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> parserFactory = IParseFactory.createParser(<span class="string">&quot;xml&quot;</span>)</span><br><span class="line">    <span class="keyword">val</span> parser = parserFactory.createParser()</span><br><span class="line">    parser.parse(<span class="string">&quot;test.xml&quot;</span>)</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>工厂方法需要额外创造诸多的Factory类，会增加代码的复杂性。每个Factory类只是做简单的new操作，没有必要设计成独立的类，所以，在这个应用场景下，简单工厂模式简单好用，比工厂方法模式更加合适。但是如果当对象的创建逻辑比较复杂，需要很多操作时，则可以将复杂的创建逻辑添加到多个工厂类之中，让每个工厂类不过于复杂。而如果使用简单工厂模式，将所有的创建逻辑放到工厂类之中，会导致这个工厂类十分复杂。</p>
+<h3 id="抽象工厂"><a href="#抽象工厂" class="headerlink" title="抽象工厂"></a>抽象工厂</h3><p>在简单工厂和工厂方法之中，类只有一个分类方式。但是如果有两种分类方式，比如不仅按照文件格式来分类（例如Json,Xml,Properties)，还可以通过解析的对象来分类（例如规则配置，系统配置，业务配置等等），就会有3*3个类，会让系统难以维护。抽象工厂就是为了这一场景而诞生的。</p>
+<p>抽象工厂可以让一个工厂负责创建多个不同类型的对象，而不是之创建一种对象，可以有效减少工厂类的个数，具体代码如下：</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">IParseFactory</span> </span>&#123;</span><br><span class="line">    <span class="keyword">companion</span> <span class="keyword">object</span> &#123;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">val</span> map = mapOf(</span><br><span class="line">            <span class="string">&quot;xml&quot;</span> to XmlParserFactory(),</span><br><span class="line">            <span class="string">&quot;json&quot;</span> to JsonParserFactory(),</span><br><span class="line">            <span class="string">&quot;properties&quot;</span> to PropertiesParserFactory()</span><br><span class="line">        )</span><br><span class="line">        <span class="function"><span class="keyword">fun</span> <span class="title">createParser</span><span class="params">(fileExtension: <span class="type">String</span>)</span></span> =</span><br><span class="line">            map[fileExtension.toLowerCase()]</span><br><span class="line">                ?: <span class="keyword">throw</span> IllegalArgumentException(<span class="string">&quot;未知的类型&quot;</span>)</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser1</span><span class="params">()</span></span>: Parser</span><br><span class="line">    <span class="function"><span class="keyword">fun</span> <span class="title">createParser2</span><span class="params">()</span></span>: Parser</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">XmlParserFactory</span> : <span class="type">IParseFactory &#123;</span></span></span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser1</span><span class="params">()</span></span> = XmlParser1()</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">createParser2</span><span class="params">()</span></span> = XmlParser2()</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">//...其他Factory代码</span></span><br></pre></td></tr></table></figure>
+
+<h2 id="创建者模式"><a href="#创建者模式" class="headerlink" title="创建者模式"></a>创建者模式</h2><p>最常见创建一个对象的方法是调用类的构造函数来完成，但是在有些情况下这种方式就不适用了，就需要使用创建者模式来创建对象。例如对于一个线程池配置类，有以下几个成员变量</p>
+<table>
+<thead>
+<tr>
+<th>成员变量</th>
+<th>解释</th>
+<th>是否必填</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>name</td>
+<td>名称</td>
+<td>是</td>
+<td></td>
+</tr>
+<tr>
+<td>maxPoolSize</td>
+<td>最大连接数</td>
+<td>否</td>
+<td>10</td>
+</tr>
+<tr>
+<td>corePoolSize</td>
+<td>线程池大小</td>
+<td>否</td>
+<td>5</td>
+</tr>
+<tr>
+<td>keepAliveTime</td>
+<td>存活时间</td>
+<td>否</td>
+<td>1min</td>
+</tr>
+</tbody></table>
+<p>如果使用构造函数，则代码如下所示</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadPoolConfig</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">var</span> config = <span class="keyword">new</span> ThreadPoolConfig(<span class="string">&quot;test&quot;</span>, <span class="number">10</span>, <span class="keyword">null</span>, <span class="keyword">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> maxPoolSize = <span class="number">10</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> corePoolSize = <span class="number">5</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> keepAliveTime = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="title">ThreadPoolConfig</span><span class="params">(String name, Integer maxPoolSize, Integer corePoolSize, Integer keepAliveTime)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (name == <span class="keyword">null</span> || name.isBlank()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;名称不能为空&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">this</span>.name = name;</span><br><span class="line">        <span class="keyword">if</span> (maxPoolSize != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (maxPoolSize &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;maxPoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.maxPoolSize = maxPoolSize;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (corePoolSize != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (corePoolSize &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;corePoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.corePoolSize = corePoolSize;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (keepAliveTime != <span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (keepAliveTime &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;keepAliveTime 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">this</span>.keepAliveTime = keepAliveTime;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果按照上面的代码，那么随着可配置项的增多，构造函数的列表会变得很长，容易搞错传递参数的顺序。为了解决这一个问题，就需要使用到建造者模式。在建造者模式中，先通过set方法设置建造者的变量值，所有逻辑检验的部分被放到了build方法之中。使用建造者模式重新实现的代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadPoolConfig</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">var</span> config = <span class="keyword">new</span> ThreadPoolConfig.Builder()</span><br><span class="line">                        .setName(<span class="string">&quot;test&quot;</span>)</span><br><span class="line">                        .setKeepAliveTime(<span class="number">100</span>).build();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> maxPoolSize;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> corePoolSize;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">int</span> keepAliveTime;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="title">ThreadPoolConfig</span><span class="params">(Builder builder)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.name = builder.name;</span><br><span class="line">        <span class="keyword">this</span>.maxPoolSize = builder.maxPoolSize;</span><br><span class="line">        <span class="keyword">this</span>.corePoolSize = builder.corePoolSize;</span><br><span class="line">        <span class="keyword">this</span>.keepAliveTime = builder.keepAliveTime;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Builder</span> </span>&#123;</span><br><span class="line">        <span class="keyword">private</span> String name;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> maxPoolSize = <span class="number">10</span>;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> corePoolSize = <span class="number">5</span>;</span><br><span class="line">        <span class="keyword">private</span> <span class="keyword">int</span> keepAliveTime = <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> ThreadPoolConfig <span class="title">build</span><span class="params">()</span> </span>&#123;</span><br><span class="line">            <span class="keyword">if</span> (name == <span class="keyword">null</span> || name.isBlank()) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;名称不能为空&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (maxPoolSize &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;maxPoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (corePoolSize &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;corePoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">if</span> (keepAliveTime &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalArgumentException(<span class="string">&quot;keepAliveTime 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">new</span> ThreadPoolConfig(<span class="keyword">this</span>);</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setName</span><span class="params">(String name)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.name = name;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setMaxPoolSize</span><span class="params">(<span class="keyword">int</span> maxPoolSize)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.maxPoolSize = maxPoolSize;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setCorePoolSize</span><span class="params">(<span class="keyword">int</span> corePoolSize)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.corePoolSize = corePoolSize;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="function"><span class="keyword">public</span> Builder <span class="title">setKeepAliveTime</span><span class="params">(<span class="keyword">int</span> keepAliveTime)</span> </span>&#123;</span><br><span class="line">            <span class="keyword">this</span>.keepAliveTime = keepAliveTime;</span><br><span class="line">            <span class="keyword">return</span> <span class="keyword">this</span>;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="原型模式"><a href="#原型模式" class="headerlink" title="原型模式"></a>原型模式</h2><p>原型模式指的是在创建新对象的时候，通过现有的一个原型来创建。原型模式的使用如下所示。</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="keyword">data</span> <span class="class"><span class="keyword">class</span> <span class="title">User</span></span>(</span><br><span class="line">    <span class="keyword">val</span> id: <span class="built_in">Int</span>,</span><br><span class="line">    <span class="keyword">val</span> name: String,</span><br><span class="line">    <span class="keyword">val</span> permission: MutableList&lt;String&gt;</span><br><span class="line">)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> permissionList = arrayListOf(<span class="string">&quot;user&quot;</span>)</span><br><span class="line">    <span class="keyword">val</span> user1 = User(<span class="number">1</span>, <span class="string">&quot;test&quot;</span>, permissionList)</span><br><span class="line">    <span class="keyword">val</span> user2 = user1.copy()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h3 id="深拷贝与浅拷贝"><a href="#深拷贝与浅拷贝" class="headerlink" title="深拷贝与浅拷贝"></a>深拷贝与浅拷贝</h3><p>原型模式有两种实现方法，深拷贝和浅拷贝。浅拷贝和深拷贝的区别在于，浅拷贝只会复制对象中基本数据类型数据和引用对象的内存地址。而深拷贝不仅仅会递归的赋值本身，得到完全独立的对象。kotlin的copy函数在进行拷贝的时候默认使用的是浅拷贝，在上面的代码运行完成之后，向user1中permission的列表添加admin属性，可以看到在user2的permission也出现了admin。</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="comment">//...</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="comment">//...    </span></span><br><span class="line">    user1.permission.add(<span class="string">&quot;admin&quot;</span>)</span><br><span class="line">    println(user2.permission)<span class="comment">//[user, admin]</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>为了解决这个问题，可以在copy调用的时候将一个新的permission列表传递给user2，这样就可以做到深拷贝。</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="comment">//...</span></span><br><span class="line">    <span class="keyword">val</span> user2 = user1.copy(permission = user1.permission.toMutableList())</span><br><span class="line">    user1.permission.add(<span class="string">&quot;admin&quot;</span>)</span><br><span class="line">    println(user2.permission)<span class="comment">//[user]</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>或者也可以通过先序列化后反序列的方式进行深拷贝。例如在javascript中先通过JSON.stringify来进行序列化，后通过JSON.parse来反序列化进行深拷贝。</p>
+<figure class="highlight javascript"><table><tr><td class="code"><pre><span class="line"><span class="comment">//javascript</span></span><br><span class="line"><span class="keyword">var</span> user1 = &#123;</span><br><span class="line">    id:<span class="number">1</span>,</span><br><span class="line">    name:<span class="string">&quot;test&quot;</span>,</span><br><span class="line">    permission:[<span class="string">&quot;admin&quot;</span>]</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">var</span> user2 = <span class="built_in">JSON</span>.parse(<span class="built_in">JSON</span>.stringify(user1))</span><br></pre></td></tr></table></figure>]]></content>
       <categories>
         <category>设计模式</category>
       </categories>
