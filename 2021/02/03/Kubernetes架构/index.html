@@ -22,21 +22,20 @@
     var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
   </script>
 
-  <meta name="description" content="HTTP（超文本传输协议）定义了浏览器如何向服务器请求万维网文档以及服务器如何将文档传送给浏览器。 HTTP 0.9HTTP 0.9在请求时不支持请求头，并且只支持GET方法。 HTTP 1.0HTTP1.0 加入了以下几个内容  在请求中加入了HTTP版本号信息  加入了请求头  增加了HTTP Status Code作为状态码   但是HTTP1.0在性能上有很大的问题，每次请求都需要建立一个">
+  <meta name="description" content="Kubernetes集群中分为两个部分  Kubernetes控制平面 工作节点  控制平面负责存储管理集群状态、控制并使得整个集群正常运转，包含以下组件  etcd分布式持久化存储 API服务器 调度器 控制器管理器  工作节点上的组件包括  Kubelet Kubelet服务代理（kube-proxy） 容器运行时  除此之外还包括几个附加组件，包含  Kubernetes DNS 服务器 仪">
 <meta property="og:type" content="article">
-<meta property="og:title" content="HTTP各版本特性">
-<meta property="og:url" content="http://qian0817.top/2021/01/30/HTTP%E5%90%84%E7%89%88%E6%9C%AC%E7%89%B9%E6%80%A7/index.html">
+<meta property="og:title" content="Kubernetes架构">
+<meta property="og:url" content="http://qian0817.top/2021/02/03/Kubernetes%E6%9E%B6%E6%9E%84/index.html">
 <meta property="og:site_name" content="Qian0817">
-<meta property="og:description" content="HTTP（超文本传输协议）定义了浏览器如何向服务器请求万维网文档以及服务器如何将文档传送给浏览器。 HTTP 0.9HTTP 0.9在请求时不支持请求头，并且只支持GET方法。 HTTP 1.0HTTP1.0 加入了以下几个内容  在请求中加入了HTTP版本号信息  加入了请求头  增加了HTTP Status Code作为状态码   但是HTTP1.0在性能上有很大的问题，每次请求都需要建立一个">
+<meta property="og:description" content="Kubernetes集群中分为两个部分  Kubernetes控制平面 工作节点  控制平面负责存储管理集群状态、控制并使得整个集群正常运转，包含以下组件  etcd分布式持久化存储 API服务器 调度器 控制器管理器  工作节点上的组件包括  Kubelet Kubelet服务代理（kube-proxy） 容器运行时  除此之外还包括几个附加组件，包含  Kubernetes DNS 服务器 仪">
 <meta property="og:locale" content="zh_CN">
-<meta property="article:published_time" content="2021-01-30T04:24:04.000Z">
-<meta property="article:modified_time" content="2021-01-30T04:24:04.118Z">
+<meta property="article:published_time" content="2021-02-03T02:52:28.000Z">
+<meta property="article:modified_time" content="2021-02-03T02:52:28.024Z">
 <meta property="article:author" content="qianlei">
-<meta property="article:tag" content="网络">
-<meta property="article:tag" content="HTTP">
+<meta property="article:tag" content="Kubernetes">
 <meta name="twitter:card" content="summary">
 
-<link rel="canonical" href="http://qian0817.top/2021/01/30/HTTP%E5%90%84%E7%89%88%E6%9C%AC%E7%89%B9%E6%80%A7/">
+<link rel="canonical" href="http://qian0817.top/2021/02/03/Kubernetes%E6%9E%B6%E6%9E%84/">
 
 
 <script id="page-configurations">
@@ -49,7 +48,7 @@
   };
 </script>
 
-  <title>HTTP各版本特性 | Qian0817</title>
+  <title>Kubernetes架构 | Qian0817</title>
   
 
 
@@ -191,7 +190,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2021/01/30/HTTP%E5%90%84%E7%89%88%E6%9C%AC%E7%89%B9%E6%80%A7/">
+    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2021/02/03/Kubernetes%E6%9E%B6%E6%9E%84/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/images/avatar.gif">
@@ -204,7 +203,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          HTTP各版本特性
+          Kubernetes架构
         </h1>
 
         <div class="post-meta">
@@ -214,7 +213,7 @@
               </span>
               <span class="post-meta-item-text">发表于</span>
 
-              <time title="创建时间：2021-01-30 12:24:04" itemprop="dateCreated datePublished" datetime="2021-01-30T12:24:04+08:00">2021-01-30</time>
+              <time title="创建时间：2021-02-03 10:52:28" itemprop="dateCreated datePublished" datetime="2021-02-03T10:52:28+08:00">2021-02-03</time>
             </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
@@ -222,7 +221,7 @@
               </span>
               <span class="post-meta-item-text">分类于</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E7%BD%91%E7%BB%9C/" itemprop="url" rel="index"><span itemprop="name">网络</span></a>
+                  <a href="/categories/Kubernetes/" itemprop="url" rel="index"><span itemprop="name">Kubernetes</span></a>
                 </span>
             </span>
 
@@ -232,14 +231,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>1.3k</span>
+              <span>1.6k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>4 分钟</span>
+              <span>5 分钟</span>
             </span>
 
         </div>
@@ -251,45 +250,58 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>HTTP（超文本传输协议）定义了浏览器如何向服务器请求万维网文档以及服务器如何将文档传送给浏览器。</p>
-<h2 id="HTTP-0-9"><a href="#HTTP-0-9" class="headerlink" title="HTTP 0.9"></a>HTTP 0.9</h2><p>HTTP 0.9在请求时不支持请求头，并且只支持GET方法。</p>
-<h2 id="HTTP-1-0"><a href="#HTTP-1-0" class="headerlink" title="HTTP 1.0"></a>HTTP 1.0</h2><p>HTTP1.0 加入了以下几个内容</p>
+        <p>Kubernetes集群中分为两个部分</p>
 <ul>
-<li><p>在请求中加入了HTTP版本号信息</p>
-</li>
-<li><p>加入了请求头</p>
-</li>
-<li><p>增加了HTTP Status Code作为状态码</p>
-</li>
+<li>Kubernetes控制平面</li>
+<li>工作节点</li>
 </ul>
-<p>但是HTTP1.0在性能上有很大的问题，每次请求都需要建立一个TCP连接，并且是串行执行请求。</p>
-<h2 id="HTTP-1-1"><a href="#HTTP-1-1" class="headerlink" title="HTTP 1.1"></a>HTTP 1.1</h2><p>HTTP 1.1的变化主要有以下几个内容</p>
-<ol>
-<li>设置 keepalive 让 HTTP 重用 TCP 连接，省下了每次握手都要进行 TCP 3 次握手的重大开销。也就是 HTTP 长连接。</li>
-<li>支持以流水线的形式进行请求发送，只要一个请求发出去，不必等到其回来就可以发送第二个请求出去。</li>
-<li>增加了 cache control 机制。</li>
-<li>增加 HOST 头，服务器可以知道你在请求哪个网站。</li>
-<li>加入了 OPTIONS 方法，用于 CORS 应用。</li>
-</ol>
-<h2 id="HTTPS"><a href="#HTTPS" class="headerlink" title="HTTPS"></a>HTTPS</h2><p>HTTPS在传输过程中通过加密来保护数据安全，避免用户敏感信息被第三方获取。其过程如下</p>
-<ol>
-<li>客户端发起HTTPS请求，告诉客户端自己所支持的加密套件列表以及希望使用的TLS选项。</li>
-<li>服务端选择客户端的一个加密套件，会有一套数字证书，就是一对公钥和私钥。</li>
-<li>传输证书，将公钥信息传递给客户端。</li>
-<li>客户端解析证书，会验证公钥是否有效。一般操作系统和浏览器都会内置一个知名证书颁发机构的名单，也可以通过手动指定证书的方式来添加证书。如果证书存在问题，那么会弹出警示框告诉用户该网站不安全。如果证书没有问题，那么生成一个随机值作为会话密钥。</li>
-<li>将随机值通过公钥进行加密，然后将加密后的随机值传输给服务端</li>
-<li>服务端用私钥解密，获取到的随机值就是会话密钥。双方使用该密钥进行对称加密通信。</li>
-</ol>
-<h2 id="HTTP-2-0"><a href="#HTTP-2-0" class="headerlink" title="HTTP 2.0"></a>HTTP 2.0</h2><p>HTTP 1.1虽然可以重用TCP连接，但是还是需要串行发送请求以保证其顺序。但是大量的网页请求中都是些资源类的东西，如果能够并行这些请求，那就会增加更大的网络吞吐和性能。同时HTTP1.1 在传输数据时使用的是文本的方式，借助zip压缩方式以减少网络带宽，但是会消耗前端和后端的CPU资源。</p>
-<p>与HTTP2.0的新特性包括</p>
-<ol>
-<li>HTTP/2是一个二进制协议，增加了数据传输的效率。</li>
-<li>可以在一个TCP连接中并发请求多个HTTP请求。</li>
-<li>使用HPACK算法压缩头部信息，如果多个请求的头是相识的，协议会消除重复的部分。</li>
-<li>允许服务端PUSH。例如请求X，服务端知道X依赖于Y，会同时将Y一起返回客户端。</li>
-</ol>
-<h2 id="HTTP-3-0"><a href="#HTTP-3-0" class="headerlink" title="HTTP 3.0"></a>HTTP 3.0</h2><p>虽然HTTP2.0能够多个HTTP请求复用一个TCP连接，但是底层的TCP协议不知道上层有多少个HTTP请求，一旦出现丢包，会造成所有的HTTP请求都必需等待丢了的包被重传回来，即使这个包不是本次HTTP请求的。</p>
-<p>为了解决这一问题，HTTP 3.0 将HTTP的底层由TCP协议改为了UDP协议，并且使用了QUIC。因为UDP不需要管理顺序，不管丢包。QUIC的任务就是要有一个像TCP一样的丢包重传机制。在基于UDP以后，QUIC直接将TCP和TLS需要做的事情合并为了三次握手。因此QUIC可以将其视为一个在UDP之上的伪TCP +TLS +HTTP/2的多路复用的协议。</p>
+<p>控制平面负责存储管理集群状态、控制并使得整个集群正常运转，包含以下组件</p>
+<ul>
+<li>etcd分布式持久化存储</li>
+<li>API服务器</li>
+<li>调度器</li>
+<li>控制器管理器</li>
+</ul>
+<p>工作节点上的组件包括</p>
+<ul>
+<li>Kubelet</li>
+<li>Kubelet服务代理（kube-proxy）</li>
+<li>容器运行时</li>
+</ul>
+<p>除此之外还包括几个附加组件，包含</p>
+<ul>
+<li>Kubernetes DNS 服务器</li>
+<li>仪表盘</li>
+<li>Ingress 仪表器</li>
+<li>Heapster（容器集群监控）</li>
+<li>容器网络接口插件</li>
+</ul>
+<p>Kubernetes系统组件间只能通过API服务器进行通信，API服务器是和etcd通信的唯一组件，其他组件不会直接和etcd进行通信，而是通过API服务器来修改集群状态。</p>
+<p>控制平面的组件以及kube-proxy可以直接部署在系统上或者作为Pod来运行。Kubelet是唯一一个作为常规系统组件来运行的组件，被部署在master节点上，它把其他组件作为pod来运行。</p>
+<h2 id="etcd"><a href="#etcd" class="headerlink" title="etcd"></a>etcd</h2><p>etcd是一个响应快、分布式的key-value存储，Kubernetes创建的所有对象（pod、ReplicationController等等）都持久化存储到etcd中。只有API服务器能够与etcd进行通信，所有组件都通过API服务器间接的读取和写入数据到etcd当中。etcd是Kubernetes存储集群状态和元数据唯一的地方。</p>
+<p>为了保证高可用，常常会运行多个etcd实例，etcd使用raft算法保证一致性。</p>
+<h2 id="API服务器"><a href="#API服务器" class="headerlink" title="API服务器"></a>API服务器</h2><p>Kubernetes API服务器作为中心组件，其他组件以及客户端（kubectl）都会调用API服务器。API服务器以restful API的形式提供了可以查询、修改集群状态的接口。API服务器负责将状态存储到etcd当中。</p>
+<p>当接收到API请求后，API服务器内部会通过认证插件认证客户端、通过授权插件授权客户端、通过准入控制插件验证修改资源请求、验证资源以及持久化存储。</p>
+<p>API服务器会启动控制器以及其他一些组件来监控已部署资源的变更。控制平面可以请求订阅资源被创建修改的通知，使得组件可以在集群元数据变化的时候能够执行任何需要做的任务。</p>
+<p>客户端通过创建到API服务器的HTTP连接来监听变更，通过此连接，客户端会接收到监听对象的一系列变更通知。每当更新对象，服务器会把新版本对象发送到所有监听该对象的客户端。</p>
+<h2 id="调度器"><a href="#调度器" class="headerlink" title="调度器"></a>调度器</h2><p>调度器利用API服务器的监听机制等待新创建的pod，然后给每个新的没有节点的pod去分配节点。</p>
+<h2 id="控制器"><a href="#控制器" class="headerlink" title="控制器"></a>控制器</h2><p>控制器用于让系统的真实状态朝API服务器定义的期望的状态收敛，去完成具体资源的部署工作。</p>
+<p>单个控制器、管理器进程当前组合了多个执行不同非冲突任务的控制器。这些控制器最终会被分解到不同的进程，控制器包括</p>
+<ul>
+<li>Replication控制器</li>
+<li>ReplicaSet，DaemonSet和Job控制器</li>
+<li>Deployment控制器</li>
+<li>StatefulSet控制器</li>
+<li>Node控制器</li>
+<li>Service控制器</li>
+<li>Endpoints控制器</li>
+<li>Namespace控制器</li>
+<li>PersistentVolume控制器</li>
+<li>其他</li>
+</ul>
+<h2 id="kubelet"><a href="#kubelet" class="headerlink" title="kubelet"></a>kubelet</h2><p>Kubelet是负责所有运行在工作节点上的内容的组件。它的第一个任务就是在API服务器创建一个Node资源来注册该节点，然后持续监控API服务器是否是否把该节点分配给pod，然后启动pod容器，告知容器运行时从特定容器镜像运行容器。Kubelet随后监控运行的容器，向API服务器报告它们的状态、时间和资源消耗。</p>
+<p>Kubelet也是运行容器存活探针的组件，当探针报错时会重启容器。当pod从API服务器删除时，Kubelet负责终止容器，并通知服务器pod已经被终止。</p>
+<h2 id="Service-Proxy"><a href="#Service-Proxy" class="headerlink" title="Service Proxy"></a>Service Proxy</h2><p>每个工作节点也会运行kube-proxy，确保客户端可以通过Kubernetes API连接到定义的服务。kube-proxy确保对服务IP和端口的连接最终能够到达支持服务的某个pod处。如果有多个pod支撑一个服务，那么代理会发挥对pod的负载均衡作用。</p>
 
     </div>
 
@@ -305,7 +317,7 @@
   </li>
   <li class="post-copyright-link">
     <strong>本文链接：</strong>
-    <a href="http://qian0817.top/2021/01/30/HTTP%E5%90%84%E7%89%88%E6%9C%AC%E7%89%B9%E6%80%A7/" title="HTTP各版本特性">http://qian0817.top/2021/01/30/HTTP各版本特性/</a>
+    <a href="http://qian0817.top/2021/02/03/Kubernetes%E6%9E%B6%E6%9E%84/" title="Kubernetes架构">http://qian0817.top/2021/02/03/Kubernetes架构/</a>
   </li>
   <li class="post-copyright-license">
     <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
@@ -316,8 +328,7 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/%E7%BD%91%E7%BB%9C/" rel="tag"># 网络</a>
-              <a href="/tags/HTTP/" rel="tag"># HTTP</a>
+              <a href="/tags/Kubernetes/" rel="tag"># Kubernetes</a>
           </div>
 
         
@@ -326,12 +337,12 @@
         
     <div class="post-nav">
       <div class="post-nav-item">
-    <a href="/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/" rel="prev" title="netty常用概念">
-      <i class="fa fa-chevron-left"></i> netty常用概念
+    <a href="/2021/02/01/Kubernetes%E8%B0%83%E5%BA%A6%E5%99%A8/" rel="prev" title="Kubernetes调度器">
+      <i class="fa fa-chevron-left"></i> Kubernetes调度器
     </a></div>
       <div class="post-nav-item">
-    <a href="/2021/02/01/Kubernetes%E8%B0%83%E5%BA%A6%E5%99%A8/" rel="next" title="Kubernetes调度器">
-      Kubernetes调度器 <i class="fa fa-chevron-right"></i>
+    <a href="/2021/02/05/JVM%E9%94%81%E4%BC%98%E5%8C%96/" rel="next" title="JVM锁优化">
+      JVM锁优化 <i class="fa fa-chevron-right"></i>
     </a></div>
     </div>
       </footer>
@@ -391,7 +402,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTP-0-9"><span class="nav-number">1.</span> <span class="nav-text">HTTP 0.9</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTP-1-0"><span class="nav-number">2.</span> <span class="nav-text">HTTP 1.0</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTP-1-1"><span class="nav-number">3.</span> <span class="nav-text">HTTP 1.1</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTPS"><span class="nav-number">4.</span> <span class="nav-text">HTTPS</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTP-2-0"><span class="nav-number">5.</span> <span class="nav-text">HTTP 2.0</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HTTP-3-0"><span class="nav-number">6.</span> <span class="nav-text">HTTP 3.0</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#etcd"><span class="nav-number">1.</span> <span class="nav-text">etcd</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">API服务器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E5%99%A8"><span class="nav-number">3.</span> <span class="nav-text">调度器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A7%E5%88%B6%E5%99%A8"><span class="nav-number">4.</span> <span class="nav-text">控制器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kubelet"><span class="nav-number">5.</span> <span class="nav-text">kubelet</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Service-Proxy"><span class="nav-number">6.</span> <span class="nav-text">Service Proxy</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
