@@ -210,31 +210,6 @@
       </tags>
   </entry>
   <entry>
-    <title>JVM锁优化</title>
-    <url>/2021/02/05/JVM%E9%94%81%E4%BC%98%E5%8C%96/</url>
-    <content><![CDATA[<h2 id="自旋锁"><a href="#自旋锁" class="headerlink" title="自旋锁"></a>自旋锁</h2><p>互斥同步对性能最大的影响在于阻塞的实现，，因为挂起线程和恢复线程都需要转入到内核态进行完成。通过不放弃处理器的执行时间，让线程忙循坏，看看持有锁的线程能否很快就释放锁，就是自旋锁。</p>
-<p>自旋锁虽然避免了线程切换的开销，但是需要占用处理器时间，所以如果锁被占用的时间很短，自旋等待的效果会比较好，反之只能白白的消耗处理器资源，带来性能的浪费。因此自选等待的时间必须要有一定的限度，如果超过自旋的限定次数仍然没有成功获得锁，那么就应当用传统的方式来挂起线程。自旋次数的默认值为10次，可以使用-XX:PreBlockSpin参数来自行修改。</p>
-<p>在JDK6以后加入了对于自旋锁的优化，引入了自适应的自旋锁。自适应意味着自旋的时间不再是固定的，而是由前一次在同一个锁上的自旋时间以及锁的拥有者状态来决定。</p>
-<h2 id="锁消除"><a href="#锁消除" class="headerlink" title="锁消除"></a>锁消除</h2><p>锁消除指的是虚拟机即时编译器在运行时，对一些代码有球同步但是被检测到不存在共享数据的锁进行消除。锁消除的主要判定依据来源于逃逸分析的数据支持。</p>
-<h2 id="锁粗化"><a href="#锁粗化" class="headerlink" title="锁粗化"></a>锁粗化</h2><p>在通常情况下，同步块的作用范围应该限制的尽量小，这样即使存在锁竞争，等待锁的线程也能尽可能地拿到锁。</p>
-<p>但是如果一系列的操作对同一个对象反复进行加锁和解锁，那么即使没有线程竞争，频繁的进行互斥行为也会导致不必要的性能损耗。如果虚拟机探测到有这样一连串的操作都对同一个对象加锁，将会把加锁同步的范围扩展到整个操作序列的外部。</p>
-<h2 id="轻量级锁"><a href="#轻量级锁" class="headerlink" title="轻量级锁"></a>轻量级锁</h2><p>轻量级锁的设计初衷在于在没有多线程竞争的情况下，减少传统的重量级锁使用操作系统互斥量产生的性能消耗。</p>
-<p>虚拟机的对象头分为两个部分，其中第一部分用于存储对象自身的运行时数据，如哈希码、GC分代年龄等，称为Mark Word，是实现轻量级锁和偏向锁的关键。</p>
-<p><img data-src="%E5%AF%B9%E8%B1%A1%E5%A4%B4.jpg" alt="img"></p>
-<p>在代码即将进入同步块的时候，如果此时同步对象没有被锁定，那么虚拟机首先将在当前线程的栈帧中建立一个名为锁记录的空间，用于存储锁对象目前的Mark Word的拷贝。然后虚拟机使用CAS操作尝试把对象的Mark Word更新为指向Mark Record的指针。如果更新成功，即代表该线程拥有了这个对象的锁，并且对象的Mark Word的锁标志位转变为00，代表该线程处于轻量级锁定状态。如果更新失败了，那么说明至少有一条线程竞争获取该对象的锁。虚拟机会首先检查对象的Mark Word是否指向当前线程的栈帧，如果是，说明当前线程已经拥有了这个对象的锁，直接进入同步块继续执行就行了，否则膨胀为重量级锁，锁标志位变为10，此时Mark Word中存储的就是指向重量级锁的指针，后面等待锁的线程也必须进入阻塞状态。</p>
-<p>解锁过程同样通过CAS进行完成，如果对象的Mark Word仍然指向线程的锁记录，那么就用CAS操作将当前的Mark Word和线程中复制的Mark Word替换回来。假如能够成功替换，那么整个同步过程就顺利完成了。如果替换失败，那么说明其他线程尝试获取过该锁，需要在释放锁的同时唤醒被挂起的线程。</p>
-<h2 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h2><p>偏向锁的目的在于消除数据在无竞争的情况下的同步原语，进一步提升程序的运行性能。偏向锁的偏表示这个锁会偏向于第一个获得它的线程，如果在接下来的执行过程中，该锁一直没有被其他的线程所获取，则持有偏向锁的线程就永远不需要进行同步。</p>
-<p>当锁对象第一次被线程获取的时候，虚拟机会将对象头的标志位设置为01，把偏向模式设置为1，表示进入偏向模式，同时使用CAS操作把获取到这个锁的ID记录在对象的Mark Word之中。如果CAS操作成功，持有偏向锁的线程以后每次进入这个锁的同步块时，虚拟机都可以不再进行任何同步操作。</p>
-<p>一旦出现另外一个线程去尝试获取这个锁的情况，偏向模式就马上宣告结束。根据锁对象目前是否处于被锁定的状态决定是否撤销偏向，撤销后标志位恢复到未锁定或者轻量级锁定的状态，后续的同步状态就按照轻量级锁去执行。</p>
-]]></content>
-      <categories>
-        <category>JVM</category>
-      </categories>
-      <tags>
-        <tag>JVM</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>Kubernetes架构</title>
     <url>/2021/02/03/Kubernetes%E6%9E%B6%E6%9E%84/</url>
     <content><![CDATA[<p>Kubernetes集群中分为两个部分</p>
@@ -295,6 +270,31 @@
       </categories>
       <tags>
         <tag>Kubernetes</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>JVM锁优化</title>
+    <url>/2021/02/05/JVM%E9%94%81%E4%BC%98%E5%8C%96/</url>
+    <content><![CDATA[<h2 id="自旋锁"><a href="#自旋锁" class="headerlink" title="自旋锁"></a>自旋锁</h2><p>互斥同步对性能最大的影响在于阻塞的实现，，因为挂起线程和恢复线程都需要转入到内核态进行完成。通过不放弃处理器的执行时间，让线程忙循坏，看看持有锁的线程能否很快就释放锁，就是自旋锁。</p>
+<p>自旋锁虽然避免了线程切换的开销，但是需要占用处理器时间，所以如果锁被占用的时间很短，自旋等待的效果会比较好，反之只能白白的消耗处理器资源，带来性能的浪费。因此自选等待的时间必须要有一定的限度，如果超过自旋的限定次数仍然没有成功获得锁，那么就应当用传统的方式来挂起线程。自旋次数的默认值为10次，可以使用-XX:PreBlockSpin参数来自行修改。</p>
+<p>在JDK6以后加入了对于自旋锁的优化，引入了自适应的自旋锁。自适应意味着自旋的时间不再是固定的，而是由前一次在同一个锁上的自旋时间以及锁的拥有者状态来决定。</p>
+<h2 id="锁消除"><a href="#锁消除" class="headerlink" title="锁消除"></a>锁消除</h2><p>锁消除指的是虚拟机即时编译器在运行时，对一些代码有球同步但是被检测到不存在共享数据的锁进行消除。锁消除的主要判定依据来源于逃逸分析的数据支持。</p>
+<h2 id="锁粗化"><a href="#锁粗化" class="headerlink" title="锁粗化"></a>锁粗化</h2><p>在通常情况下，同步块的作用范围应该限制的尽量小，这样即使存在锁竞争，等待锁的线程也能尽可能地拿到锁。</p>
+<p>但是如果一系列的操作对同一个对象反复进行加锁和解锁，那么即使没有线程竞争，频繁的进行互斥行为也会导致不必要的性能损耗。如果虚拟机探测到有这样一连串的操作都对同一个对象加锁，将会把加锁同步的范围扩展到整个操作序列的外部。</p>
+<h2 id="轻量级锁"><a href="#轻量级锁" class="headerlink" title="轻量级锁"></a>轻量级锁</h2><p>轻量级锁的设计初衷在于在没有多线程竞争的情况下，减少传统的重量级锁使用操作系统互斥量产生的性能消耗。</p>
+<p>虚拟机的对象头分为两个部分，其中第一部分用于存储对象自身的运行时数据，如哈希码、GC分代年龄等，称为Mark Word，是实现轻量级锁和偏向锁的关键。</p>
+<p><img data-src="%E5%AF%B9%E8%B1%A1%E5%A4%B4.jpg" alt="img"></p>
+<p>在代码即将进入同步块的时候，如果此时同步对象没有被锁定，那么虚拟机首先将在当前线程的栈帧中建立一个名为锁记录的空间，用于存储锁对象目前的Mark Word的拷贝。然后虚拟机使用CAS操作尝试把对象的Mark Word更新为指向Mark Record的指针。如果更新成功，即代表该线程拥有了这个对象的锁，并且对象的Mark Word的锁标志位转变为00，代表该线程处于轻量级锁定状态。如果更新失败了，那么说明至少有一条线程竞争获取该对象的锁。虚拟机会首先检查对象的Mark Word是否指向当前线程的栈帧，如果是，说明当前线程已经拥有了这个对象的锁，直接进入同步块继续执行就行了，否则膨胀为重量级锁，锁标志位变为10，此时Mark Word中存储的就是指向重量级锁的指针，后面等待锁的线程也必须进入阻塞状态。</p>
+<p>解锁过程同样通过CAS进行完成，如果对象的Mark Word仍然指向线程的锁记录，那么就用CAS操作将当前的Mark Word和线程中复制的Mark Word替换回来。假如能够成功替换，那么整个同步过程就顺利完成了。如果替换失败，那么说明其他线程尝试获取过该锁，需要在释放锁的同时唤醒被挂起的线程。</p>
+<h2 id="偏向锁"><a href="#偏向锁" class="headerlink" title="偏向锁"></a>偏向锁</h2><p>偏向锁的目的在于消除数据在无竞争的情况下的同步原语，进一步提升程序的运行性能。偏向锁的偏表示这个锁会偏向于第一个获得它的线程，如果在接下来的执行过程中，该锁一直没有被其他的线程所获取，则持有偏向锁的线程就永远不需要进行同步。</p>
+<p>当锁对象第一次被线程获取的时候，虚拟机会将对象头的标志位设置为01，把偏向模式设置为1，表示进入偏向模式，同时使用CAS操作把获取到这个锁的ID记录在对象的Mark Word之中。如果CAS操作成功，持有偏向锁的线程以后每次进入这个锁的同步块时，虚拟机都可以不再进行任何同步操作。</p>
+<p>一旦出现另外一个线程去尝试获取这个锁的情况，偏向模式就马上宣告结束。根据锁对象目前是否处于被锁定的状态决定是否撤销偏向，撤销后标志位恢复到未锁定或者轻量级锁定的状态，后续的同步状态就按照轻量级锁去执行。</p>
+]]></content>
+      <categories>
+        <category>JVM</category>
+      </categories>
+      <tags>
+        <tag>JVM</tag>
       </tags>
   </entry>
   <entry>
@@ -498,89 +498,6 @@
       </categories>
       <tags>
         <tag>Redis</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>Redis中的持久化机制</title>
-    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
-    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
-<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
-<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
-
-<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
-<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
-<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
-<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
-<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
-<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
-<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
-<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
-<table>
-<thead>
-<tr>
-<th>配置项</th>
-<th>写回时机</th>
-<th>优点</th>
-<th>缺点</th>
-</tr>
-</thead>
-<tbody><tr>
-<td>Always</td>
-<td>同步写回</td>
-<td>可靠性高，数据基本不会丢失</td>
-<td>性能影响大</td>
-</tr>
-<tr>
-<td>No</td>
-<td>操作系统控制的写回</td>
-<td>性能高</td>
-<td>丢失数据多</td>
-</tr>
-<tr>
-<td>Everysec</td>
-<td>每秒写回</td>
-<td>性能适中</td>
-<td>会丢失1秒内的数据</td>
-</tr>
-</tbody></table>
-<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
-<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
-
-<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
-<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
-<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
-<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
-<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
-<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
-<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
-<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
-<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
-<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
-<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
-<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
-<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
-<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
-<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
-<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
-<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
-<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
-<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
-<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
-<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
-<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
-
-<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
-<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
-]]></content>
-      <categories>
-        <category>Redis</category>
-      </categories>
-      <tags>
-        <tag>Redis</tag>
-        <tag>日志</tag>
-        <tag>持久化</tag>
       </tags>
   </entry>
   <entry>
@@ -917,6 +834,144 @@
       </tags>
   </entry>
   <entry>
+    <title>Redis中的持久化机制</title>
+    <url>/2020/09/05/Redis%E4%B8%AD%E7%9A%84%E6%8C%81%E4%B9%85%E5%8C%96%E6%9C%BA%E5%88%B6/</url>
+    <content><![CDATA[<p>Redis的数据全部存放在内存之中，如果一个服务器出现了宕机，那么内存中的数据将会全部丢失。为了解决这一个问题，需要用到Redis的持久化机制。Redis的持久化主要有两大机制，即AOF日志和RDB快照。</p>
+<h2 id="AOF日志"><a href="#AOF日志" class="headerlink" title="AOF日志"></a>AOF日志</h2><p>Redis提供了AOF日志来实现持久化的功能，AOF是通过记录保存到redis中的命令来记录数据库状态的。</p>
+<h3 id="AOF日志格式"><a href="#AOF日志格式" class="headerlink" title="AOF日志格式"></a>AOF日志格式</h3><p>在AOF日志中记录了Redis收到的每一条命令，这些命令使用文本形式进行保存。例如当Redis收到set testKey testValue 这样的命令之后，会在AOF日志中记录如下的内容：</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">*3</span><br><span class="line">$3</span><br><span class="line">set</span><br><span class="line">$7</span><br><span class="line">testKey</span><br><span class="line">$9</span><br><span class="line">testValue</span><br></pre></td></tr></table></figure>
+
+<p>其中*3代表当前命令中有三个部分，每个部分以$开头，后面的数字代表该部分命令有多少字节,下一行代表该部分具体的命令。</p>
+<p>Redis在向AOF里面记录日志的时候，不会先去对这些命令进行语法检查，因此Redis采用了写后才记录日志的方式，避免记录了错误的日志被记录下来。</p>
+<h3 id="AOF日志的实现"><a href="#AOF日志的实现" class="headerlink" title="AOF日志的实现"></a>AOF日志的实现</h3><p>AOF日志的实现可分为命令追加，文件写入以及文件同步。</p>
+<h4 id="命令追加"><a href="#命令追加" class="headerlink" title="命令追加"></a>命令追加</h4><p>在服务器状态redisServer结构体中，有aof_buf字段。当需要记录AOF日志的时候，会将被执行的命令追加到服务器状态中的aof_buf缓冲区的末尾。</p>
+<h4 id="文件写入与同步"><a href="#文件写入与同步" class="headerlink" title="文件写入与同步"></a>文件写入与同步</h4><p>在redis结束每一个时间循环之前，会调用flushAppendOnlyFile函数，判断是否需要将aof_buf缓冲区中的保存到AOF文件之中。Redis为AOF日志提供了三种写回策略，可以通过appendfsync选项来设置，其值分别为Always,No,Everysec。</p>
+<p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
+<p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
+<p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>写回时机</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Always</td>
+<td>同步写回</td>
+<td>可靠性高，数据基本不会丢失</td>
+<td>性能影响大</td>
+</tr>
+<tr>
+<td>No</td>
+<td>操作系统控制的写回</td>
+<td>性能高</td>
+<td>丢失数据多</td>
+</tr>
+<tr>
+<td>Everysec</td>
+<td>每秒写回</td>
+<td>性能适中</td>
+<td>会丢失1秒内的数据</td>
+</tr>
+</tbody></table>
+<h4 id="AOF重写"><a href="#AOF重写" class="headerlink" title="AOF重写"></a>AOF重写</h4><p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
+<p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line"># 重写前</span><br><span class="line">RPUSH list &quot;A&quot; &quot;B&quot;</span><br><span class="line">RPUSH list &quot;C&quot;</span><br><span class="line">RPUSH list &quot;D&quot; &quot;E&quot;</span><br><span class="line">LPOP list</span><br><span class="line">LPOP list</span><br><span class="line">RPUSH list &quot;F&quot; &quot;G&quot;</span><br><span class="line"></span><br><span class="line"># 重写后</span><br><span class="line">RPUSH list &quot;C&quot; &quot;D&quot; &quot;E&quot; &quot;F&quot; &quot;G&quot;</span><br></pre></td></tr></table></figure>
+
+<p>在实际实现之中，因为避免在重写过程中造成客户端的缓冲区溢出，会检查键所包含的元素数量。如果元素的数量超过了一定的值，那么会使用多条命令记录键的值，而不是单单使用一条命令。</p>
+<p>但是AOF重写是一个非常耗时的操作，为了避免阻塞主线程，AOF重写需要由子进程来完成的。但是在AOF重写的过程中，也需要继续处理命令请求，而新的命令请求可能导致当前数据库状态与重写后的数据库状态不一致。</p>
+<p>为了解决这一问题，Redis设置了一个AOF重写缓冲区。在Redis处理玩命令以后，会将这些命令同时发送到AOF缓冲区和AOF重写缓冲区。</p>
+<p>在子进程完成AOF重写工作以后，会向父进程发送一个信号。父进程会在收到该信号以后，将重写缓冲区中的内容写到新的AOF文件之中，同时原子的对新的AOF文件进行改名，完成新旧文件的替换。</p>
+<h2 id="RDB持久化"><a href="#RDB持久化" class="headerlink" title="RDB持久化"></a>RDB持久化</h2><p>单独使用AOF日志在进行故障恢复的时候需要逐一将操作日志执行一遍。如果恢复的量比较大，会导致恢复速度缓慢，此时可以使用RDB内存快照的机制。RDB记录的是某一时刻的数据而不是像AOF日志一样记录操作，在进行数据恢复的时候，可以直接将RDB的数据导入Redis中，很快速的完成数据的恢复。</p>
+<h3 id="RDB文件结构"><a href="#RDB文件结构" class="headerlink" title="RDB文件结构"></a>RDB文件结构</h3><h4 id="REDIS字符"><a href="#REDIS字符" class="headerlink" title="REDIS字符"></a>REDIS字符</h4><p>一个RDB文件最开头是REDIS五个字符，在载入RDB文件的时候，可以通过这五个字符来快速的判定是否为RDB文件。</p>
+<h4 id="DB-VERSION"><a href="#DB-VERSION" class="headerlink" title="DB_VERSION"></a>DB_VERSION</h4><p>在REDIS字符之后是一个db_version字段，长度为4字节，记录了RDB文件的版本号。</p>
+<h4 id="DATABASES"><a href="#DATABASES" class="headerlink" title="DATABASES"></a>DATABASES</h4><p>之后是databases部分，包含着任意个数据库中的键值对数据。如果服务器的数据库状态都为空，那么这个部分也为空。同时每一个数据库的保存内容也可以被分为SELECTDB,db_number,key_value_pairs三个部分。</p>
+<p>SELECTDB是一个常量，当读入这个值说明接下来要读入的是一个数据库号码。</p>
+<p>db_number保存着一个数据库号码，根据号码的不同，长度可以为1，2，5字节。当读到db_number字段的时候，会进行数据库切换。</p>
+<p>key_value_pairs部分保存着数据库中所有键值对数据。其由EXPIRETIME_MS,ms,TYPE,key,value五个部分组成。其中EXPIRETIME_MS和ms仅仅在带有过期时间的键值对中出现。</p>
+<p>EXPIRETIME_MS是一个常量字段，告诉读入程序接下来是一个过期时间字段。</p>
+<p>ms是一个8字节的整数，以毫秒为单位的UNIX时间戳，记录着键值对的过期时间。</p>
+<p>Type字段记录了value的类型，长度为1个字节，代表这当前value数据的类型。</p>
+<p>key是一个字符串对象，总是以REDIS_RDB_TYPE_STRING的形式保存。</p>
+<p>value根据TYPE的值不同，Redis会根据不同的类型来进行不同方式的保存。</p>
+<h4 id="EOF"><a href="#EOF" class="headerlink" title="EOF"></a>EOF</h4><p>EOF字段代表着RDB文件的正文正式结束。当REDIS读入RDB文件的时候，如果读到该字段，说明所有数据库的键值对已经载入完毕了。</p>
+<h4 id="CHECK-SUM"><a href="#CHECK-SUM" class="headerlink" title="CHECK_SUM"></a>CHECK_SUM</h4><p>最后是一个部分是check_sum，通过对前面四个部分通过CRC64算法计算得出。在载入RDB文件的时候，服务器会通过该字段来判断是否出现了文件损坏。</p>
+<h3 id="RDB实现"><a href="#RDB实现" class="headerlink" title="RDB实现"></a>RDB实现</h3><p>Redis提供了save和bgsave命令来生成RDB文件，其中save命令在主线程执行RDB的操作，会阻塞主线程的执行，而bgsave会创建一个子进程，专门用于写入新的RDB文件，避免主线程的阻塞。</p>
+<p>在执行RDB记录的时候，Redis会使用操作系统提供的写时复制技术（COW）来实现在生成RDB文件的同时可以正常的处理请求。如果主线程对Redis中的数据执行的是读操作，那么主线程与子线程互不影响。如果主线程时写操作，那么该数据会被复制一份，生成该数据的副本，提供给子线程，子线程会把这个副本的数据写入到RDB文件之中，而在这个过程中，主线程仍然可以修改原来的数据。这一机制既保证了数据的完整性，同时允许主线程进行数据修改。</p>
+<h3 id="RDB自动保存"><a href="#RDB自动保存" class="headerlink" title="RDB自动保存"></a>RDB自动保存</h3><p>在Redis服务器启动的时候，可以通过传递配置文件等方式设置save选项。根据设置的条件，Redis会设置服务器状态中的saveParams属性，其类型为saveparam的数组。saveparam结构体有两个属性，表示了在多少秒内发生了多少次修改会触发RDB保存，saveparam的源码如下：</p>
+<figure class="highlight c"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">saveparam</span> &#123;</span></span><br><span class="line">    <span class="comment">// 多少秒之内</span></span><br><span class="line">    <span class="keyword">time_t</span> seconds;</span><br><span class="line">    <span class="comment">// 发生多少次修改</span></span><br><span class="line">    <span class="keyword">int</span> changes;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+
+<p>同时在服务器状态中还维护dirty计数器以及leavesave属性。dirty属性记录了距离上次RDB保存之后还执行了多少次修改，leavesave属性记录了上次保存的时间。在serverCron函数中会遍历saveparam，检查save的条件是否满足，一旦有一个条件满足，那么就会自动执行bgsave命令。</p>
+<h2 id="RDB与AOF混合使用"><a href="#RDB与AOF混合使用" class="headerlink" title="RDB与AOF混合使用"></a>RDB与AOF混合使用</h2><p>Redis中可以将了混合使用AOF和RDB的方法。RDB可以通过混合使用AOF日志来实现增量的更新。在两次RDB操作之间，使用AOF日志来记录这之间所有的命令操作。通过这样的方法，在完成之后清空AOF日志中的内容。通过这种方式，RDB不需要很频繁的执行，同时减少了AOF日志的文件大小。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+        <tag>日志</tag>
+        <tag>持久化</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Redis实现主从复制原理</title>
+    <url>/2020/09/11/Redis%E5%AE%9E%E7%8E%B0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%8E%9F%E7%90%86/</url>
+    <content><![CDATA[<p>在Redis中可以通过SLAVEOF（5.0版本以后可使用REPLICAOF）命令让一个服务器去复制另一个服务器。被复制的服务器被称为主服务器，对主服务器进行复制的服务器成为从服务器。Redis进行主从同步的过程如下：</p>
+<h2 id="建立套接字连接"><a href="#建立套接字连接" class="headerlink" title="建立套接字连接"></a>建立套接字连接</h2><p>使用以下命令时</p>
+<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">SLAVEOF 127.0.0.1 6379</span><br></pre></td></tr></table></figure>
+
+<p>服务器会将IP地址127.0.0.1和6379端口保存到redisServer结构体之中。在执行完成之后，服务器根据命令所设置的IP地址以及端口，创建套接字连接。</p>
+<p>如果套接字成功连接，那么主服务器将会为该套接字创建对应的客户端状态，并将从服务器看作一个连接到主服务器的客户端来对待。从服务器会为套接字关联一个用于处理复制工作的文件事件处理器，处理后续的复制工作，比如接受RDB文件，接受主服务器传来的写命令等等。</p>
+<h2 id="发送PING命令"><a href="#发送PING命令" class="headerlink" title="发送PING命令"></a>发送PING命令</h2><p>在创建完成套接字以后，从服务器会像主服务发送一个PING请求，这个PING请求的作用有</p>
+<ol>
+<li>检查套接字的读写状态是否正常。</li>
+<li>检查主服务器是否可以正常处理命令请求。</li>
+</ol>
+<p>如果主服务器返回了PONG，说明网络状态正常并且主服务器可以正常处理请求，从服务器可以继续执行下个步骤。如果出现了回复超市或者主服务器返回了一个错误，从服务器会断开连接并且尝试重连主服务器。</p>
+<h2 id="身份验证"><a href="#身份验证" class="headerlink" title="身份验证"></a>身份验证</h2><p>在返回PONG之后，下一步决定是否进行身份验证。如果主从服务器都没有设置密码或者主从服务器设置了相同的密码，那么直接进入下一步。否则如果，主从服务器设置了不同的密码或者一个设置了密码一个没有设置，那么会身份验证失败，进行重试或者退出。</p>
+<h2 id="发送端口信息"><a href="#发送端口信息" class="headerlink" title="发送端口信息"></a>发送端口信息</h2><p>在完成身份验证以后，从服务器将向主服务器发送从服务器的监听端口号。主服务器接收到该请求以后，会将端口号记录在客户端状态下的slave_listening_port属性中。</p>
+<h2 id="同步"><a href="#同步" class="headerlink" title="同步"></a>同步</h2><p>在这一步中，从服务器会向主服务发送同步命令，执行同步操作，将自己的数据库更新为主数据库当前所处的状态。可以通过SYNC和PSYNC两种命令来实现主从同步。</p>
+<h3 id="SYNC命令"><a href="#SYNC命令" class="headerlink" title="SYNC命令"></a>SYNC命令</h3><h4 id="SYNC命令实现"><a href="#SYNC命令实现" class="headerlink" title="SYNC命令实现"></a>SYNC命令实现</h4><p>SYNC命令的执行步骤如下:</p>
+<ol>
+<li><p>从服务器向主服务器发送SYNC命令</p>
+</li>
+<li><p>收到SYNC命令的主服务器执行BGSAVE命令，生成RDB文件，同时创建一个缓冲区记录从现在开始执行的所有写命令。</p>
+</li>
+<li><p>当BGSAVE命令执行完毕之后，主服务器会将RDB文件发送给从服务器，从服务器载入该RDB文件，将数据库状态更新至执行BGSAVE命令时的数据库状态。</p>
+</li>
+<li><p>主服务器将记录在缓冲区的所有写命令发送给从服务器，从服务器执行这些命令，更新至主服务器当前所处的状态。</p>
+</li>
+</ol>
+<h4 id="SYNC命令的缺陷"><a href="#SYNC命令的缺陷" class="headerlink" title="SYNC命令的缺陷"></a>SYNC命令的缺陷</h4><p>在出现断线后重新复制的情况时，SYNC命令的效率十分低。因为在断线后重连时，主从服务器的大部分数据是一致，从服务器将自己更新为主服务器的状态时，只需要更新中断期间的数据即可。SYNC命令没有利用好这些特性，导致了需要进行全量的RDB备份才能保持数据一致，因此Redis引入了PSYNC命令来代替SYNC命令。</p>
+<h3 id="PSYNC命令"><a href="#PSYNC命令" class="headerlink" title="PSYNC命令"></a>PSYNC命令</h3><p>PSYNC具有完整重同步和部分重同步两种模式，其中完整重同步用于处理初次复制的情况，部分重同步用于处理断线后的重复制情况。完全重同步的过程与SYNC命令的实现类似，部分重同步模式解决了SYNC模式的缺陷。部分重同步的功能有以下三个部分组成</p>
+<h4 id="复制偏移量"><a href="#复制偏移量" class="headerlink" title="复制偏移量"></a>复制偏移量</h4><p>执行复制的双方会分别维护一个复制偏移量。当主服务器每次向从服务器传播N个字节的数据时，就将自己的复制偏移量加上N。从服务器接收到N个字节的数据时，也将自己的复制偏移量加上N。通过对比两者的复制偏移量，可以得出两者的数据是否一致。</p>
+<h4 id="复制积压缓冲区"><a href="#复制积压缓冲区" class="headerlink" title="复制积压缓冲区"></a>复制积压缓冲区</h4><p>复制积压缓冲区是一个由主服务器维护的一个固定长度的先进先出的队列，默认大小为1MB。当主服务器进行命令传播时，会将写命令入队到复制积压缓冲区之中，同时记录队列中每个字节记录的相应的复制偏移量。</p>
+<p>当从服务器重新连接上主服务器的时候，从服务器会将自己的复制偏移量发送给主服务器。如果该复制偏移量仍然存在于复制积压缓冲区，则执行部分重同步操作，否则执行完整重同步操作。</p>
+<h4 id="服务器运行ID"><a href="#服务器运行ID" class="headerlink" title="服务器运行ID"></a>服务器运行ID</h4><p>每个Redis服务器都会有自己的运行ID，由40个随机的十六进制字符组成，在服务器启动时自动生成。当从服务器进行初次复制的时候，主服务器会将自己的运行ID传送给服务器。当从服务器断线重连时，从服务器发送之前保存的运行ID。如果主服务器接收到的运行ID与自己的运行ID相同，说明从服务器断线之前复制的就是当前连接的主服务器，则执行部分重同步操作，否则执行完整重同步操作。</p>
+<h2 id="命令传播"><a href="#命令传播" class="headerlink" title="命令传播"></a>命令传播</h2><p>当同步操作完成以后，主从服务器的数据库达到一致的水平，但是每当主服务器执行客户端发送的写命令时，主服务器的数据库状态会被修改，导致主从服务器状态不一致。</p>
+<p>为了让主从服务器保持一致的数据，主服务需要对从服务器执行命令保存操作，将主服务器的写指令发送给从服务器，当从服务器执行了该指令时，主从重新回到了一致的状态。</p>
+<h3 id="心跳检测"><a href="#心跳检测" class="headerlink" title="心跳检测"></a>心跳检测</h3><p>在命令传播阶段，从服务器会以每秒一次的频率向主服务器发送命令，告诉主服务器目前从服务器当前的复制偏移量。其作用有：</p>
+<ol>
+<li>检测主从服务器之间的网络连接</li>
+<li>辅助实现min-slaves选项</li>
+<li>检测命令丢失</li>
+</ol>
+<p>如果在心跳检测的过程中检测出命令丢失的情况，那么主服务器会根据从服务器提交的命令偏移量，在复制挤压缓冲区中找到从服务器中缺少的数据，并将这些数据重新发送给从服务器。</p>
+<h3 id="主从级联分担全量复制压力"><a href="#主从级联分担全量复制压力" class="headerlink" title="主从级联分担全量复制压力"></a>主从级联分担全量复制压力</h3><p>在一次全量复制中，对于主库由两个耗时的操作：生成 RDB 文件和传输 RDB 文件。</p>
+<p>如果从库数量很多，会导致出现主库忙于生成RDB文件，同时占用大量的网络资源用于传输RDB文件。可以通过“主 - 从 - 从”模式将主库生成 RDB 和传输 RDB 的压力，以级联的方式分散到从库上。</p>
+<p>具体的方式为在部署主从集群的时候，可以选择通过手动选择一个从库用于级联其他从库。这些从库在进行同步时，不用再和主库进行交互了，只要和级联的从库进行写操作同步就行了，这就可以减轻主库上的压力。</p>
+]]></content>
+      <categories>
+        <category>Redis</category>
+      </categories>
+      <tags>
+        <tag>Redis</tag>
+      </tags>
+  </entry>
+  <entry>
     <title>Redis如何删除过期键</title>
     <url>/2020/09/09/Redis%E5%A6%82%E4%BD%95%E5%88%A0%E9%99%A4%E8%BF%87%E6%9C%9F%E9%94%AE/</url>
     <content><![CDATA[<p>通过EXPIRE，PEXPIRE，SETEX等指令，Redis可以为数据库中的某键设置生存时间，在经过指定时间之后，服务器就会删除生存时间为0的键。</p>
@@ -994,61 +1049,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Redis实现主从复制原理</title>
-    <url>/2020/09/11/Redis%E5%AE%9E%E7%8E%B0%E4%B8%BB%E4%BB%8E%E5%A4%8D%E5%88%B6%E5%8E%9F%E7%90%86/</url>
-    <content><![CDATA[<p>在Redis中可以通过SLAVEOF（5.0版本以后可使用REPLICAOF）命令让一个服务器去复制另一个服务器。被复制的服务器被称为主服务器，对主服务器进行复制的服务器成为从服务器。Redis进行主从同步的过程如下：</p>
-<h2 id="建立套接字连接"><a href="#建立套接字连接" class="headerlink" title="建立套接字连接"></a>建立套接字连接</h2><p>使用以下命令时</p>
-<figure class="highlight text"><table><tr><td class="code"><pre><span class="line">SLAVEOF 127.0.0.1 6379</span><br></pre></td></tr></table></figure>
-
-<p>服务器会将IP地址127.0.0.1和6379端口保存到redisServer结构体之中。在执行完成之后，服务器根据命令所设置的IP地址以及端口，创建套接字连接。</p>
-<p>如果套接字成功连接，那么主服务器将会为该套接字创建对应的客户端状态，并将从服务器看作一个连接到主服务器的客户端来对待。从服务器会为套接字关联一个用于处理复制工作的文件事件处理器，处理后续的复制工作，比如接受RDB文件，接受主服务器传来的写命令等等。</p>
-<h2 id="发送PING命令"><a href="#发送PING命令" class="headerlink" title="发送PING命令"></a>发送PING命令</h2><p>在创建完成套接字以后，从服务器会像主服务发送一个PING请求，这个PING请求的作用有</p>
-<ol>
-<li>检查套接字的读写状态是否正常。</li>
-<li>检查主服务器是否可以正常处理命令请求。</li>
-</ol>
-<p>如果主服务器返回了PONG，说明网络状态正常并且主服务器可以正常处理请求，从服务器可以继续执行下个步骤。如果出现了回复超市或者主服务器返回了一个错误，从服务器会断开连接并且尝试重连主服务器。</p>
-<h2 id="身份验证"><a href="#身份验证" class="headerlink" title="身份验证"></a>身份验证</h2><p>在返回PONG之后，下一步决定是否进行身份验证。如果主从服务器都没有设置密码或者主从服务器设置了相同的密码，那么直接进入下一步。否则如果，主从服务器设置了不同的密码或者一个设置了密码一个没有设置，那么会身份验证失败，进行重试或者退出。</p>
-<h2 id="发送端口信息"><a href="#发送端口信息" class="headerlink" title="发送端口信息"></a>发送端口信息</h2><p>在完成身份验证以后，从服务器将向主服务器发送从服务器的监听端口号。主服务器接收到该请求以后，会将端口号记录在客户端状态下的slave_listening_port属性中。</p>
-<h2 id="同步"><a href="#同步" class="headerlink" title="同步"></a>同步</h2><p>在这一步中，从服务器会向主服务发送同步命令，执行同步操作，将自己的数据库更新为主数据库当前所处的状态。可以通过SYNC和PSYNC两种命令来实现主从同步。</p>
-<h3 id="SYNC命令"><a href="#SYNC命令" class="headerlink" title="SYNC命令"></a>SYNC命令</h3><h4 id="SYNC命令实现"><a href="#SYNC命令实现" class="headerlink" title="SYNC命令实现"></a>SYNC命令实现</h4><p>SYNC命令的执行步骤如下:</p>
-<ol>
-<li><p>从服务器向主服务器发送SYNC命令</p>
-</li>
-<li><p>收到SYNC命令的主服务器执行BGSAVE命令，生成RDB文件，同时创建一个缓冲区记录从现在开始执行的所有写命令。</p>
-</li>
-<li><p>当BGSAVE命令执行完毕之后，主服务器会将RDB文件发送给从服务器，从服务器载入该RDB文件，将数据库状态更新至执行BGSAVE命令时的数据库状态。</p>
-</li>
-<li><p>主服务器将记录在缓冲区的所有写命令发送给从服务器，从服务器执行这些命令，更新至主服务器当前所处的状态。</p>
-</li>
-</ol>
-<h4 id="SYNC命令的缺陷"><a href="#SYNC命令的缺陷" class="headerlink" title="SYNC命令的缺陷"></a>SYNC命令的缺陷</h4><p>在出现断线后重新复制的情况时，SYNC命令的效率十分低。因为在断线后重连时，主从服务器的大部分数据是一致，从服务器将自己更新为主服务器的状态时，只需要更新中断期间的数据即可。SYNC命令没有利用好这些特性，导致了需要进行全量的RDB备份才能保持数据一致，因此Redis引入了PSYNC命令来代替SYNC命令。</p>
-<h3 id="PSYNC命令"><a href="#PSYNC命令" class="headerlink" title="PSYNC命令"></a>PSYNC命令</h3><p>PSYNC具有完整重同步和部分重同步两种模式，其中完整重同步用于处理初次复制的情况，部分重同步用于处理断线后的重复制情况。完全重同步的过程与SYNC命令的实现类似，部分重同步模式解决了SYNC模式的缺陷。部分重同步的功能有以下三个部分组成</p>
-<h4 id="复制偏移量"><a href="#复制偏移量" class="headerlink" title="复制偏移量"></a>复制偏移量</h4><p>执行复制的双方会分别维护一个复制偏移量。当主服务器每次向从服务器传播N个字节的数据时，就将自己的复制偏移量加上N。从服务器接收到N个字节的数据时，也将自己的复制偏移量加上N。通过对比两者的复制偏移量，可以得出两者的数据是否一致。</p>
-<h4 id="复制积压缓冲区"><a href="#复制积压缓冲区" class="headerlink" title="复制积压缓冲区"></a>复制积压缓冲区</h4><p>复制积压缓冲区是一个由主服务器维护的一个固定长度的先进先出的队列，默认大小为1MB。当主服务器进行命令传播时，会将写命令入队到复制积压缓冲区之中，同时记录队列中每个字节记录的相应的复制偏移量。</p>
-<p>当从服务器重新连接上主服务器的时候，从服务器会将自己的复制偏移量发送给主服务器。如果该复制偏移量仍然存在于复制积压缓冲区，则执行部分重同步操作，否则执行完整重同步操作。</p>
-<h4 id="服务器运行ID"><a href="#服务器运行ID" class="headerlink" title="服务器运行ID"></a>服务器运行ID</h4><p>每个Redis服务器都会有自己的运行ID，由40个随机的十六进制字符组成，在服务器启动时自动生成。当从服务器进行初次复制的时候，主服务器会将自己的运行ID传送给服务器。当从服务器断线重连时，从服务器发送之前保存的运行ID。如果主服务器接收到的运行ID与自己的运行ID相同，说明从服务器断线之前复制的就是当前连接的主服务器，则执行部分重同步操作，否则执行完整重同步操作。</p>
-<h2 id="命令传播"><a href="#命令传播" class="headerlink" title="命令传播"></a>命令传播</h2><p>当同步操作完成以后，主从服务器的数据库达到一致的水平，但是每当主服务器执行客户端发送的写命令时，主服务器的数据库状态会被修改，导致主从服务器状态不一致。</p>
-<p>为了让主从服务器保持一致的数据，主服务需要对从服务器执行命令保存操作，将主服务器的写指令发送给从服务器，当从服务器执行了该指令时，主从重新回到了一致的状态。</p>
-<h3 id="心跳检测"><a href="#心跳检测" class="headerlink" title="心跳检测"></a>心跳检测</h3><p>在命令传播阶段，从服务器会以每秒一次的频率向主服务器发送命令，告诉主服务器目前从服务器当前的复制偏移量。其作用有：</p>
-<ol>
-<li>检测主从服务器之间的网络连接</li>
-<li>辅助实现min-slaves选项</li>
-<li>检测命令丢失</li>
-</ol>
-<p>如果在心跳检测的过程中检测出命令丢失的情况，那么主服务器会根据从服务器提交的命令偏移量，在复制挤压缓冲区中找到从服务器中缺少的数据，并将这些数据重新发送给从服务器。</p>
-<h3 id="主从级联分担全量复制压力"><a href="#主从级联分担全量复制压力" class="headerlink" title="主从级联分担全量复制压力"></a>主从级联分担全量复制压力</h3><p>在一次全量复制中，对于主库由两个耗时的操作：生成 RDB 文件和传输 RDB 文件。</p>
-<p>如果从库数量很多，会导致出现主库忙于生成RDB文件，同时占用大量的网络资源用于传输RDB文件。可以通过“主 - 从 - 从”模式将主库生成 RDB 和传输 RDB 的压力，以级联的方式分散到从库上。</p>
-<p>具体的方式为在部署主从集群的时候，可以选择通过手动选择一个从库用于级联其他从库。这些从库在进行同步时，不用再和主库进行交互了，只要和级联的从库进行写操作同步就行了，这就可以减轻主库上的压力。</p>
-]]></content>
-      <categories>
-        <category>Redis</category>
-      </categories>
-      <tags>
-        <tag>Redis</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>java使用自定义注解</title>
     <url>/2020/07/20/java%E4%BD%BF%E7%94%A8%E8%87%AA%E5%AE%9A%E4%B9%89%E6%B3%A8%E8%A7%A3/</url>
     <content><![CDATA[<h2 id="注解简介"><a href="#注解简介" class="headerlink" title="注解简介"></a>注解简介</h2><p>注解是放在Java源码的类、方法、字段、参数前的一种特殊“注释”，用于保存类相关的信息以供反射调用，提供了一种为程序元素提供元数据的方法。注解不能直接干扰程序的运行。注解本身也是一个类，所有的注解都需要继承自java.lang.annotation.Annotation接口。</p>
@@ -1088,26 +1088,6 @@
       </tags>
   </entry>
   <entry>
-    <title>Kafka基本概念</title>
-    <url>/2021/01/26/kafka%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</url>
-    <content><![CDATA[<p>一个经典的Kafka架构包括若干个Producer、Broker、Consumer和ZooKeeper集群。</p>
-<p>ZooKeeper是Kafka用来负责集群元数据的管理以及控制器的选举。</p>
-<p>Producer将消息发送到Broker中去，Broker负责将收到的消息存储到磁盘当中，然后Consumer负责从Broker订阅并且消费消息。</p>
-<p>Kafka还有两个重要的概念就是主题Topic以及分区Partition。Kafka中的消息以主题为单位进行归类，生产者负责将消息发送到特定的主题，消费者负责订阅主题并进行消费。</p>
-<p>主题是一个逻辑上的概念，还可以细分为多个分区，一个分区只属于单个主题。同一主题下不同分区包含的消息是不同的。分区在存储层面可以看作一个可以追加的日志，消息在追加到分区日志文件的时候会分配一个特定的偏移量offset。offset是消息在分区中的唯一标识，Kafka通过offset来保证消息在分区中的顺序性。但是offset不跨越分区，因此Kafka只保证分区有序而不保证主题有序。</p>
-<p>Kafka的分区可以分布在不同的服务器上，横跨多个Broker，以此来提供比单个Broker更强大的性能。当消息发送到Broker之前，会根据分区规则选择存储到哪个分区。</p>
-<p>Kafka为分区引入了多副本（Replica）机制，通过增加副本数量可以提升容灾能力。同一分区的不同副本中保存的是相同的消息，但在同一时刻副本之间的消息可能并非完全相同，副本之间是一主多从的关系，其中leader副本负责处理读写请求，follower副本只负责与leader副本消息同步。副本处于不同的broker中，当leader副本出现故障时，从follower副本中重新选举新的leader副本继续对外提供服务。通过该机制使得Kafka集群中某个Broker失效时仍然能够对外提供服务。</p>
-<p>分区中所有的副本称为AR（Assigned Replicas），所有与leader副本保持一定程度同步的副本组成ISR（In-Sync-Replicas）。当消费者发送消息时，会先发送到leader节点，然后follower节点才能从leader副本中拉取消息进行同步，同步期间follower副本相对于leader副本会有一定程度上的落后。与leader副本同步滞后过多的副本称为OSR（Out-of-Sync Replicas）。当leader副本发生故障时，只有ISR集合中的副本才有资格选举为新的leader。</p>
-<p>Kafka的消费端也有容灾能力，Consumer使用拉（Pull）模式从服务端拉取消息，并且保存消费的具体位置。当消费者宕机重启时可以根据之前保存的消费位置重新拉取需要的消息进行消费。</p>
-]]></content>
-      <categories>
-        <category>Kafka</category>
-      </categories>
-      <tags>
-        <tag>Kafka</tag>
-      </tags>
-  </entry>
-  <entry>
     <title>netty常用概念</title>
     <url>/2021/01/28/netty%E5%B8%B8%E7%94%A8%E6%A6%82%E5%BF%B5/</url>
     <content><![CDATA[<h2 id="channel"><a href="#channel" class="headerlink" title="channel"></a>channel</h2><p>Channel接口是Netty对网络操作的抽象类，代表一个到实体（如硬件设备、网络套接字、文件等等）的开放连接，包含基本的读写操作。常用的Channel接口实现类包括NioServerSocketChannel和NioSocketChannel。这两个相当于BIO编程模型中的ServerSocket以及Socket两个概念。</p>
@@ -1132,6 +1112,26 @@
       <tags>
         <tag>网络</tag>
         <tag>Netty</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>Kafka基本概念</title>
+    <url>/2021/01/26/kafka%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/</url>
+    <content><![CDATA[<p>一个经典的Kafka架构包括若干个Producer、Broker、Consumer和ZooKeeper集群。</p>
+<p>ZooKeeper是Kafka用来负责集群元数据的管理以及控制器的选举。</p>
+<p>Producer将消息发送到Broker中去，Broker负责将收到的消息存储到磁盘当中，然后Consumer负责从Broker订阅并且消费消息。</p>
+<p>Kafka还有两个重要的概念就是主题Topic以及分区Partition。Kafka中的消息以主题为单位进行归类，生产者负责将消息发送到特定的主题，消费者负责订阅主题并进行消费。</p>
+<p>主题是一个逻辑上的概念，还可以细分为多个分区，一个分区只属于单个主题。同一主题下不同分区包含的消息是不同的。分区在存储层面可以看作一个可以追加的日志，消息在追加到分区日志文件的时候会分配一个特定的偏移量offset。offset是消息在分区中的唯一标识，Kafka通过offset来保证消息在分区中的顺序性。但是offset不跨越分区，因此Kafka只保证分区有序而不保证主题有序。</p>
+<p>Kafka的分区可以分布在不同的服务器上，横跨多个Broker，以此来提供比单个Broker更强大的性能。当消息发送到Broker之前，会根据分区规则选择存储到哪个分区。</p>
+<p>Kafka为分区引入了多副本（Replica）机制，通过增加副本数量可以提升容灾能力。同一分区的不同副本中保存的是相同的消息，但在同一时刻副本之间的消息可能并非完全相同，副本之间是一主多从的关系，其中leader副本负责处理读写请求，follower副本只负责与leader副本消息同步。副本处于不同的broker中，当leader副本出现故障时，从follower副本中重新选举新的leader副本继续对外提供服务。通过该机制使得Kafka集群中某个Broker失效时仍然能够对外提供服务。</p>
+<p>分区中所有的副本称为AR（Assigned Replicas），所有与leader副本保持一定程度同步的副本组成ISR（In-Sync-Replicas）。当消费者发送消息时，会先发送到leader节点，然后follower节点才能从leader副本中拉取消息进行同步，同步期间follower副本相对于leader副本会有一定程度上的落后。与leader副本同步滞后过多的副本称为OSR（Out-of-Sync Replicas）。当leader副本发生故障时，只有ISR集合中的副本才有资格选举为新的leader。</p>
+<p>Kafka的消费端也有容灾能力，Consumer使用拉（Pull）模式从服务端拉取消息，并且保存消费的具体位置。当消费者宕机重启时可以根据之前保存的消费位置重新拉取需要的消息进行消费。</p>
+]]></content>
+      <categories>
+        <category>Kafka</category>
+      </categories>
+      <tags>
+        <tag>Kafka</tag>
       </tags>
   </entry>
   <entry>
@@ -1168,6 +1168,28 @@
       <tags>
         <tag>操作系统</tag>
         <tag>内存</tag>
+      </tags>
+  </entry>
+  <entry>
+    <title>操作系统文件管理</title>
+    <url>/2020/12/10/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86/</url>
+    <content><![CDATA[<p>文件系统是操作系统中文件的管理者。文件系统为上层用户提供文件抽象并实现文件访问所需要的接口，同时以特定的存储格式在下层存储设备中维护每个文件的数据以及元数据。操作系统将存储设备抽象为块设备，块设备上的的存储空间被划分为固定大小的存储块，每个存储块有一个地址被称为块号。</p>
+<h2 id="基于inode的文件系统"><a href="#基于inode的文件系统" class="headerlink" title="基于inode的文件系统"></a>基于inode的文件系统</h2><h3 id="inode"><a href="#inode" class="headerlink" title="inode"></a>inode</h3><p>inode是“index node”的简写，即索引节点，记录了一个文件所对应的所有存储块号。inode中保存了三种存储指针，第一种指针为直接指针，其直接指向数据块，数据块中保存了文件数据；第二种指针为间接指针，指向了一个一级索引块，一级索引块中存放者指向数据块的指针。第三种指针为二级间接指针，指向一个二级索引块，二级索引块的每个指针都指向一个一级索引块，进而指向多个数据块。</p>
+<p><img data-src="%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%5Cinode%E6%95%B0%E6%8D%AE%E7%B4%A2%E5%BC%95.png" alt="inode数据索引"></p>
+<p>通过上述的组织方式可以看出，一个文件系统所支持的最大文件大小收到文件数据组织方式的限制，通过调整inode的设计可以改变其能够管理的最大文件大小。为了支持更大的文件，inode还可以启用三级或者四级间接指针。</p>
+<p>inode还会记录该文件的其他元数据，例如文件模式、链接数、文件大小、文件访问时间等。</p>
+<h3 id="存储结构"><a href="#存储结构" class="headerlink" title="存储结构"></a>存储结构</h3><p>文件系统以特定的存储布局将文件数据以及元数据保存在存储设备之中。为了高效的管理这些文件数据以及元数据，文件系统通常将存储空间划分为不同区域，分别用于不同功能。通常一个存储设备会被划分为超级块、块分配信息、inode分配信息、inode表以及文件数据块等区域。</p>
+<p>超级块记录了整个文件系统的全局元数据，例如文件系统的版本、所管理空间大小、最后一次的挂载时间以及一些统计信息（例如最大inode数、空闲inode数、最大块数量、空闲块数量）。</p>
+<p>块分配信息使用位图（bitmap）的格式来标记文件数据块区域中各个块的使用情况，如果为比特位为1则表示对应的数据块已经被分配和使用，若为0则代表对应的数据块空闲。inode分配信息与块分配信息类似，其对应的是每个inode的使用情况。</p>
+<p>inode表以数组的形式存放整个文件系统的所有inode结构，文件系统使用inode在此表中的索引对不同inode进行区分。</p>
+<p>剩余的存储空间为文件数据块区域，用于保存文件的数据。</p>
+<h2 id="虚拟文件系统VFS"><a href="#虚拟文件系统VFS" class="headerlink" title="虚拟文件系统VFS"></a>虚拟文件系统VFS</h2><p>在一个计算机之中可能存在多个文件系统，需要使用到虚拟文件系统（VFS）对多种文件系统进行管理和协调，允许它们在同一个操作系统上共同工作。VFS定义了一系列内存数据结构，并要求底层的不同文件系统提供指定的方法，利用这些方法将不同文件系统的元数据统一转化为VFS的内存数据结构。</p>
+]]></content>
+      <categories>
+        <category>操作系统</category>
+      </categories>
+      <tags>
+        <tag>操作系统</tag>
       </tags>
   </entry>
   <entry>
@@ -1382,25 +1404,46 @@
       </tags>
   </entry>
   <entry>
-    <title>操作系统文件管理</title>
-    <url>/2020/12/10/%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86/</url>
-    <content><![CDATA[<p>文件系统是操作系统中文件的管理者。文件系统为上层用户提供文件抽象并实现文件访问所需要的接口，同时以特定的存储格式在下层存储设备中维护每个文件的数据以及元数据。操作系统将存储设备抽象为块设备，块设备上的的存储空间被划分为固定大小的存储块，每个存储块有一个地址被称为块号。</p>
-<h2 id="基于inode的文件系统"><a href="#基于inode的文件系统" class="headerlink" title="基于inode的文件系统"></a>基于inode的文件系统</h2><h3 id="inode"><a href="#inode" class="headerlink" title="inode"></a>inode</h3><p>inode是“index node”的简写，即索引节点，记录了一个文件所对应的所有存储块号。inode中保存了三种存储指针，第一种指针为直接指针，其直接指向数据块，数据块中保存了文件数据；第二种指针为间接指针，指向了一个一级索引块，一级索引块中存放者指向数据块的指针。第三种指针为二级间接指针，指向一个二级索引块，二级索引块的每个指针都指向一个一级索引块，进而指向多个数据块。</p>
-<p><img data-src="%E6%93%8D%E4%BD%9C%E7%B3%BB%E7%BB%9F%E6%96%87%E4%BB%B6%E7%AE%A1%E7%90%86%5Cinode%E6%95%B0%E6%8D%AE%E7%B4%A2%E5%BC%95.png" alt="inode数据索引"></p>
-<p>通过上述的组织方式可以看出，一个文件系统所支持的最大文件大小收到文件数据组织方式的限制，通过调整inode的设计可以改变其能够管理的最大文件大小。为了支持更大的文件，inode还可以启用三级或者四级间接指针。</p>
-<p>inode还会记录该文件的其他元数据，例如文件模式、链接数、文件大小、文件访问时间等。</p>
-<h3 id="存储结构"><a href="#存储结构" class="headerlink" title="存储结构"></a>存储结构</h3><p>文件系统以特定的存储布局将文件数据以及元数据保存在存储设备之中。为了高效的管理这些文件数据以及元数据，文件系统通常将存储空间划分为不同区域，分别用于不同功能。通常一个存储设备会被划分为超级块、块分配信息、inode分配信息、inode表以及文件数据块等区域。</p>
-<p>超级块记录了整个文件系统的全局元数据，例如文件系统的版本、所管理空间大小、最后一次的挂载时间以及一些统计信息（例如最大inode数、空闲inode数、最大块数量、空闲块数量）。</p>
-<p>块分配信息使用位图（bitmap）的格式来标记文件数据块区域中各个块的使用情况，如果为比特位为1则表示对应的数据块已经被分配和使用，若为0则代表对应的数据块空闲。inode分配信息与块分配信息类似，其对应的是每个inode的使用情况。</p>
-<p>inode表以数组的形式存放整个文件系统的所有inode结构，文件系统使用inode在此表中的索引对不同inode进行区分。</p>
-<p>剩余的存储空间为文件数据块区域，用于保存文件的数据。</p>
-<h2 id="虚拟文件系统VFS"><a href="#虚拟文件系统VFS" class="headerlink" title="虚拟文件系统VFS"></a>虚拟文件系统VFS</h2><p>在一个计算机之中可能存在多个文件系统，需要使用到虚拟文件系统（VFS）对多种文件系统进行管理和协调，允许它们在同一个操作系统上共同工作。VFS定义了一系列内存数据结构，并要求底层的不同文件系统提供指定的方法，利用这些方法将不同文件系统的元数据统一转化为VFS的内存数据结构。</p>
+    <title>设计模式之结构型模式</title>
+    <url>/2020/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E7%BB%93%E6%9E%84%E5%9E%8B%E6%A8%A1%E5%BC%8F/</url>
+    <content><![CDATA[<p>结构型模式主要总结了一些类或对象组合在一起的经典结构，这些经典的结构可以解决特定应用场景的问题。</p>
+<h2 id="代理模式"><a href="#代理模式" class="headerlink" title="代理模式"></a>代理模式</h2><p>代理模式在不改变原始类的情况下，通过添加代理类来给原始类添加附加功能。代理模式经常用在比如监控，统计，鉴权这样的非业务逻辑之中。同时RPC框架也可以看成一种代理模式，被称为远程代理，在使用RPC的时候，不需要考虑与服务器交互的细节，只关注业务逻辑即可。</p>
+<p>代理模式通过针对每个类都创建一个代理类，具体实现代码如下所示：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ANeedProxy</span> <span class="keyword">implements</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">//TODO</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">AProxy</span> <span class="keyword">implements</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> A a;</span><br><span class="line"></span><br><span class="line">    AProxy(A a) &#123;</span><br><span class="line">        <span class="keyword">this</span>.a = a;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (checkPermission()) &#123;</span><br><span class="line">            <span class="keyword">this</span>.a.doSomething();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> SecurityException(<span class="string">&quot;Forbidden&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">checkPermission</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Math.random() &lt; <span class="number">0.5</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        AProxy proxy = <span class="keyword">new</span> AProxy(<span class="keyword">new</span> ANeedProxy());</span><br><span class="line">        proxy.doSomething();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在上面代码之中，代理类AProxy和原始类B都实现了A接口，在使用的时候将B对象使用构造函数传入AProxy中，然后调用原始类来执行代码，同时在调用代码之前检查相关的权限信息。</p>
+<h3 id="动态代理"><a href="#动态代理" class="headerlink" title="动态代理"></a>动态代理</h3><p>在刚才实现的代理模式中，需要将原始类中的所有方法都重新实现一遍。同时如果有多个类需要使用代理，那么就需要写多个代理类，会导致类的个数不必要的增多，可以使用动态代理来解决这一个问题。Java本身就已经提供了动态代理的语法，使用jdk动态代理实现的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ADynamicProxyHandler</span> <span class="keyword">implements</span> <span class="title">InvocationHandler</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Object proxiedObject;</span><br><span class="line"></span><br><span class="line">    ADynamicProxyHandler(Object proxiedObject) &#123;</span><br><span class="line">        <span class="keyword">this</span>.proxiedObject = proxiedObject;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object proxy, Method method, Object[] args)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (checkPermission()) &#123;</span><br><span class="line">            <span class="keyword">return</span> method.invoke(proxiedObject, args);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> SecurityException(<span class="string">&quot;Forbidden&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">checkPermission</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Math.random() &lt; <span class="number">0.5</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        B b = <span class="keyword">new</span> B();</span><br><span class="line">        ADynamicProxyHandler handler = <span class="keyword">new</span> ADynamicProxyHandler(b);</span><br><span class="line">        A a = (A) Proxy.newProxyInstance(b.getClass().getClassLoader(), b.getClass().getInterfaces(), handler);</span><br><span class="line">        a.doSomething();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>动态代理十分有用，可以帮助在编写代码时减少模板代码，减少维护和开发的成本，Spring AOP的底层实现原理就是基于这样的动态代理的。</p>
+<h2 id="桥接模式"><a href="#桥接模式" class="headerlink" title="桥接模式"></a>桥接模式</h2><p>桥接模式是将抽象部分与它的实现部分分离，使它们都可以独立地变化，其思路是不要过度使用继承，而是优先拆分部分组件，通过组合的方式来进行扩展。桥接模式的目的是为了避免直接继承带来的子类爆炸。</p>
+<p>例如如果对于图形类而言，有是什么形状这一维度，也有颜色这一维度，那么就可以使用桥接模式来编写代码。具体代码如下：</p>
+<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Color</span> <span class="keyword">protected</span> <span class="keyword">constructor</span></span>(<span class="keyword">protected</span> <span class="keyword">val</span> name: String) &#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">bepaint</span><span class="params">(shape: <span class="type">String</span>)</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Grey</span> : <span class="type">Color</span></span>(<span class="string">&quot;灰色&quot;</span>) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">bepaint</span><span class="params">(shape: <span class="type">String</span>)</span></span> = println(<span class="string">&quot;灰色的<span class="variable">$shape</span>&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Green</span> : <span class="type">Color</span></span>(<span class="string">&quot;绿色&quot;</span>) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">bepaint</span><span class="params">(shape: <span class="type">String</span>)</span></span> = println(<span class="string">&quot;绿色的<span class="variable">$shape</span>&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Shape</span> <span class="keyword">protected</span> <span class="keyword">constructor</span></span>(<span class="keyword">protected</span> <span class="keyword">val</span> color: Color) &#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">draw</span><span class="params">()</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Circle</span></span>(color: Color) : Shape(color) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">draw</span><span class="params">()</span></span> = color.bepaint(<span class="string">&quot;正方形&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Rectangle</span></span>(color: Color) : Shape(color) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">draw</span><span class="params">()</span></span> = color.bepaint(<span class="string">&quot;长方形&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> white = Grey()</span><br><span class="line">    <span class="keyword">val</span> rectangle = Rectangle(white)</span><br><span class="line">    rectangle.draw()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在实际使用中，如果出现一个类出现多个可以单个可以单独变化的维度，那么可以使用桥接模式进行设计。</p>
+<h2 id="装饰器模式"><a href="#装饰器模式" class="headerlink" title="装饰器模式"></a>装饰器模式</h2><p>装饰器模式能够在运行器动态的给某个对象增加功能，同时将核心功能与附加功能分开。Java标准库的IO库就是装饰器模式的经典案例。</p>
+<p>例如我们需要给FileInputStream添加缓存功能以及GZIP解压缩功能，那么实现的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Decorator</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        InputStream in = <span class="keyword">new</span> GZIPInputStream( <span class="comment">//提供解压缩</span></span><br><span class="line">                <span class="keyword">new</span> BufferedInputStream(      <span class="comment">//提供缓存</span></span><br><span class="line">                        <span class="keyword">new</span> FileInputStream(<span class="string">&quot;a.txt&quot;</span>)</span><br><span class="line">                )</span><br><span class="line">        );</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这样的代码就是典型的装饰器模式的代码。通过查看源码可以看到GZIPInputStream，BufferedInputStream，FileInputStream都是InputStream的子类。在这个例子中，核心功能指的就是FileInputStream这个真正读取数据的源头，附加工作指的是缓冲和压缩这两个功能。如果我们仍然需要新增附加功能，就可以继承InputStream独立的进行扩展。</p>
+<p>在装饰器模式中，装饰器类和原始类都继承自同样的父类，装饰器模式有个特点就是可以对原始类嵌套使用多个装饰器。</p>
+<h2 id="适配器模式"><a href="#适配器模式" class="headerlink" title="适配器模式"></a>适配器模式</h2><p>适配器模式用于将不兼容的接口转换为可兼容的接口，让原本不能一起工作的类一起工作。适配器模式可以通过继承以及组合的方式进行实现，通过继承来实现适配器模式的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">ITarget</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">fa</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Adaptee</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">f1</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Adaptor</span> <span class="keyword">extends</span> <span class="title">Adaptee</span> <span class="keyword">implements</span> <span class="title">ITarget</span></span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">fa</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.f1();</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>在这段代码之中，ITarget表示要转化成的接口的定义，Adaptee是一组不兼容的ITarget接口的类，Adaptor将Adaptee转化成为符合ITarget接口定义的类。</p>
+<p>在实际应用之中，适配器模式可以看作一种补救设计上缺陷的方法。例如Java中有很多日志框架例如log4j，logback，大部分的日志都提供了相似的功能但没有实现统一的接口。Slf4j提供了打印日志的统一接口规范，像log4j这样的日志框架需要将接口改为符合slf4j的接口规范，就使用到了适配器模式。  </p>
+<h2 id="门面模式"><a href="#门面模式" class="headerlink" title="门面模式"></a>门面模式</h2><p>门面模式为子系统提供一组统一的接口，定义一组高层接口让子系统更易用。例如一个系统A，提供了a、b、c、d 四个接口。系统B需要调用a、b、d三个接口，利用门面模式，可以提供一个包含a、b、d三个接口调用的门面接口x，供B系统使用，这就是门面模式。</p>
+<p>门面模式不仅让子系统更加的易用，有时还可以解决性能上的问题。例如客户端APP之前可能需要使用三次调用服务器端的接口才能获取到想要的数据，而使用门面模式之后，就可以只发送一次请求，提升了响应速度。</p>
+<h2 id="组合模式"><a href="#组合模式" class="headerlink" title="组合模式"></a>组合模式</h2><p>组合模式将对象组织成为树形的结构，表示部分与整体之间的层次结构。例如对于文件系统，可以将文件和目录进行区分，定义成为File和Directory两个类,在下面的代码中实现了打印当前目录下递归打印文件的功能，就使用了组合模式。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">FileNode</span> </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> String path;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="title">FileNode</span><span class="params">(String path)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.path = path;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">abstract</span> List&lt;FileNode&gt; <span class="title">list</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">abstract</span> String <span class="title">toTreeString</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">File</span> <span class="keyword">extends</span> <span class="title">FileNode</span> </span>&#123;</span><br><span class="line">    File(String path) &#123;</span><br><span class="line">        <span class="keyword">super</span>(path);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span> <span class="function">List&lt;FileNode&gt; <span class="title">list</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span> <span class="function">String <span class="title">toTreeString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.path + <span class="string">&quot;\n&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Directory</span> <span class="keyword">extends</span> <span class="title">FileNode</span> </span>&#123;</span><br><span class="line">    Directory(String path) &#123;</span><br><span class="line">        <span class="keyword">super</span>(path);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span> <span class="function">List&lt;FileNode&gt; <span class="title">list</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">var</span> file = <span class="keyword">new</span> java.io.File(<span class="keyword">super</span>.path);</span><br><span class="line">        <span class="keyword">return</span> Arrays.stream(file.listFiles()).map(f -&gt; &#123;</span><br><span class="line">            <span class="keyword">if</span> (f.isFile()) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> File(f.getPath());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> Directory(f.getPath());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).collect(Collectors.toList());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span> <span class="function">String <span class="title">toTreeString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        StringBuilder ret = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">        ret.append(<span class="keyword">super</span>.path).append(<span class="string">&quot;\n&quot;</span>);</span><br><span class="line">        list().forEach(node -&gt; ret.append(node.toTreeString()));</span><br><span class="line">        <span class="keyword">return</span> ret.toString();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>组合模式将一组对象抽象成树形结构，将单个对象和组合对象都看做树中的节点，以统一处理逻辑，并且它利用树形结构的特点，递归地处理每个子树，依次简化代码实现。使用场景必须要能够表示成为树形结构是其前提，因此其使用场景比较有局限性。</p>
+<h2 id="享元模式"><a href="#享元模式" class="headerlink" title="享元模式"></a>享元模式</h2><p>享元模式指的是复用被共享的变量，其意图在于复用对象，节省内存。如果在一个系统中存在大量重复对象，且这些对象是不可变变量，就可以将其设计为享元，在内存中只保留一份实例，供多处代码引用。因此，享元模式就是通过工厂方法创建对象，在工厂方法内部，很可能返回缓存的实例，而不是新创建实例，从而实现不可变实例的复用。</p>
+<p>享元模式在Java标准库中有许多的的应用，例如Integer.valueOf这个静态工厂创建实例，当传入的int范围在-128到+127的范围之间时，会直接返回缓存的Integer实例：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Integer n1 = Integer.valueOf(<span class="number">100</span>);</span><br><span class="line">        Integer n2 = Integer.valueOf(<span class="number">100</span>);</span><br><span class="line">        System.out.println(n1 == n2); <span class="comment">// true</span></span><br><span class="line">        Integer n3 = Integer.valueOf(<span class="number">200</span>);</span><br><span class="line">        Integer n4 = Integer.valueOf(<span class="number">200</span>);</span><br><span class="line">        System.out.println(n3 == n4); <span class="comment">// false</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
-        <category>操作系统</category>
+        <category>设计模式</category>
       </categories>
       <tags>
-        <tag>操作系统</tag>
+        <tag>设计模式</tag>
       </tags>
   </entry>
   <entry>
@@ -1445,49 +1488,6 @@
 <h2 id="命令模式"><a href="#命令模式" class="headerlink" title="命令模式"></a>命令模式</h2><p>TODO</p>
 <h2 id="解释器模式"><a href="#解释器模式" class="headerlink" title="解释器模式"></a>解释器模式</h2><p>TODO</p>
 <h2 id="中介模式"><a href="#中介模式" class="headerlink" title="中介模式"></a>中介模式</h2><p>TODO</p>
-]]></content>
-      <categories>
-        <category>设计模式</category>
-      </categories>
-      <tags>
-        <tag>设计模式</tag>
-      </tags>
-  </entry>
-  <entry>
-    <title>设计模式之结构型模式</title>
-    <url>/2020/09/04/%E8%AE%BE%E8%AE%A1%E6%A8%A1%E5%BC%8F%E4%B9%8B%E7%BB%93%E6%9E%84%E5%9E%8B%E6%A8%A1%E5%BC%8F/</url>
-    <content><![CDATA[<p>结构型模式主要总结了一些类或对象组合在一起的经典结构，这些经典的结构可以解决特定应用场景的问题。</p>
-<h2 id="代理模式"><a href="#代理模式" class="headerlink" title="代理模式"></a>代理模式</h2><p>代理模式在不改变原始类的情况下，通过添加代理类来给原始类添加附加功能。代理模式经常用在比如监控，统计，鉴权这样的非业务逻辑之中。同时RPC框架也可以看成一种代理模式，被称为远程代理，在使用RPC的时候，不需要考虑与服务器交互的细节，只关注业务逻辑即可。</p>
-<p>代理模式通过针对每个类都创建一个代理类，具体实现代码如下所示：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ANeedProxy</span> <span class="keyword">implements</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">//TODO</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">AProxy</span> <span class="keyword">implements</span> <span class="title">A</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> A a;</span><br><span class="line"></span><br><span class="line">    AProxy(A a) &#123;</span><br><span class="line">        <span class="keyword">this</span>.a = a;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doSomething</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (checkPermission()) &#123;</span><br><span class="line">            <span class="keyword">this</span>.a.doSomething();</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> SecurityException(<span class="string">&quot;Forbidden&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">checkPermission</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Math.random() &lt; <span class="number">0.5</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        AProxy proxy = <span class="keyword">new</span> AProxy(<span class="keyword">new</span> ANeedProxy());</span><br><span class="line">        proxy.doSomething();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在上面代码之中，代理类AProxy和原始类B都实现了A接口，在使用的时候将B对象使用构造函数传入AProxy中，然后调用原始类来执行代码，同时在调用代码之前检查相关的权限信息。</p>
-<h3 id="动态代理"><a href="#动态代理" class="headerlink" title="动态代理"></a>动态代理</h3><p>在刚才实现的代理模式中，需要将原始类中的所有方法都重新实现一遍。同时如果有多个类需要使用代理，那么就需要写多个代理类，会导致类的个数不必要的增多，可以使用动态代理来解决这一个问题。Java本身就已经提供了动态代理的语法，使用jdk动态代理实现的代码如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">ADynamicProxyHandler</span> <span class="keyword">implements</span> <span class="title">InvocationHandler</span> </span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">final</span> Object proxiedObject;</span><br><span class="line"></span><br><span class="line">    ADynamicProxyHandler(Object proxiedObject) &#123;</span><br><span class="line">        <span class="keyword">this</span>.proxiedObject = proxiedObject;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">invoke</span><span class="params">(Object proxy, Method method, Object[] args)</span> <span class="keyword">throws</span> Throwable </span>&#123;</span><br><span class="line">        <span class="keyword">if</span> (checkPermission()) &#123;</span><br><span class="line">            <span class="keyword">return</span> method.invoke(proxiedObject, args);</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> SecurityException(<span class="string">&quot;Forbidden&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">checkPermission</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Math.random() &lt; <span class="number">0.5</span>;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        B b = <span class="keyword">new</span> B();</span><br><span class="line">        ADynamicProxyHandler handler = <span class="keyword">new</span> ADynamicProxyHandler(b);</span><br><span class="line">        A a = (A) Proxy.newProxyInstance(b.getClass().getClassLoader(), b.getClass().getInterfaces(), handler);</span><br><span class="line">        a.doSomething();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>动态代理十分有用，可以帮助在编写代码时减少模板代码，减少维护和开发的成本，Spring AOP的底层实现原理就是基于这样的动态代理的。</p>
-<h2 id="桥接模式"><a href="#桥接模式" class="headerlink" title="桥接模式"></a>桥接模式</h2><p>桥接模式是将抽象部分与它的实现部分分离，使它们都可以独立地变化，其思路是不要过度使用继承，而是优先拆分部分组件，通过组合的方式来进行扩展。桥接模式的目的是为了避免直接继承带来的子类爆炸。</p>
-<p>例如如果对于图形类而言，有是什么形状这一维度，也有颜色这一维度，那么就可以使用桥接模式来编写代码。具体代码如下：</p>
-<figure class="highlight kotlin"><table><tr><td class="code"><pre><span class="line"><span class="comment">//kotlin 1.4.0</span></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Color</span> <span class="keyword">protected</span> <span class="keyword">constructor</span></span>(<span class="keyword">protected</span> <span class="keyword">val</span> name: String) &#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">bepaint</span><span class="params">(shape: <span class="type">String</span>)</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Grey</span> : <span class="type">Color</span></span>(<span class="string">&quot;灰色&quot;</span>) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">bepaint</span><span class="params">(shape: <span class="type">String</span>)</span></span> = println(<span class="string">&quot;灰色的<span class="variable">$shape</span>&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Green</span> : <span class="type">Color</span></span>(<span class="string">&quot;绿色&quot;</span>) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">bepaint</span><span class="params">(shape: <span class="type">String</span>)</span></span> = println(<span class="string">&quot;绿色的<span class="variable">$shape</span>&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">Shape</span> <span class="keyword">protected</span> <span class="keyword">constructor</span></span>(<span class="keyword">protected</span> <span class="keyword">val</span> color: Color) &#123;</span><br><span class="line">    <span class="keyword">abstract</span> <span class="function"><span class="keyword">fun</span> <span class="title">draw</span><span class="params">()</span></span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Circle</span></span>(color: Color) : Shape(color) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">draw</span><span class="params">()</span></span> = color.bepaint(<span class="string">&quot;正方形&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Rectangle</span></span>(color: Color) : Shape(color) &#123;</span><br><span class="line">    <span class="keyword">override</span> <span class="function"><span class="keyword">fun</span> <span class="title">draw</span><span class="params">()</span></span> = color.bepaint(<span class="string">&quot;长方形&quot;</span>)</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">fun</span> <span class="title">main</span><span class="params">()</span></span> &#123;</span><br><span class="line">    <span class="keyword">val</span> white = Grey()</span><br><span class="line">    <span class="keyword">val</span> rectangle = Rectangle(white)</span><br><span class="line">    rectangle.draw()</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>在实际使用中，如果出现一个类出现多个可以单个可以单独变化的维度，那么可以使用桥接模式进行设计。</p>
-<h2 id="装饰器模式"><a href="#装饰器模式" class="headerlink" title="装饰器模式"></a>装饰器模式</h2><p>装饰器模式能够在运行器动态的给某个对象增加功能，同时将核心功能与附加功能分开。Java标准库的IO库就是装饰器模式的经典案例。</p>
-<p>例如我们需要给FileInputStream添加缓存功能以及GZIP解压缩功能，那么实现的代码如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Decorator</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> IOException </span>&#123;</span><br><span class="line">        InputStream in = <span class="keyword">new</span> GZIPInputStream( <span class="comment">//提供解压缩</span></span><br><span class="line">                <span class="keyword">new</span> BufferedInputStream(      <span class="comment">//提供缓存</span></span><br><span class="line">                        <span class="keyword">new</span> FileInputStream(<span class="string">&quot;a.txt&quot;</span>)</span><br><span class="line">                )</span><br><span class="line">        );</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这样的代码就是典型的装饰器模式的代码。通过查看源码可以看到GZIPInputStream，BufferedInputStream，FileInputStream都是InputStream的子类。在这个例子中，核心功能指的就是FileInputStream这个真正读取数据的源头，附加工作指的是缓冲和压缩这两个功能。如果我们仍然需要新增附加功能，就可以继承InputStream独立的进行扩展。</p>
-<p>在装饰器模式中，装饰器类和原始类都继承自同样的父类，装饰器模式有个特点就是可以对原始类嵌套使用多个装饰器。</p>
-<h2 id="适配器模式"><a href="#适配器模式" class="headerlink" title="适配器模式"></a>适配器模式</h2><p>适配器模式用于将不兼容的接口转换为可兼容的接口，让原本不能一起工作的类一起工作。适配器模式可以通过继承以及组合的方式进行实现，通过继承来实现适配器模式的代码如下：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="class"><span class="keyword">interface</span> <span class="title">ITarget</span></span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">fa</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Adaptee</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">f1</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Adaptor</span> <span class="keyword">extends</span> <span class="title">Adaptee</span> <span class="keyword">implements</span> <span class="title">ITarget</span></span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">fa</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">super</span>.f1();</span><br><span class="line">    &#125;   </span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>在这段代码之中，ITarget表示要转化成的接口的定义，Adaptee是一组不兼容的ITarget接口的类，Adaptor将Adaptee转化成为符合ITarget接口定义的类。</p>
-<p>在实际应用之中，适配器模式可以看作一种补救设计上缺陷的方法。例如Java中有很多日志框架例如log4j，logback，大部分的日志都提供了相似的功能但没有实现统一的接口。Slf4j提供了打印日志的统一接口规范，像log4j这样的日志框架需要将接口改为符合slf4j的接口规范，就使用到了适配器模式。  </p>
-<h2 id="门面模式"><a href="#门面模式" class="headerlink" title="门面模式"></a>门面模式</h2><p>门面模式为子系统提供一组统一的接口，定义一组高层接口让子系统更易用。例如一个系统A，提供了a、b、c、d 四个接口。系统B需要调用a、b、d三个接口，利用门面模式，可以提供一个包含a、b、d三个接口调用的门面接口x，供B系统使用，这就是门面模式。</p>
-<p>门面模式不仅让子系统更加的易用，有时还可以解决性能上的问题。例如客户端APP之前可能需要使用三次调用服务器端的接口才能获取到想要的数据，而使用门面模式之后，就可以只发送一次请求，提升了响应速度。</p>
-<h2 id="组合模式"><a href="#组合模式" class="headerlink" title="组合模式"></a>组合模式</h2><p>组合模式将对象组织成为树形的结构，表示部分与整体之间的层次结构。例如对于文件系统，可以将文件和目录进行区分，定义成为File和Directory两个类,在下面的代码中实现了打印当前目录下递归打印文件的功能，就使用了组合模式。</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">abstract</span> <span class="class"><span class="keyword">class</span> <span class="title">FileNode</span> </span>&#123;</span><br><span class="line">    <span class="keyword">protected</span> <span class="keyword">final</span> String path;</span><br><span class="line">    <span class="function"><span class="keyword">protected</span> <span class="title">FileNode</span><span class="params">(String path)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">this</span>.path = path;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">abstract</span> List&lt;FileNode&gt; <span class="title">list</span><span class="params">()</span></span>;</span><br><span class="line">    <span class="function"><span class="keyword">abstract</span> String <span class="title">toTreeString</span><span class="params">()</span></span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">File</span> <span class="keyword">extends</span> <span class="title">FileNode</span> </span>&#123;</span><br><span class="line">    File(String path) &#123;</span><br><span class="line">        <span class="keyword">super</span>(path);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span> <span class="function">List&lt;FileNode&gt; <span class="title">list</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> Collections.emptyList();</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span> <span class="function">String <span class="title">toTreeString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> <span class="keyword">super</span>.path + <span class="string">&quot;\n&quot;</span>;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Directory</span> <span class="keyword">extends</span> <span class="title">FileNode</span> </span>&#123;</span><br><span class="line">    Directory(String path) &#123;</span><br><span class="line">        <span class="keyword">super</span>(path);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span> <span class="function">List&lt;FileNode&gt; <span class="title">list</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">var</span> file = <span class="keyword">new</span> java.io.File(<span class="keyword">super</span>.path);</span><br><span class="line">        <span class="keyword">return</span> Arrays.stream(file.listFiles()).map(f -&gt; &#123;</span><br><span class="line">            <span class="keyword">if</span> (f.isFile()) &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> File(f.getPath());</span><br><span class="line">            &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">                <span class="keyword">return</span> <span class="keyword">new</span> Directory(f.getPath());</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;).collect(Collectors.toList());</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span> <span class="function">String <span class="title">toTreeString</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        StringBuilder ret = <span class="keyword">new</span> StringBuilder();</span><br><span class="line">        ret.append(<span class="keyword">super</span>.path).append(<span class="string">&quot;\n&quot;</span>);</span><br><span class="line">        list().forEach(node -&gt; ret.append(node.toTreeString()));</span><br><span class="line">        <span class="keyword">return</span> ret.toString();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>组合模式将一组对象抽象成树形结构，将单个对象和组合对象都看做树中的节点，以统一处理逻辑，并且它利用树形结构的特点，递归地处理每个子树，依次简化代码实现。使用场景必须要能够表示成为树形结构是其前提，因此其使用场景比较有局限性。</p>
-<h2 id="享元模式"><a href="#享元模式" class="headerlink" title="享元模式"></a>享元模式</h2><p>享元模式指的是复用被共享的变量，其意图在于复用对象，节省内存。如果在一个系统中存在大量重复对象，且这些对象是不可变变量，就可以将其设计为享元，在内存中只保留一份实例，供多处代码引用。因此，享元模式就是通过工厂方法创建对象，在工厂方法内部，很可能返回缓存的实例，而不是新创建实例，从而实现不可变实例的复用。</p>
-<p>享元模式在Java标准库中有许多的的应用，例如Integer.valueOf这个静态工厂创建实例，当传入的int范围在-128到+127的范围之间时，会直接返回缓存的Integer实例：</p>
-<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Main</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        Integer n1 = Integer.valueOf(<span class="number">100</span>);</span><br><span class="line">        Integer n2 = Integer.valueOf(<span class="number">100</span>);</span><br><span class="line">        System.out.println(n1 == n2); <span class="comment">// true</span></span><br><span class="line">        Integer n3 = Integer.valueOf(<span class="number">200</span>);</span><br><span class="line">        Integer n4 = Integer.valueOf(<span class="number">200</span>);</span><br><span class="line">        System.out.println(n3 == n4); <span class="comment">// false</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 ]]></content>
       <categories>
         <category>设计模式</category>
