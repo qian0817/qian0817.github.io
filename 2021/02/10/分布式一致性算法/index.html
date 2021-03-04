@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.2.0">
+<link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="TCOGPQHqI4qgI6tDjR8RZk1bYwpUmQ0Ng5MJQzHJWWI">
+  <meta name="baidu-site-verification" content="XvPzBf4OrQ">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.xml"};
+  </script>
+
+  <meta name="description" content="PaxosPaxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。 Basic Paxos在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。 提议者决议一个值，用于投票表决。集群中">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式一致性算法">
+<meta property="og:url" content="http://qian0817.top/2021/02/10/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%AE%97%E6%B3%95/index.html">
+<meta property="og:site_name" content="Qian0817">
+<meta property="og:description" content="PaxosPaxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。 Basic Paxos在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。 提议者决议一个值，用于投票表决。集群中">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE4.png">
+<meta property="og:image" content="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE7.png">
+<meta property="article:published_time" content="2021-02-10T12:05:32.000Z">
+<meta property="article:modified_time" content="2021-02-10T12:05:32.125Z">
+<meta property="article:author" content="qianlei">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE4.png">
+
+<link rel="canonical" href="http://qian0817.top/2021/02/10/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%AE%97%E6%B3%95/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>分布式一致性算法 | Qian0817</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Qian0817" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Qian0817</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/qian0817" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2021/02/10/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%AE%97%E6%B3%95/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="qianlei">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qian0817">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          分布式一致性算法
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2021-02-10 20:05:32" itemprop="dateCreated datePublished" datetime="2021-02-10T20:05:32+08:00">2021-02-10</time>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>2.8k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>8 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="Paxos"><a href="#Paxos" class="headerlink" title="Paxos"></a>Paxos</h2><p>Paxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。</p>
+<h3 id="Basic-Paxos"><a href="#Basic-Paxos" class="headerlink" title="Basic Paxos"></a>Basic Paxos</h3><p>在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。</p>
+<p>提议者决议一个值，用于投票表决。集群中收到客户端请求的节点，才是提议者。提议者在收到客户端请求后，发起二阶段提交，进行共识协商。</p>
+<p>接收者对每个提议的值进行投票，并存储接受的值。一般来说，集群中的所有节点都在扮演接受者的角色。接受者参与共识协商，并接受和存储数据。</p>
+<p>学习者是被告知投票的结果，接受达成共识的值。一般来说，学习者是数据备份节点，比如主从模型的从节点，被动地接受数据，容灾备份。</p>
+<p>在准备阶段，客户端分别向所有的接受者发送准备请求。在准备请求中是不需要指定提议的值，只需要提案编号就可以了。如果接受者之前没有通过任何提案，那么会返回一个尚无提案的响应，并承诺以后不再通过编号小于该提案编号的提案。</p>
+<p>第二个阶段就是接受阶段，提议者在收到大部分节点的准备响应以后，会分别发送接受请求。当接受者收到客户端的接受请求时，如果提案的提案编号小于当前能通过的提案的最小提案编号，那么会被拒绝。如果提案编号不小于节点承诺能通过的提案的最小提案编号，那么多个节点之间就能达成了共识。</p>
+<h3 id="Multi-Paxos"><a href="#Multi-Paxos" class="headerlink" title="Multi Paxos"></a>Multi Paxos</h3><p>Basic Paxos只能就单个值达成共识，一旦遇到为一系列的值实现共识的，就需要使用到Multi Paxos算法了。</p>
+<p>Multi Paxos引入了领导者节点，领导者作为唯一的提议者，防止出现多个提议者提示提交提案的情况。当领导者处于稳定状态时，省掉准备阶段，直接进入接受阶段，从而降低往返的消息数，提升性能并降低延时。</p>
+<h2 id="Raft"><a href="#Raft" class="headerlink" title="Raft"></a>Raft</h2><p>Raft在Paxos算法的基础上，做了一些简化和限制。</p>
+<p>Raft算法包含三种状态：领导者Leader，跟随者Follower以及候选人Candidate。在稳定状态下，只存在一个Leader节点和多个Follower节点，Leader节点通过心跳消息与各个Follower节点保持联系。raft算法中可能出现的状态转换关系如下图所示</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/maemual/raft-zh_cn/blob/master/images/raft-%E5%9B%BE4.png"><img data-src="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE4.png" alt="图 4 "></a></p>
+<p>在集群刚启动时，所有的节点都是follower，在经过心跳超时超时时间以后，会转变成为candidate去拉取选票，获得大多数选票以后就变成了leader。此时如果大部分其他候选人发现了新的leader已经诞生，会自动转变为follower。如果经过一个选举超时时间以后仍然没有选举出leader，那么会重新开始一次新的选举。</p>
+<p>Raft算法在节点之间所使用的消息主要有两种</p>
+<ul>
+<li>RequestVote，请求其他节点给自己投票，由Candidate节点发出</li>
+<li>AppendEntries，用于日志复制以及心跳信息，由Leader节点发出</li>
+</ul>
+<p>Raft在选举过程中有一个term参数，作为逻辑时钟值。在选举开始时，增加自己的term，在发送RequestVote消息以及AppendEntries带上自己的term信息，在收到RequestVote消息以及AppendEntries消息时，选择最大的term并更新自己的term。</p>
+<h3 id="选举过程"><a href="#选举过程" class="headerlink" title="选举过程"></a>选举过程</h3><p>Raft通过心跳机制发起leader选举。节点都是从follower状态开始的，如果收到了来自leader或candidate的AppendEntries RPC，那它就保持follower状态，避免争抢称为candidate。Leader会发送空的AppendEntries RPC作为心跳信号来确立自己的地位，如果follower经过选举超时时间仍然没有收到心跳，它就会认为leader已经挂了，发起新的一轮选举。</p>
+<h3 id="日志复制过程"><a href="#日志复制过程" class="headerlink" title="日志复制过程"></a>日志复制过程</h3><p>一旦leader被选举成功，就可以为客户端提供服务了。客户端提交每一条命令都会被按顺序记录到leader的日志中，并且加上term编号和顺序索引，然后向其他节点发送AppendEntries RPC用以复制日志。当大多数节点成功复制以后，leader就会提交命令，执行该命令并将结果返回给客户端。leader会保存当前已经提交的最高日志编号。当发送AppendEntries RPC时，会包含leader上一条刚处理过的命令，如果接收节点发现上一条命令不匹配，会拒绝执行。</p>
+<p>如果在过程中leader崩溃了，那么所记录的日志没有完全被复制，会造成日志不一致的情况，follower相比于当前的leader可能会丢失几条日志，也可能会额外多出几条日志，例如下图所示，a和b丢失了部分命令，c和d多了几条命令，e和f既有增多也有丢失。（场景 f 可能会这样发生，该服务器在任期 2 的时候是领导人，已附加了一些日志条目到自己的日志中，但在提交之前就崩溃了；重启后在任期 3 重新被选为领导人，并且又增加了一些日志条目到自己的日志中；在任期 2 和任期 3 的日志被提交之前，这个服务器又宕机了，并且在接下来的几个任期里一直处于宕机状态。）</p>
+<p><img data-src="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE7.png" alt="图 7"></p>
+<p>在Raft中，leader通过强制follower复制自己的日志来解决上述日志不一致的情形，冲突的日志将会被重写。为了让日志一致，先找到最新的一致的那条日志(如f中索引为3的日志条目)，然后把follower之后的日志全部删除，leader再把自己在那之后的日志全部推送给follower，这样就实现了一致。</p>
+<h2 id="Gossip"><a href="#Gossip" class="headerlink" title="Gossip"></a>Gossip</h2><p>Gossip利用一种随机的带传染性的方式，将信息传播到整个网络当中，实现最终一致性的算法。</p>
+<p>gossip的执行过程如下：Gossip 过程是由种子节点发起，当一个种子节点有状态需要更新到网络中的其他节点时，它会随机的选择周围几个节点散播消息，收到消息的节点也会重复该过程，直至最终网络中所有的节点都收到了消息。这个过程可能需要一定的时间，由于不能保证某个时刻所有节点都收到消息，但是理论上最终所有节点都会收到消息，因此它是一个最终一致性协议。</p>
+<p>Gossip算法包含直接邮寄、反熵和谣言传播三部分。</p>
+<p>直接邮寄就是直接发送更新数据，当数据发送失败时，将数据缓存下来，然后进行重传。</p>
+<p>反熵指的是集群中的节点，每隔段时间就随机选择某个其他节点，然后通过互相交换自己的所有数据来消除两者之间的差异，实现数据的最终一致性。在反熵实现的时候主要有推、拉以及推拉结合的三种方式。因为反熵需要节点两两交换和比对自己所有的数据，执行反熵通信的成本会很高，不应该在实际场景中频繁的执行反熵。</p>
+<p>谣言传播指的是当一个节点有一个新数据以后，这个节点变成了活跃节点，并周期性的联系其他节点发送新数据，知道所有节点都存储了该数据。</p>
+<p>gossip协议允许网络中节点的任意增加和减少，同时网络中任何节点的宕机和重启都不会影响 Gossip 消息的传播，具有天然的分布式系统容错特性，并且不要求任何的中心节点，但是会出现消息的延迟以及消息冗余的问题。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>qianlei
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://qian0817.top/2021/02/10/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%AE%97%E6%B3%95/" title="分布式一致性算法">http://qian0817.top/2021/02/10/分布式一致性算法/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/02/10/Java%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F/" rel="prev" title="Java内存区域">
+      <i class="fa fa-chevron-left"></i> Java内存区域
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/02/18/Docker%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/" rel="next" title="Docker实现原理">
+      Docker实现原理 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Paxos"><span class="nav-number">1.</span> <span class="nav-text">Paxos</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Basic-Paxos"><span class="nav-number">1.1.</span> <span class="nav-text">Basic Paxos</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Multi-Paxos"><span class="nav-number">1.2.</span> <span class="nav-text">Multi Paxos</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Raft"><span class="nav-number">2.</span> <span class="nav-text">Raft</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E4%B8%BE%E8%BF%87%E7%A8%8B"><span class="nav-number">2.1.</span> <span class="nav-text">选举过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">日志复制过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Gossip"><span class="nav-number">3.</span> <span class="nav-text">Gossip</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">qianlei</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">32</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">12</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">26</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/qian0817" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;qian0817" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:qianlei666@gmail.com" title="E-Mail → mailto:qianlei666@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+  <div class="beian"><a href="https://beian.miit.gov.cn/" rel="noopener" target="_blank">浙ICP备19007396号 </a>
+  </div>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2021</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">qianlei</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">104k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">4:58</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var canonicalURL, curProtocol;
+      //Get the <link> tag
+      var x=document.getElementsByTagName("link");
+		//Find the last canonical URL
+		if(x.length > 0){
+			for (i=0;i<x.length;i++){
+				if(x[i].rel.toLowerCase() == 'canonical' && x[i].href){
+					canonicalURL=x[i].href;
+				}
+			}
+		}
+    //Get protocol
+	    if (!canonicalURL){
+	    	curProtocol = window.location.protocol.split(':')[0];
+	    }
+	    else{
+	    	curProtocol = canonicalURL.split(':')[0];
+	    }
+      //Get current URL if the canonical URL does not exist
+	    if (!canonicalURL) canonicalURL = window.location.href;
+	    //Assign script content. Replace current URL with the canonical URL
+      !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=canonicalURL,t=document.referrer;if(!e.test(r)){var n=(String(curProtocol).toLowerCase() === 'https')?"https://sp0.baidu.com/9_Q4simg2RQJ8t7jm9iCKT-xh_/s.gif":"//api.share.baidu.com/s.gif";t?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var i=new Image;i.src=n}}(window);})();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
