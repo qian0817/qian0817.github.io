@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+<link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="kmu8arSRmrVwYbcJZRhbLSDAwEJFx0fp5SM2umI5Py0">
+  <meta name="baidu-site-verification" content="XvPzBf4OrQ">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="Alluxio 客户端逻辑分析创建客户端创建一个 Alluxio 客户端的逻辑在类alluxio.client.file.FileSystem当中，一个最简单的创建客户端访问 Alluxio 的代码如下。 12345AlluxioProperties properties &#x3D; new AlluxioProperties();InstancedConfiguration conf &#x3D; new Ins">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Alluxio客户端逻辑分析">
+<meta property="og:url" content="http://qian0817.top/2022/10/13/Alluxio%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="Qian0817">
+<meta property="og:description" content="Alluxio 客户端逻辑分析创建客户端创建一个 Alluxio 客户端的逻辑在类alluxio.client.file.FileSystem当中，一个最简单的创建客户端访问 Alluxio 的代码如下。 12345AlluxioProperties properties &#x3D; new AlluxioProperties();InstancedConfiguration conf &#x3D; new Ins">
+<meta property="og:locale" content="zh_CN">
+<meta property="article:published_time" content="2022-10-13T11:29:21.000Z">
+<meta property="article:modified_time" content="2026-04-09T02:59:05.765Z">
+<meta property="article:author" content="qianlei">
+<meta property="article:tag" content="Alluxio">
+<meta property="article:tag" content="大数据">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="http://qian0817.top/2022/10/13/Alluxio%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91%E5%88%86%E6%9E%90/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Alluxio客户端逻辑分析 | Qian0817</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Qian0817" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Qian0817</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/qian0817" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2022/10/13/Alluxio%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="qianlei">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qian0817">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Alluxio客户端逻辑分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2022-10-13 19:29:21" itemprop="dateCreated datePublished" datetime="2022-10-13T19:29:21+08:00">2022-10-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-04-09 10:59:05" itemprop="dateModified" datetime="2026-04-09T10:59:05+08:00">2026-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>11k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>32 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="Alluxio-客户端逻辑分析"><a href="#Alluxio-客户端逻辑分析" class="headerlink" title="Alluxio 客户端逻辑分析"></a>Alluxio 客户端逻辑分析</h1><h2 id="创建客户端"><a href="#创建客户端" class="headerlink" title="创建客户端"></a>创建客户端</h2><p>创建一个 Alluxio 客户端的逻辑在类<code>alluxio.client.file.FileSystem</code>当中，一个最简单的创建客户端访问 Alluxio 的代码如下。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">AlluxioProperties</span> <span class="variable">properties</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">AlluxioProperties</span>();</span><br><span class="line"><span class="type">InstancedConfiguration</span> <span class="variable">conf</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">InstancedConfiguration</span>(properties);</span><br><span class="line"><span class="keyword">try</span> (<span class="type">FileSystem</span> <span class="variable">fs</span> <span class="operator">=</span> FileSystem.Factory.get(<span class="keyword">new</span> <span class="title class_">Subject</span>(), conf)) &#123;</span><br><span class="line">  fs.listStatus(<span class="keyword">new</span> <span class="title class_">AlluxioURI</span>(<span class="string">&quot;/&quot;</span>));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>接下来先从 <code>FileSystem.Factory.get</code>这个方法开始分析，该方法代码如下</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> FileSystem <span class="title function_">get</span><span class="params">(Subject subject, AlluxioConfiguration conf)</span> &#123;</span><br><span class="line">  Preconditions.checkNotNull(subject, <span class="string">&quot;subject&quot;</span>);</span><br><span class="line">  FileSystemCache.<span class="type">Key</span> <span class="variable">key</span> <span class="operator">=</span></span><br><span class="line">      <span class="keyword">new</span> <span class="title class_">FileSystemCache</span>.Key(UserState.Factory.create(conf, subject).getSubject(), conf);</span><br><span class="line">  <span class="keyword">return</span> FILESYSTEM_CACHE.get(key);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>只有看到这里的逻辑是先根据传入的用户信息和配置获取一个唯一键，然后会尝试从缓存当中获取。如果在缓存中存在会直接返回相应的客户端，反之会调用<code>FileSystem.Factory.create</code>来创建一个新的文件系统客户端。缓存当中使用了引用计数来判断该客户端是否仍然在使用。当客户端的引用变为 0 时会从缓存中释放该客户端。</p>
+<h2 id="客户端初始化"><a href="#客户端初始化" class="headerlink" title="客户端初始化"></a>客户端初始化</h2><p>在创建客户端时会调用<code>FileSystemContext.create</code>创建该客户端对象的上下文，在创建过程中需要先调用<code>FileSystemContext.init</code>初始化该客户端。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">private</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">init</span><span class="params">(ClientContext clientContext,</span></span><br><span class="line"><span class="params">    MasterInquireClient masterInquireClient)</span> &#123;</span><br><span class="line">  initContext(clientContext, masterInquireClient);</span><br><span class="line">  mReinitializer = <span class="keyword">new</span> <span class="title class_">FileSystemContextReinitializer</span>(<span class="built_in">this</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">private</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title function_">initContext</span><span class="params">(ClientContext ctx,</span></span><br><span class="line"><span class="params">    MasterInquireClient masterInquireClient)</span> &#123;</span><br><span class="line">  mClosed.set(<span class="literal">false</span>);</span><br><span class="line">  mMasterClientContext = MasterClientContext.newBuilder(ctx)</span><br><span class="line">      .setMasterInquireClient(masterInquireClient).build();</span><br><span class="line">  mMetricsEnabled = getClusterConf().getBoolean(PropertyKey.USER_METRICS_COLLECTION_ENABLED);</span><br><span class="line">  <span class="keyword">if</span> (mMetricsEnabled) &#123;</span><br><span class="line">    MetricsSystem.startSinks(getClusterConf().get(PropertyKey.METRICS_CONF_FILE));</span><br><span class="line">    MetricsHeartbeatContext.addHeartbeat(getClientContext(), masterInquireClient);</span><br><span class="line">  &#125;</span><br><span class="line">  mFileSystemMasterClientPool = <span class="keyword">new</span> <span class="title class_">FileSystemMasterClientPool</span>(mMasterClientContext);</span><br><span class="line">  mBlockMasterClientPool = <span class="keyword">new</span> <span class="title class_">BlockMasterClientPool</span>(mMasterClientContext);</span><br><span class="line">  mBlockWorkerClientPoolMap = <span class="keyword">new</span> <span class="title class_">ConcurrentHashMap</span>&lt;&gt;();</span><br><span class="line">  mUriValidationEnabled = ctx.getUriValidationEnabled();</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>在初始化过程中会先创建客户端与 master 和 worker 连接的连接池，如果启用了<code>alluxio.user.metrics.collection.enabled</code>配置，那么还会启动一个后台守护线程定时与 master 节点进行心跳传输监控指标项信息。</p>
+<p>另外在初始化客户端时会创建一个负责重新初始化的后台线程，负责定时从 master 拉取配置文件的哈希值，判断 master 节点的配置是否有过修改（例如通过 updateConf 或者 PathConf 等动态修改配置的命令），如果出现哈希值不一致的情况，那么会重新初始化该客户端。在重新初始化的过程中，会阻塞所有的请求直到重新初始化客户端完成。</p>
+<h2 id="创建具有缓存功能的客户端"><a href="#创建具有缓存功能的客户端" class="headerlink" title="创建具有缓存功能的客户端"></a>创建具有缓存功能的客户端</h2><p>在客户端初始化完成以后，会调用<code>FileSystem.Factory.create</code>创建客户端，其主要代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> FileSystem <span class="title function_">create</span><span class="params">(FileSystemContext context)</span> &#123;</span><br><span class="line">  <span class="type">AlluxioConfiguration</span> <span class="variable">conf</span> <span class="operator">=</span> context.getClusterConf();</span><br><span class="line">  <span class="type">FileSystem</span> <span class="variable">fs</span> <span class="operator">=</span> conf.getBoolean(PropertyKey.USER_METADATA_CACHE_ENABLED)</span><br><span class="line">      ? <span class="keyword">new</span> <span class="title class_">MetadataCachingBaseFileSystem</span>(context) : <span class="keyword">new</span> <span class="title class_">BaseFileSystem</span>(context);</span><br><span class="line">  <span class="keyword">if</span> (conf.getBoolean(PropertyKey.USER_CLIENT_CACHE_ENABLED)</span><br><span class="line">      &amp;&amp; CommonUtils.PROCESS_TYPE.get().equals(CommonUtils.ProcessType.CLIENT)) &#123;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="type">CacheManager</span> <span class="variable">cacheManager</span> <span class="operator">=</span> CacheManager.Factory.get(conf);</span><br><span class="line">      <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">LocalCacheFileSystem</span>(cacheManager, fs, conf);</span><br><span class="line">    &#125; <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">      LOG.error(<span class="string">&quot;Fallback without client caching: &quot;</span>, e);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> fs;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>可以看到根据不同的配置，客户端当中出现了三种实现，分别是 <code>BaseFileSystem</code>,<code>MetadataCachingBaseFileSystem</code>和<code>LocalCacheFileSystem</code>。其中 <code>MetadataCachingBaseFileSystem</code>和<code>LocalCacheFileSystem</code>都是对于<code>BaseFileSystem</code>的封装，分别提供了元数据和数据缓存的功能，这里先从最简单的<code>BaseFileSystem</code>开始分析，在 BaseFileSystem 可以将调用分为三大类，一种是 getStatus 这样的纯元数据操作，一种是 openfile 这样的读取文件操作，另一种时 createFile 这样的写入文件操作。针对元数据操作，可以直接调用对应的 GRPC 接口（例如listStatus）即可，接下来需要介绍客户端如何与 Master 进行通信以及读取和写入的流程。</p>
+<h2 id="与-Master-节点通信"><a href="#与-Master-节点通信" class="headerlink" title="与 Master 节点通信"></a>与 Master 节点通信</h2><h3 id="选择-Master-主节点"><a href="#选择-Master-主节点" class="headerlink" title="选择 Master 主节点"></a>选择 Master 主节点</h3><p>客户端通过 MasterInquireClient 这个接口获取到主节点的地址，其目前有三个实现，分别是<code>PollingMasterInquireClient</code>,<code>SingleMasterInquireClient</code>和<code>ZkMasterInquireClient</code>,其中 <code>PollingMasterInquireClient</code> 针对使用 Embbed Journal 作为高可用模式下的选择主节点方式，<code>SingleMasterInquireClient</code> 是单节点给高可用 master 节点的选择方式，<code>ZkMasterInquireClient</code> 用于使用 Zookeeper 进行高可用模式下的主节点选择方式。</p>
+<p>因为 Alluxio 当中只有主节点会启动 Rpc Server，而其他节点在遇到客户端连接时会直接断开连接，<code>PollingMasterInquireClient</code> 使用到了这一特性，该实现会轮询所有的 master 节点并尝试连接，直到寻找到可以连接的节点。</p>
+<p>在知道了主节点之后，客户端会记录下该节点，之后所有的连接都会直接与主节点连接。如果出现了该主节点无法连接的情况时，就会重新调用 <code>PollingMasterInquireClient</code> 的过程连接到新的主节点。</p>
+<h2 id="数据读取流程"><a href="#数据读取流程" class="headerlink" title="数据读取流程"></a>数据读取流程</h2><p>数据读取的入口位于 <code>BaseFileSystem.openFile</code> 函数，首先会通过 getStatus 向 master 节点获取该文件的元数据，之后会检查是否为目录和是否未写入完成等条件，如果出现上述情况则抛出异常。</p>
+<h3 id="寻找合适的-Worker-节点"><a href="#寻找合适的-Worker-节点" class="headerlink" title="寻找合适的 Worker 节点"></a>寻找合适的 Worker 节点</h3><p>通过 getStatus 获取的文件信息中包含了该文件所有块的信息，当客户端读取文件时会根据读取位置的偏移量计算出当前需要读取的块编号，并寻找最接近客户端并持有该块的 Worker 节点，从该节点当中读取该块的数据。</p>
+<p>判断最接近客户端的Worker 的逻辑位于 <code>BlockLocationUtils.nearest</code>,首先会判断配置中是否启用了<code>alluxio.worker.data.server.domain.socket.address</code>这一配置，该配置用于判断使用 domain socket 进行短路读时每个 Worker 节点使用的 domain socket 路径是否是不一致的，如关闭该项，那么每个 Worker 节点会使用同样的 domain socket 地址，如果开启该项，则每个 worker 会动态的生成一个路径作为 domain socket 的连接地址。Alluxio 会在这里判断每个worker 节点的domain socket 是否是可连接的，如果找到一个 domain socket 可以连接，那么会直接使用该 Worker 作为连接的 Worker 节点。如果没有根据domain socket 信息寻找到最近的 Worker 节点，之后 Alluxio 会根据每个 Worker 节点配置有限寻找与客户端 IP 相同的 Worker 节点 IP。如果仍然没有找到合适的 Worker 节点，会寻找与配置的机架位置相同的 Worker 节点作为选择的 Worker 节点。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> Optional&lt;Pair&lt;WorkerNetAddress, Boolean&gt;&gt; <span class="title function_">nearest</span><span class="params">(TieredIdentity tieredIdentity,</span></span><br><span class="line"><span class="params">    List&lt;WorkerNetAddress&gt; addresses, AlluxioConfiguration conf)</span> &#123;</span><br><span class="line">  <span class="keyword">if</span> (conf.getBoolean(PropertyKey.WORKER_DATA_SERVER_DOMAIN_SOCKET_AS_UUID)) &#123;</span><br><span class="line">    <span class="keyword">for</span> (WorkerNetAddress addr : addresses) &#123;</span><br><span class="line">      <span class="keyword">if</span> (NettyUtils.isDomainSocketAccessible(addr, conf)) &#123;</span><br><span class="line">        LOG.debug(<span class="string">&quot;Found local worker by file system inspection of path &#123;&#125;&quot;</span>,</span><br><span class="line">            addr.getDomainSocketPath());</span><br><span class="line">        <span class="comment">// Returns the first local worker and does not shuffle</span></span><br><span class="line">        <span class="keyword">return</span> Optional.of(<span class="keyword">new</span> <span class="title class_">Pair</span>&lt;&gt;(addr, <span class="literal">true</span>));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">  Optional&lt;TieredIdentity&gt; nearestIdentity = TieredIdentityUtils.nearest(tieredIdentity,</span><br><span class="line">      addresses.stream().map(addr -&gt; addr.getTieredIdentity()).collect(Collectors.toList()),</span><br><span class="line">      conf);</span><br><span class="line">  <span class="keyword">if</span> (!nearestIdentity.isPresent()) &#123;</span><br><span class="line">    <span class="keyword">return</span> Optional.empty();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="type">boolean</span> <span class="variable">isLocal</span> <span class="operator">=</span> tieredIdentity.getTier(<span class="number">0</span>).getTierName().equals(Constants.LOCALITY_NODE)</span><br><span class="line">      &amp;&amp; tieredIdentity.topTiersMatch(nearestIdentity.get());</span><br><span class="line">  Optional&lt;WorkerNetAddress&gt; dataSource = addresses.stream()</span><br><span class="line">      .filter(addr -&gt; addr.getTieredIdentity().equals(nearestIdentity.get())).findFirst();</span><br><span class="line">  <span class="keyword">if</span> (!dataSource.isPresent()) &#123;</span><br><span class="line">    <span class="keyword">return</span> Optional.empty();</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">return</span> Optional.of(<span class="keyword">new</span> <span class="title class_">Pair</span>&lt;&gt;(dataSource.get(), isLocal));</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>如果此时仍然没有合适的 Worker 节点，会根据配置项 <code>alluxio.user.ufs.block.read.location.policy</code> 选择一个 Worker 节点进行读取，目前版本的 Alluxio 提供了以下的策略进行 worker 节点的选择。</p>
+<table>
+<thead>
+<tr>
+<th>策略名称</th>
+<th>介绍</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>DeterministicHashPolicy</td>
+<td>通过 Hash 确定读取的 Worker</td>
+</tr>
+<tr>
+<td>LocalFirstAvoidEvictionPolicy</td>
+<td>优先通过本地 Worker 进行读取,但是会尝试避免缓存驱逐</td>
+</tr>
+<tr>
+<td>LocalFirstPolicy</td>
+<td>优先通过本地 Worker 进行读取</td>
+</tr>
+<tr>
+<td>MostAvailableFirstPolicy</td>
+<td>向拥有最多空间的 Worker 节点进行读取</td>
+</tr>
+<tr>
+<td>RoundRobinPolicy</td>
+<td>轮询所有 Worker 节点进行读取</td>
+</tr>
+<tr>
+<td>SpecificHostPolicy</td>
+<td>只选择指定的一个 Worker 节点</td>
+</tr>
+</tbody></table>
+<p>根据不同位置的 Worker 节点，客户端会通过不同的方式进行读取，如果客户端与 Worker 节点在同一个节点上，那么会通过短路读直接从本地文件系统当中读取，否则将会通过与 Worker 节点建立 Grpc 通信读取文件。</p>
+<h3 id="短路读"><a href="#短路读" class="headerlink" title="短路读"></a>短路读</h3><p>如果客户端和数据块在同一节点上，客户端可以直接从本地磁盘读取数据。通过该方式可以使读取性能得到很大的提高。客户端会通过 <code>BlockInStream.createLocalBlockInStream</code> 创建基于短路读的块输入流。</p>
+<p>进行短路读取时需要先与本地 Worker 节点进行一次通信，向 Worker 发送一个<code>OpenLocalBlockRequest</code>请求，用于锁定该块不被驱逐或者移动，如果需要移动该块到 Worker 节点存储的最高层，Worker 节点也会在收到请求后移动该块到最高层。在 Worker 节点处理完这些请求后，会向客户端返回该块在本地文件系统的位置，之后客户端就可以直接从本地读取该块的内容。</p>
+<p>当读取数据块完成后或者出现异常终止时，也就是在该连接释放时，Worker 就会自动释放针对该块的写入锁。</p>
+<h3 id="通过-Grpc-读取"><a href="#通过-Grpc-读取" class="headerlink" title="通过 Grpc 读取"></a>通过 Grpc 读取</h3><p>如果无法通过短路读进行读取，那么客户端会回退到使用 Grpc 连接与选中的 Worker 节点进行通信。这里客户端会判断是否可以通过 domain socket 连接到选中的 Worker 节点并优先选择使用 domain socket 的方式与 Worker 进行通信。创建基于 Grpc 的块输入流的代码位于 <code>BlockInStream.createGrpcBlockInStream</code>。</p>
+<p>通过 Grpc 进行连接时，每次读取一个 chunk 的大小，并缓存该 chunk，降低调用 RPC 次数来提升性能。chunk 的大小由配置<code>alluxio.user.network.reader.chunk.size.bytes</code>决定。</p>
+<h3 id="读取异常处理"><a href="#读取异常处理" class="headerlink" title="读取异常处理"></a>读取异常处理</h3><p>当从一个 Worker 读取失败时，会会记录失败的 Worker 节点，然后尝试从其他的 Worker 当中进行读取，直到重试次数达到上限或者没有别的 Worker 可供读取。重试的配置通过<code>alluxio.user.block.read.retry.sleep.base</code>,<code>alluxio.user.block.read.retry.sleep.max</code>和<code>alluxio.user.block.read.retry.max.duration</code>这三个配置进行控制。</p>
+<h3 id="异步缓存"><a href="#异步缓存" class="headerlink" title="异步缓存"></a>异步缓存</h3><p>如果读取数据时并没有从本地 Worker 节点进行读取，那么客户端会尝试发起异步缓存的请求。如果启用了 <code>alluxio.user.file.passive.cache.enabled</code>配置，且存在本地的 Worker 节点，那么会向本地Worker 节点发起异步缓存当前读取块的请求，否则会向选出的负责读取该块数据的 Worker 节点发起请求。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">boolean</span> <span class="title function_">triggerAsyncCaching</span><span class="params">(BlockInStream stream)</span> &#123;</span><br><span class="line">  <span class="keyword">final</span> <span class="type">long</span> <span class="variable">blockId</span> <span class="operator">=</span> stream.getId();</span><br><span class="line">  <span class="keyword">final</span> <span class="type">BlockInfo</span> <span class="variable">blockInfo</span> <span class="operator">=</span> mStatus.getBlockInfo(blockId);</span><br><span class="line">  <span class="keyword">if</span> (blockInfo == <span class="literal">null</span>) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line">  <span class="keyword">try</span> &#123;</span><br><span class="line">    <span class="type">boolean</span> <span class="variable">cache</span> <span class="operator">=</span> ReadType.fromProto(mOptions.getOptions().getReadType()).isCache();</span><br><span class="line">    <span class="type">boolean</span> <span class="variable">overReplicated</span> <span class="operator">=</span> mStatus.getReplicationMax() &gt; <span class="number">0</span></span><br><span class="line">        &amp;&amp; blockInfo.getLocations().size() &gt;= mStatus.getReplicationMax();</span><br><span class="line">    cache = cache &amp;&amp; !overReplicated;</span><br><span class="line">    <span class="comment">// Get relevant information from the stream.</span></span><br><span class="line">    <span class="type">WorkerNetAddress</span> <span class="variable">dataSource</span> <span class="operator">=</span> stream.getAddress();</span><br><span class="line">    <span class="keyword">if</span> (cache &amp;&amp; (mLastBlockIdCached != blockId)) &#123;</span><br><span class="line">      <span class="comment">// Construct the async cache request</span></span><br><span class="line">      <span class="type">long</span> <span class="variable">blockLength</span> <span class="operator">=</span> mOptions.getBlockInfo(blockId).getLength();</span><br><span class="line">      <span class="type">String</span> <span class="variable">host</span> <span class="operator">=</span> dataSource.getHost();</span><br><span class="line">      <span class="type">CacheRequest</span> <span class="variable">request</span> <span class="operator">=</span></span><br><span class="line">          CacheRequest.newBuilder().setBlockId(blockId).setLength(blockLength)</span><br><span class="line">              .setOpenUfsBlockOptions(mOptions.getOpenUfsBlockOptions(blockId))</span><br><span class="line">              .setSourceHost(host).setSourcePort(dataSource.getDataPort())</span><br><span class="line">              .setAsync(<span class="literal">true</span>).build();</span><br><span class="line">      WorkerNetAddress worker;</span><br><span class="line">      <span class="keyword">if</span> (mPassiveCachingEnabled &amp;&amp; mContext.hasNodeLocalWorker()) &#123;</span><br><span class="line">        <span class="comment">// send request to local worker</span></span><br><span class="line">        worker = mContext.getNodeLocalWorker();</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123; <span class="comment">// send request to data source</span></span><br><span class="line">        worker = dataSource;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">try</span> (CloseableResource&lt;BlockWorkerClient&gt; blockWorker =</span><br><span class="line">               mContext.acquireBlockWorkerClient(worker)) &#123;</span><br><span class="line">        blockWorker.get().cache(request);</span><br><span class="line">        mLastBlockIdCached = blockId;</span><br><span class="line">      &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">true</span>;</span><br><span class="line">  &#125; <span class="keyword">catch</span> (Exception e) &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="literal">false</span>;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h2 id="数据写入流程"><a href="#数据写入流程" class="headerlink" title="数据写入流程"></a>数据写入流程</h2><p>客户端写入数据时，会先向 master 节点发送一个 CreateFile 请求，master 在这里会判断请求是否合法等要求，然后向客户端返回新创建的文件的基本信息。</p>
+<p>之后客户端会判断写入的类型，进行不同的操作。</p>
+<p>如果是 THROUGH 或者 CACHE_THROUGH 等需要直接写入到底层文件系统的写入类型，则会，并选择一个 Worker（根据配置 <code>alluxio.user.block.write.location.policy.class</code> 选择）来负责处理写到 UFS 的数据。</p>
+<p>如果写入的类型是 MUST_CACHE、CACHE_THROUGH、ASYNC_THROUGH 等需要将写入的数据缓存到 Worker 节点上的写入类型时，需要打开另外一个流负责将每一个写入的块缓存到不同的 Worker 上。</p>
+<p>写入 worker 缓存块的流程与读取的流程类似，也会判断写入的 Worker 节点是否与客户端所在节点相同，如果写入的 Worker 与客户端在同一个主机上，将使用短路写的方式直接将块数据写入到 Worker 节点本地而不需要将块数据通过网络发送到 Worker 节点上。</p>
+<p>当数据完成写入时，最后客户端向 master 节点发送一个 completeFile 请求，补全该文件的长度等信息，表示该文件已经完成写入。</p>
+<h3 id="异常处理"><a href="#异常处理" class="headerlink" title="异常处理"></a>异常处理</h3><p>当在写入文件的过程当中失败时，会调用 cancel 接口取消当前流以及之前的所有使用过的输出流。在取消的过程中，会删除所有已经缓存的块和底层存储当中的数据。与读取流程不同，写入失败后不会进行重试。</p>
+<h2 id="零拷贝实现"><a href="#零拷贝实现" class="headerlink" title="零拷贝实现"></a>零拷贝实现</h2><p>在写入和读取的流程中，由于 WriteRequest 和 ReadResponse 的消息体积会很大，导致拷贝时间长会严重影响性能。可以通过配置 <code>alluxio.user.streaming.zerocopy.enabled</code> 开启零拷贝特性。Alluxio 通过实现了 Grpc 的 <code>MethodDescriptor.Marshaller</code> 和 <code>Drainable</code> 接口来实现 Grpc 零拷贝的特性。</p>
+<p><code>MethodDescriptor.Marshaller</code> 负责对消息序列化和反序列化的抽象，通过该可以 Alluxio 可以自定义消息序列化和反序列化的行为。<code>Drainable</code> 负责对 <code>java.io.InputStream</code> 进行扩展，增加一个将所有内容转移到 <code>OutputStream</code> 的方法。该方法用于优化输入流的内容最终将被写入 OutputStream 的情况。与其通过 read() 将内容复制到一个字节数组，然后再写入 OutputStream，通过该接口可以实现直接将内容写入 OutputStream，避免数据的拷贝。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">abstract</span> <span class="keyword">class</span> <span class="title class_">DataMessageMarshaller</span>&lt;T&gt; <span class="keyword">implements</span> <span class="title class_">MethodDescriptor</span>.Marshaller&lt;T&gt;,</span><br><span class="line">    BufferRepository&lt;T, DataBuffer&gt; &#123;</span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> InputStream <span class="title function_">stream</span><span class="params">(T message)</span> &#123;</span><br><span class="line">    <span class="keyword">return</span> <span class="keyword">new</span> <span class="title class_">DataBufferInputStream</span>(message);</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="meta">@Override</span></span><br><span class="line">  <span class="keyword">public</span> T <span class="title function_">parse</span><span class="params">(InputStream message)</span> &#123;</span><br><span class="line">    <span class="type">ReadableBuffer</span> <span class="variable">rawBuffer</span> <span class="operator">=</span> GrpcSerializationUtils.getBufferFromStream(message);</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">      <span class="keyword">if</span> (rawBuffer != <span class="literal">null</span>) &#123;</span><br><span class="line">        <span class="type">CompositeReadableBuffer</span> <span class="variable">readableBuffer</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">CompositeReadableBuffer</span>();</span><br><span class="line">        readableBuffer.addBuffer(rawBuffer);</span><br><span class="line">        <span class="keyword">return</span> deserialize(readableBuffer);</span><br><span class="line">      &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="comment">// falls back to buffer copy</span></span><br><span class="line">        <span class="type">byte</span>[] byteBuffer = <span class="keyword">new</span> <span class="title class_">byte</span>[message.available()];</span><br><span class="line">        message.read(byteBuffer);</span><br><span class="line">        <span class="keyword">return</span> deserialize(ReadableBuffers.wrap(byteBuffer));</span><br><span class="line">      &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (Throwable t) &#123;</span><br><span class="line">      <span class="keyword">if</span> (rawBuffer != <span class="literal">null</span>) &#123;</span><br><span class="line">        rawBuffer.close();</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">RuntimeException</span>(t);</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line"></span><br><span class="line">  <span class="keyword">private</span> <span class="keyword">class</span> <span class="title class_">DataBufferInputStream</span> <span class="keyword">extends</span> <span class="title class_">InputStream</span> <span class="keyword">implements</span> <span class="title class_">Drainable</span> &#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="keyword">public</span> <span class="type">int</span> <span class="title function_">drainTo</span><span class="params">(OutputStream target)</span> <span class="keyword">throws</span> IOException &#123;</span><br><span class="line">      <span class="type">int</span> <span class="variable">bytesWritten</span> <span class="operator">=</span> <span class="number">0</span>;</span><br><span class="line">      ByteBuf[] buffers = serialize(mMessage);</span><br><span class="line">      <span class="keyword">for</span> (ByteBuf buffer : buffers) &#123;</span><br><span class="line">        bytesWritten += buffer.readableBytes();</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">if</span> (!GrpcSerializationUtils.addBuffersToStream(buffers, target)) &#123;</span><br><span class="line">        <span class="comment">// falls back to buffer copy</span></span><br><span class="line">        <span class="keyword">for</span> (ByteBuf buffer : buffers) &#123;</span><br><span class="line">          buffer.readBytes(target, buffer.readableBytes());</span><br><span class="line">        &#125;</span><br><span class="line">      &#125;</span><br><span class="line">      <span class="keyword">return</span> bytesWritten;</span><br><span class="line">    &#125;</span><br><span class="line">  &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>阅读客户端的代码对于后续阅读 Alluxio 的其他代码更很有帮助，可以从大体上了解 Alluxio 的体系结构，明白 Alluxio 在读取和写入数据是的数据流向。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>qianlei
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://qian0817.top/2022/10/13/Alluxio%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91%E5%88%86%E6%9E%90/" title="Alluxio客户端逻辑分析">http://qian0817.top/2022/10/13/Alluxio客户端逻辑分析/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Alluxio/" rel="tag"># Alluxio</a>
+              <a href="/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE/" rel="tag"># 大数据</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/03/15/HTTP2%E5%8D%8F%E8%AE%AE/" rel="prev" title="HTTP2协议">
+      <i class="fa fa-chevron-left"></i> HTTP2协议
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/" rel="next" title="Alluxio在网易大数据的应用和优化">
+      Alluxio在网易大数据的应用和优化 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Alluxio-%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91%E5%88%86%E6%9E%90"><span class="nav-number">1.</span> <span class="nav-text">Alluxio 客户端逻辑分析</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">1.1.</span> <span class="nav-text">创建客户端</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A2%E6%88%B7%E7%AB%AF%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">1.2.</span> <span class="nav-text">客户端初始化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E5%85%B7%E6%9C%89%E7%BC%93%E5%AD%98%E5%8A%9F%E8%83%BD%E7%9A%84%E5%AE%A2%E6%88%B7%E7%AB%AF"><span class="nav-number">1.3.</span> <span class="nav-text">创建具有缓存功能的客户端</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%B8%8E-Master-%E8%8A%82%E7%82%B9%E9%80%9A%E4%BF%A1"><span class="nav-number">1.4.</span> <span class="nav-text">与 Master 节点通信</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E6%8B%A9-Master-%E4%B8%BB%E8%8A%82%E7%82%B9"><span class="nav-number">1.4.1.</span> <span class="nav-text">选择 Master 主节点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B"><span class="nav-number">1.5.</span> <span class="nav-text">数据读取流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AF%BB%E6%89%BE%E5%90%88%E9%80%82%E7%9A%84-Worker-%E8%8A%82%E7%82%B9"><span class="nav-number">1.5.1.</span> <span class="nav-text">寻找合适的 Worker 节点</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%9F%AD%E8%B7%AF%E8%AF%BB"><span class="nav-number">1.5.2.</span> <span class="nav-text">短路读</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%9A%E8%BF%87-Grpc-%E8%AF%BB%E5%8F%96"><span class="nav-number">1.5.3.</span> <span class="nav-text">通过 Grpc 读取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%AF%BB%E5%8F%96%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86"><span class="nav-number">1.5.4.</span> <span class="nav-text">读取异常处理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%82%E6%AD%A5%E7%BC%93%E5%AD%98"><span class="nav-number">1.5.5.</span> <span class="nav-text">异步缓存</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E6%B5%81%E7%A8%8B"><span class="nav-number">1.6.</span> <span class="nav-text">数据写入流程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86"><span class="nav-number">1.6.1.</span> <span class="nav-text">异常处理</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%9B%B6%E6%8B%B7%E8%B4%9D%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.7.</span> <span class="nav-text">零拷贝实现</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93"><span class="nav-number">2.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">qianlei</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/qian0817" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;qian0817" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:qianlei666@gmail.com" title="E-Mail → mailto:qianlei666@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">qianlei</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">172k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var canonicalURL, curProtocol;
+      //Get the <link> tag
+      var x=document.getElementsByTagName("link");
+		//Find the last canonical URL
+		if(x.length > 0){
+			for (i=0;i<x.length;i++){
+				if(x[i].rel.toLowerCase() == 'canonical' && x[i].href){
+					canonicalURL=x[i].href;
+				}
+			}
+		}
+    //Get protocol
+	    if (!canonicalURL){
+	    	curProtocol = window.location.protocol.split(':')[0];
+	    }
+	    else{
+	    	curProtocol = canonicalURL.split(':')[0];
+	    }
+      //Get current URL if the canonical URL does not exist
+	    if (!canonicalURL) canonicalURL = window.location.href;
+	    //Assign script content. Replace current URL with the canonical URL
+      !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=canonicalURL,t=document.referrer;if(!e.test(r)){var n=(String(curProtocol).toLowerCase() === 'https')?"https://sp0.baidu.com/9_Q4simg2RQJ8t7jm9iCKT-xh_/s.gif":"//api.share.baidu.com/s.gif";t?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var i=new Image;i.src=n}}(window);})();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>

@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+<link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="kmu8arSRmrVwYbcJZRhbLSDAwEJFx0fp5SM2umI5Py0">
+  <meta name="baidu-site-verification" content="XvPzBf4OrQ">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="Alluxio是世界上第一个面向基于云的数据分析和人工智能的开源的数据编排技术，它为数据驱动型应用和存储系统构建了桥梁，将数据从存储层移动到距离数据驱动型应用更近的位置从而能够更容易被访问，这还使得应用程序能够通过一个公共接口连接到许多存储系统。Alluxio内存至上的层次化架构使得数据的访问速度能比现有方案快几个数量级。 在大数据生态系统中，Alluxio位于数据驱动框架或应用和各种持久化存储系">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Alluxio在网易大数据的应用和优化">
+<meta property="og:url" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/index.html">
+<meta property="og:site_name" content="Qian0817">
+<meta property="og:description" content="Alluxio是世界上第一个面向基于云的数据分析和人工智能的开源的数据编排技术，它为数据驱动型应用和存储系统构建了桥梁，将数据从存储层移动到距离数据驱动型应用更近的位置从而能够更容易被访问，这还使得应用程序能够通过一个公共接口连接到许多存储系统。Alluxio内存至上的层次化架构使得数据的访问速度能比现有方案快几个数量级。 在大数据生态系统中，Alluxio位于数据驱动框架或应用和各种持久化存储系">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E4%BA%91%E4%B8%8A%E5%A4%A7%E6%95%B0%E6%8D%AE%E5%B9%B3%E5%8F%B0%E6%9E%B6%E6%9E%84.png">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E6%95%B0%E6%8D%AE%E5%B9%B3%E5%8F%B0%E6%9E%B6%E6%9E%84%E5%9B%BE.png">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E6%B5%81%E5%BC%8F%E4%B8%8A%E4%BC%A0%E5%8E%9F%E6%9C%89%E6%9C%BA%E5%88%B6.jpg">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E6%B5%81%E5%BC%8F%E4%B8%8A%E4%BC%A0%E4%BC%98%E5%8C%96%E6%9C%BA%E5%88%B6.jpg">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/Impala%E6%96%87%E4%BB%B6%E5%8F%A5%E6%9F%84%E7%BC%93%E5%AD%98%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B.jpg">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E6%95%B0%E6%8D%AE%E8%B5%84%E4%BA%A7%E7%AE%A1%E7%90%86%E4%B8%8E%E6%B2%BB%E7%90%86.png">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E7%9B%AE%E5%BD%95%E5%86%BB%E7%BB%93%E5%8A%9F%E8%83%BD.png">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/Alluxio%E9%80%BB%E8%BE%91%E5%9F%9F%E5%90%8D%E5%AE%9E%E7%8E%B0.jpg">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E6%84%9F%E7%9F%A5API.png">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E7%BD%91%E6%98%93Alluxio%E5%B7%A5%E4%BD%9C%E6%B1%87%E6%80%BB.png">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E7%A4%BE%E5%8C%BA%E8%B4%A1%E7%8C%AE%E6%83%85%E5%86%B5.png">
+<meta property="og:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E7%A4%BE%E5%8C%BA%E6%84%9F%E8%B0%A2%E6%88%AA%E5%9B%BE.png">
+<meta property="article:published_time" content="2023-07-07T11:48:18.000Z">
+<meta property="article:modified_time" content="2026-04-09T02:59:05.718Z">
+<meta property="article:author" content="qianlei">
+<meta property="article:tag" content="Alluxio">
+<meta property="article:tag" content="大数据">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/%E4%BA%91%E4%B8%8A%E5%A4%A7%E6%95%B0%E6%8D%AE%E5%B9%B3%E5%8F%B0%E6%9E%B6%E6%9E%84.png">
+
+<link rel="canonical" href="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Alluxio在网易大数据的应用和优化 | Qian0817</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Qian0817" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Qian0817</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/qian0817" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="qianlei">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qian0817">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Alluxio在网易大数据的应用和优化
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2023-07-07 19:48:18" itemprop="dateCreated datePublished" datetime="2023-07-07T19:48:18+08:00">2023-07-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2026-04-09 10:59:05" itemprop="dateModified" datetime="2026-04-09T10:59:05+08:00">2026-04-09</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%A4%A7%E6%95%B0%E6%8D%AE/" itemprop="url" rel="index"><span itemprop="name">大数据</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>10k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>29 分钟</span>
+            </span>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>Alluxio是世界上第一个面向基于云的数据分析和人工智能的开源的数据编排技术，它为数据驱动型应用和存储系统构建了桥梁，将数据从存储层移动到距离数据驱动型应用更近的位置从而能够更容易被访问，这还使得应用程序能够通过一个公共接口连接到许多存储系统。Alluxio内存至上的层次化架构使得数据的访问速度能比现有方案快几个数量级。</p>
+<p>在大数据生态系统中，Alluxio位于数据驱动框架或应用和各种持久化存储系统之间。Alluxio统一了存储在这些不同存储系统中的数据，为其上层数据驱动型应用提供统一的客户端API和全局命名空间。本文主要基于Alluxio在网易数帆的大数据基础设施产品-NDH（Netease Data Hub）上的使用实践，来介绍我们对Alluxio的应用和优化。</p>
+<h1 id="云上大数据平台"><a href="#云上大数据平台" class="headerlink" title="云上大数据平台"></a>云上大数据平台</h1><p>下图所示为网易数帆NDH在公有云环境部署的系统架构图，从中可以看到，Alluxio承当了存储层统一入口的角色，除了支持使用分布式文件系统HDFS作为底层存储外，还通过标准存储接口（S3接口）统一底层不同存储，可以同时接入多种不同异构存储引擎，包括国内外各公有云产商的对象存储系统，如阿里云OSS、AWS S3、腾讯云COS和华为云OBS等。</p>
+<p><img data-src="%E4%BA%91%E4%B8%8A%E5%A4%A7%E6%95%B0%E6%8D%AE%E5%B9%B3%E5%8F%B0%E6%9E%B6%E6%9E%84.png" alt="云上大数据平台架构"></p>
+<p>在这套方案中，Alluxio发挥了存储层的文件管理、IO路由和缓存加速的功能，计算和查询引擎通过Hadoop兼容接口访问Alluxio。在已有的客户实践案例中，得益于Alluxio的引入，云上大数据系统的整体性能提升了数十倍。为了使Alluxio在这套方案中稳定运行、发挥应有的作用和更好得融入到整个产品体系中，我们在多个维度上做了优化和增强，涉及Alluxio的Master、Worker和Client等组件。本文接下来从对象存储适配、计算和查询引擎适配（Spark、Flink和Impala等）、与网易数帆产品体系融合以及提供更好的使用体验等角度介绍在Alluxio所做的相关优化。</p>
+<h1 id="对象存储优化"><a href="#对象存储优化" class="headerlink" title="对象存储优化"></a>对象存储优化</h1><p>在云上存算分离的场景下通常会选择使用公有云提供的对象存储来作为存储层，计算框架需要适配不同的对象存储，例如AWS S3、阿里云OSS等等，为了避免不同的对象存储带来的适配成本，如前所述，我们选择通过Alluxio来提供统一的访问入口，作为云上对象存储的统一解决方案。</p>
+<p><img data-src="%E6%95%B0%E6%8D%AE%E5%B9%B3%E5%8F%B0%E6%9E%B6%E6%9E%84%E5%9B%BE.png" alt="数据平台架构图"></p>
+<p>在使用Alluxio对接对象存储的过程中遇到了包括性能和可用性在内的不少问题，比如文件（对象）上传、文件的删除和重命名操作等等，下面举例说明。</p>
+<h2 id="对象存储流式上传"><a href="#对象存储流式上传" class="headerlink" title="对象存储流式上传"></a>对象存储流式上传</h2><p>大数据场景通常会通过Spark等计算引擎执行ETL任务，然后通过Alluxio上传文件到对象存储当中。在使用过程中发现Alluxio处理上传文件请求时，Worker会先将上传的数据写入到Worker节点本地的临时目录上，然后在客户端调用close方法时将本地文件上传到对象存储上。</p>
+<p><img data-src="%E6%B5%81%E5%BC%8F%E4%B8%8A%E4%BC%A0%E5%8E%9F%E6%9C%89%E6%9C%BA%E5%88%B6.jpg" alt="流式上传原有机制"></p>
+<p>这样做带来了以下几个问题：</p>
+<ol>
+<li><p>临时目录必须足够大来存储文件，如果上传的文件过大可能会占满整个磁盘，甚至级联影响整个机器上的服务。在某个线上环境曾出现用户提交的任务产生大文件，导致部分节点临时目录磁盘被打满，使得整个大数据平台服务不可用，带来了较大的不可用风险；</p>
+</li>
+<li><p>通常对象存储PutObject接口有上传文件大小的限制，无法上传文件大小超过该限制的文件。在社区实现的OSS和OBS UFS当中存在5GB文件的限制。在某个客户环境上也出现了超大任务的临时数据文件较大的情况，导致用户只能修改任务SQL降低文件大小来规避限制；</p>
+</li>
+<li><p>上传时间慢，因为Alluxio Client到Alluxio Worker发送数据和Alluxio Worker向UFS发送数据这两个过程是串行的，无法充分利用网络带宽；</p>
+</li>
+</ol>
+<p>社区实现没有重试机制，即使实现后出现上传失败需要重新上传整个文件进行重试，性能不佳。</p>
+<p>针对这些问题我们开发了使用分片上传来替代现有机制，支持针对S3、OSS、OBS等对象存储的流式上传能力，并贡献给了开源社区：<a target="_blank" rel="noopener" href="https://github.com/Alluxio/alluxio/pull/16122%E3%80%82">https://github.com/Alluxio/alluxio/pull/16122。</a></p>
+<p>开启流式上传后，Alluxio Worker在上传的文件大于指定大小后会使用分片的形式来进行上传，这样首先Worker上的占用空间就会降低，因为一旦一个分片上传成功后，该分片在磁盘上的临时文件就会被删除。</p>
+<p><img data-src="%E6%B5%81%E5%BC%8F%E4%B8%8A%E4%BC%A0%E4%BC%98%E5%8C%96%E6%9C%BA%E5%88%B6.jpg" alt="流式上传优化机制"></p>
+<p>其次因为Client传输数据到Worker和Worker传输数据到UFS是并行的操作，在上传时间上也会变短。在我们的测试当中，如果传输一个8 GB的文件到S3上，原先的方式需要大约50 s的时间，而优化后只需要30s，性能提升非常明显。</p>
+<p>分片上传对于重试机制也更加友好，在重试时只需要重新上传一个分片而不是整个文件，降低因为网络问题等原因导致的上传失败所产生的影响。</p>
+<h2 id="Rename-性能优化"><a href="#Rename-性能优化" class="headerlink" title="Rename 性能优化"></a>Rename 性能优化</h2><p>在大数据场景下，ETL任务执行期间会先将跑批的结果写入到临时目录当中，然后在整个任务完成后将临时目录改名为正式目录。由于大多数对象存储没有原生的Rename接口，需要通过copy object结合delete object的方式来模拟移动操作，这在拥有大量对象的目录上进行移动操作会存在性能问题。</p>
+<p>虽然在对象存储上使用copy+delete的方式很难改变，无法做到像HDFS一样非常快速地Rename。我们通过合并减少delete object的请求次数来尽可能地提升Rename的性能。在之前的实现中，如果一个目录下存在1000个文件，需要调用1000次copy和delete请求，我们通过合并delete请求，按照每次1000个对象批量发送delete请求，这样只需要向对象存储调用1000次copy和1次delete请求，大幅加快了请求速度。在我们的测试当中，Rename目录的性能比原来提升了大约30%，具体实现详见：<a target="_blank" rel="noopener" href="https://github.com/Alluxio/alluxio/pull/16527%E3%80%82">https://github.com/Alluxio/alluxio/pull/16527。</a></p>
+<h2 id="删除操作性能优化"><a href="#删除操作性能优化" class="headerlink" title="删除操作性能优化"></a>删除操作性能优化</h2><p>我们有些用户将网易大数据系统部署在华为云上，在实践中发现该用户的Spark任务执行过程有时会因为各种原因在数仓表的目录中遗留临时目录未删除，清理这些目录时发现执行速度很缓慢，分析目录结构后发现每次执行的临时目录中内容都是数仓表目录的近似副本，保留了所有的分区子目录，而此表的分区数又比较庞大，因此导致删除临时目录时有非常多的删除操作。</p>
+<p>删除这种结构的目录无论是Alluxio层面还是底层对象存储层面都比较慢，由于用户位于华为云，而OBS对象存储具有原生的Rename能力，因此我们对Alluxio的删除操作进行了语义的微调，由直接删除变为移动至自定义目录，然后由OBS的生命周期管理来保证数据被及时删除，配套使用Alluxio的元数据定期同步机制，确保Alluxio上的元数据快速恢复一致性。将删除行为调整为Rename进行延迟删除能够有效避免用户的误删除行为，这与NDH产品的高安全性定位是相匹配的。</p>
+<p>经过这样调整后，删除的行为实际上变为了定向Rename和延迟删除，性能提升极为明显，在客户的部分使用场景下，有些任务可以达到<strong>几十倍</strong>的性能提升。</p>
+<p>在该客户实践中，Alluxio需要依赖OBS生命周期管理的定时删除机制，这显然不是最优的，因此，我们又进一步在Alluxio上引入了回收站能力，实现Alluxio层的定时删除逻辑，详见本文后续章节描述。</p>
+<h1 id="Impala引擎适配"><a href="#Impala引擎适配" class="headerlink" title="Impala引擎适配"></a>Impala引擎适配</h1><p>在网易数帆NDH主要使用Impala作为OLAP查询引擎，Alluxio作为云上大数据方案的分布式缓存加速层，在与Impala配合使用时遇到过一些问题并进行了针对性适配，主要包括文件句柄缓存和文件URI转换等。</p>
+<h2 id="文件句柄缓存适配"><a href="#文件句柄缓存适配" class="headerlink" title="文件句柄缓存适配"></a>文件句柄缓存适配</h2><p>Impala通过缓存文件句柄来减少到HDFS NameNode（NN）的元数据请求，避免避免频繁访问NN导致其负载过高，但是因为Impala是通过文件系统的URI的schema来判断是否启用文件句柄缓存的，这导致社区版Impala无法缓存Alluxio的文件句柄缓存。</p>
+<p><img data-src="Impala%E6%96%87%E4%BB%B6%E5%8F%A5%E6%9F%84%E7%BC%93%E5%AD%98%E8%AF%BB%E5%8F%96%E6%B5%81%E7%A8%8B.jpg" alt="Impala文件句柄缓存读取流程"></p>
+<p>因此，我们通过修改Impala代码使其能够识别Alluxio uri，这样Impala也能够缓存Alluxio文件句柄。但我们启用缓存后发现，正常执行若干查询后，接下来的查询会渐渐卡住不动。问题原因分析如下：</p>
+<p>Impala会调用HDFS的HDFSOpenFile C API打开文件，在读取完成后，并不会立刻调用close方法关闭文件读取流，而是在调用unbuffer方法后将其放入Impala的文件句柄缓存中，如果之后其他的线程需要读取该文件时，会从文件句柄缓存中拿到对应的文件的读取流进行读取操作。Impala 4.1的相关代码如下</p>
+<figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Status <span class="title">HdfsFileReader::ReadFromPos</span><span class="params">(DiskQueue* queue, <span class="type">int64_t</span> file_offset, <span class="type">uint8_t</span>* buffer, <span class="type">int64_t</span> bytes_to_read, <span class="type">int64_t</span>* bytes_read, <span class="type">bool</span>* eof)</span> </span>&#123; </span><br><span class="line">    ... <span class="comment">// 忽略读取 data cache 代码 </span></span><br><span class="line">    <span class="comment">// RAII accessor, it will release the file handle at destruction </span></span><br><span class="line">    FileHandleCache::Accessor accessor;</span><br><span class="line">    HDFSFile HDFS_file;</span><br><span class="line">    <span class="keyword">if</span> (exclusive_HDFS_fh_ != <span class="literal">nullptr</span>) &#123; </span><br><span class="line">        HDFS_file = exclusive_HDFS_fh_-&gt;<span class="built_in">file</span>();</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123; </span><br><span class="line">        <span class="comment">// 从 file handle cache 当中获取 HDFS_file，HDFS_file 相当于于 Java 当中 InputStream</span></span><br><span class="line">        <span class="built_in">RETURN_IF_ERROR</span>(io_mgr-&gt;<span class="built_in">GetCachedHdfsFileHandle</span>(HDFS_fs_, scan_range_-&gt;<span class="built_in">file_string</span>(), scan_range_-&gt;<span class="built_in">mtime</span>(), request_context, &amp;accessor));</span><br><span class="line">        HDFS_file = accessor.<span class="built_in">Get</span>()-&gt;<span class="built_in">file</span>();</span><br><span class="line">    &#125; </span><br><span class="line">    ...<span class="comment">// 忽略读取文件代码</span></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"> FileHandleCache::Accessor::~<span class="built_in">Accessor</span>() &#123;</span><br><span class="line">     <span class="keyword">if</span> (cache_accessor_.<span class="built_in">Get</span>()) &#123;</span><br><span class="line">         <span class="comment">// 析构函数中调用 unbuffer 接口，未实现 unbuffer 接口则什么都不做</span></span><br><span class="line">         <span class="keyword">if</span> (<span class="built_in">HDFSUnbufferFile</span>(<span class="built_in">Get</span>()-&gt;<span class="built_in">file</span>()) != <span class="number">0</span>) &#123;</span><br><span class="line">             <span class="built_in">Destroy</span>();</span><br><span class="line">         &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">             <span class="comment">// 放回到 file handle cache 当中 </span></span><br><span class="line">             <span class="built_in">Release</span>();</span><br><span class="line">         &#125;</span><br><span class="line">     &#125;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>出现问题的原因就在于Alluxio客户端的实现当中没有实现unbuffer接口，该接口的含义是释放被InputStream持有的网络连接和客户端缓存等资源，如果未实现接口那么调用HDFS C API的HDFSUnbufferFile函数会返回0，但是效果是什么都不做。因此为了让Impala在访问Alluxio时也用上文件句柄缓存，我们在Alluxio客户端上为Impala实现了unbuffer接口，在客户端调用unbuffer接口时调用BlockInStream.closeDataReader释放客户端与Worker节点的长连接和预读的数据缓存，具体实现可以参考我们提交的PR：<a target="_blank" rel="noopener" href="https://github.com/Alluxio/alluxio/pull/16017%E3%80%82">https://github.com/Alluxio/alluxio/pull/16017。</a></p>
+<h2 id="Transparent-URI"><a href="#Transparent-URI" class="headerlink" title="Transparent URI"></a>Transparent URI</h2><p>Alluxio访问地址的schema是Alluxio://，所以Impala访问需要将hive对应表的地址修改为Alluxio://开头的地址。有些大数据用户的需求是存量的访问HDFS的业务或集群中的仅有部分组件想用Alluxio，对于Impala来说，如何让Alluxio只应用于Impala引擎，而避免修改公共Hive元数据中的数据location？</p>
+<p>其中一种实现方案是在Impala当中添加一个Alluxio白名单机制，根据用户访问的表在Impala查询前将元数据前缀从原先的URI转换为Alluxio URI，以此实现只有Impala访问Alluxio缓存，其他引擎不会访问到Alluxio。</p>
+<p>![Transparent URI白名单方案](Transparent URI白名单方案.jpg)</p>
+<p>但这种修改Impala内核的方式虽然能够达到仅为Impala启用Alluxio加速的目的，但存在门槛较高而不通用的问题（并不是每个用户都有修改内核代码的能力）。</p>
+<p>因此，我们进一步思考能否让Alluxio客户端识别非Alluxio前缀的URI，进而用上Alluxio的加速功能呢？通过调研发现，企业版Alluxio的<strong>Transparent URI</strong>功能具备这样的能力，能够完美地解决这样的问题，该功能的相关介绍详见官方文档：<a target="_blank" rel="noopener" href="https://docs.alluxio.io/ee/user/stable/en/operation/Transparent-Uri.html">Transparent-URI</a>。我们在NDH的Alluxio内部版本上进行了类似增强，使其对业务更加友好。对于社区中存在类似述求的用户，建议使用企业版Alluxio。</p>
+<h2 id="getFileBlockLocations-优化"><a href="#getFileBlockLocations-优化" class="headerlink" title="getFileBlockLocations()优化"></a>getFileBlockLocations()优化</h2><p>Impala会在元数据加载时调用Hadoop的getFileBlockLocations接口，通过该接口查找相应文件在Alluxio集群上块的位置，并用于在下发SQL任务调度时通过该信息将相应的scan range优先调度到相同主机上的Impalad上进行读取，从而达到尽可能保证本地读来加速Impala的性能。</p>
+<p>在进行代码分析时发现Alluxio客户端调用getFileBlockLocations(FileStatus file, long start, long len)接口的逻辑存在性能优化的空间。在之前的实现中，该接口内部每次都会调用 getFileStatus获取文件块的地址信息，但是由于Alluxio客户端内部实现在获取文件元数据时已经包含了文件的块地址信息，其实调用getFileStatus方法是不必要的。我们优化了这里客户端实现的逻辑，去除了这个无用的网络调用，为Impala加载元数据时的性能带来了一定的提升。我们将该性能优化提交给了Alluxio开源社区，实现可以参见<a target="_blank" rel="noopener" href="https://github.com/Alluxio/alluxio/pull/16054%E3%80%82">https://github.com/Alluxio/alluxio/pull/16054。</a></p>
+<h1 id="数据资产管理"><a href="#数据资产管理" class="headerlink" title="数据资产管理"></a>数据资产管理</h1><h2 id="NDH-MetaService"><a href="#NDH-MetaService" class="headerlink" title="NDH MetaService"></a>NDH MetaService</h2><p>用户在生产环境使用HDFS时，往往需要对存储资源进行各种分析，由于优化资源配置，降低存储成本。分析操作举例如下：</p>
+<ul>
+<li><p>指定路径，查询元数据信息</p>
+</li>
+<li><p>指定路径，查询元数据的统计信息、文件分布信息</p>
+</li>
+<li><p>指定路径、时间、数据列，查询历史元数据列表</p>
+</li>
+<li><p>指定路径、时间，查询路径的历史读写次数和读写时间</p>
+</li>
+<li><p>filter查询功能，指定相关指标，及算数符，返回满足条件的目录数</p>
+</li>
+</ul>
+<p>在开源的Apache生态下，用户只能通过连接HDFS NameNode（NN）进行相关的API查询才能做到，但NN节点是HDFS的核心组件，其服务稳定性对于HDFS的服务SLA至关重要。大量频繁的分析性查询，可能导致NN出现FullGC等问题，为了既满足用户的分析需求又不影响HDFS服务稳定性，NDH提供了HDFS MetaService服务，用户可以通过访问该服务来进行分析性查询。在实现上，MetaService会解析FsImage，并回放FsEditlog和FsAuditlog等日志，并将其存入HBase中，这样，在响应用户的分析需求时，只需要访问HBase即可。</p>
+<p>![HDFS MetaService架构](HDFS MetaService架构.png)</p>
+<p>HDFS的MetaService服务与Hive层的相关功能相配合，可以提供包括表的分区数和文件数、分区生命周期、表的存储成本和变化趋势、表的访问情况等数据。在此基础上，可以进行热表分析、小文件合并、分区优化、存储格式优化等数据治理动作，能够有力支撑大数据集群的降本增效行动。</p>
+<p><img data-src="%E6%95%B0%E6%8D%AE%E8%B5%84%E4%BA%A7%E7%AE%A1%E7%90%86%E4%B8%8E%E6%B2%BB%E7%90%86.png" alt="数据资产管理与治理"></p>
+<h2 id="Alluxio适配"><a href="#Alluxio适配" class="headerlink" title="Alluxio适配"></a>Alluxio适配</h2><p>云上大数据方案不一定使用HDFS，但同样需数据资产分析等能力，同时为了面对不同云厂商的不同接口，避免针对不同的厂商多次实现，我们选择将该功能实现在Alluxio上。</p>
+<p>因为我们需要获取到每个目录下所有文件和目录的数量以及这个目录下文件的总大小，最简单的方式是客户端直接访问Alluxio遍历所有文件的方式并计算进行实现。这种实现会对Alluxio造成大量压力。如果直接在当前的Alluxio Master节点上进行计算，那么也会对Master节点造成性能压力。我们希望新加的计算功能不影响集群的性能和稳定性，针对这个场景，我们开发了基于Ratis Listener的元数据统计服务。</p>
+<p>Ratis是Apache基金会下面的一个Raft实现项目，被Alluxio用作保证Master高可用集群元数据的一致性。通常Raft集群中存在三种成员，分别是Leader/Follower和Candidate，Leader负责响应客户端的读写请求，Follower从Leader节点同步信息，当长时间未收到Leader心跳时成为Candidate节点，并选举产生新的Leader。</p>
+<p>为了实现该功能，我们向Ratis社区贡献了Listener功能，只参与同步Raft Log而不参与投票过程，当Listener收到主节点的同步的信息时，计算相应路径下的文件目录数量和文件总大小，做到基本不影响客户端的读写请求性能和稳定性。</p>
+<p>![Ratis Listener元数据统计](Ratis Listener元数据统计.jpg)</p>
+<p>在Listener节点上计算后，我们会提供根据目录获取目录下的文件目录数量和文件总大小的HTTP API接口，并将相关的数据导入到Hive表当中，每天计算路径下文件大小的变化情况。</p>
+<h2 id="目录冻结功能"><a href="#目录冻结功能" class="headerlink" title="目录冻结功能"></a>目录冻结功能</h2><p>网易数帆大数据产品基于Apache Ranger实现了目录冻结功能，用户可以配置对满足要求的目录进行冻结，比如自动冻结某些指定目录或超过一定大小的目录，禁止对该目录的Rename和delete操作。</p>
+<p><img data-src="%E7%9B%AE%E5%BD%95%E5%86%BB%E7%BB%93%E5%8A%9F%E8%83%BD.png" alt="目录冻结功能"></p>
+<p>该功能可以在一定程度上避免用户因为误删除操作导致数据丢失，我们在Alluxio上适配了内部Ranger版本的能力。</p>
+<h1 id="Hadoop生态兼容性"><a href="#Hadoop生态兼容性" class="headerlink" title="Hadoop生态兼容性"></a>Hadoop生态兼容性</h1><h2 id="逻辑域名访问"><a href="#逻辑域名访问" class="headerlink" title="逻辑域名访问"></a>逻辑域名访问</h2><p>在我们使用初期对接 YARN时发现一些YARN无法正确的识别之前的Alluxio高可用地址，按照alluxio://master1:19998,master2:19998,master3:19998的格式配置会有如下问题：</p>
+<p>![YARN URI识别问题](YARN URI识别问题.png)</p>
+<p>这里使用YARN无法正常运行的原因是YARN无法正确的识别该URI地址，在解析URI时出现错误。为了让YARN能够支持使用高可用格式的Alluxio URI，我们仿照了HDFS逻辑域名实现开发了Alluxio逻辑域名的实现，能够支持以alluxio://ebj@my-alluxio-cluster这样的URI作为客户端配置的URI。</p>
+<p><img data-src="Alluxio%E9%80%BB%E8%BE%91%E5%9F%9F%E5%90%8D%E5%AE%9E%E7%8E%B0.jpg" alt="Alluxio逻辑域名实现"></p>
+<p>我们在Alluxio的Hadoop客户端当中添加了针对逻辑域名识别的逻辑，并从配置当中解析获取主节点地址作为访问高可用集群所需要的配置信息，目前使用新的逻辑域名来访问高可用Alluxio的方式已经广泛应用在我们的使用场景当中，同时我们也将该功能提交给了社区：<a target="_blank" rel="noopener" href="https://github.com/Alluxio/alluxio/pull/14021%E3%80%82">https://github.com/Alluxio/alluxio/pull/14021。</a></p>
+<h2 id="动态代理用户配置"><a href="#动态代理用户配置" class="headerlink" title="动态代理用户配置"></a>动态代理用户配置</h2><p>业务使用Alluxio时会有修改或者添加代理用户配置的需求，Alluxio中没有类似HDFS dfsadmin -refreshSuperUserGroupsConfiguration这样的命令来动态更新代理用户，每次修改代理用户都需要重启这个集群，由于集群重启的过程中可能导致任务失败，造成的影响范围比较大，尤其是对于Flink实时任务场景。</p>
+<p>为了避免频繁的重启集群，我们在Alluxio当中实现了监听配置文件修改并动态配置代理用户的功能，为Alluxio提供了动态配置代理用户的功能，从而避免了大量的服务重启操作，减少对于上层业务的影响。</p>
+<h2 id="Hadoop-回收站增强"><a href="#Hadoop-回收站增强" class="headerlink" title="Hadoop 回收站增强"></a>Hadoop 回收站增强</h2><p>大数据的计算框架在使用Hadoop客户端删除时会先将删除的文件或者目录移动到/user//.Trash/Current路径下。在HDFS中，客户端将文件移动到指定的路径之后，会由NameNode负责定期使用时间戳生成检查点重命名Current目录为时间戳，并删除超过指定时间的检查点目录。由于在Alluxio社区版中没有类似NN定期清理的机制，就会使得本应该被删除的文件一直留在了存储系统上，导致底层存储空间大量的占用（用户存储成本变高），只能通过配置对象存储的定期删除功能来优化。基于Alluxio的易用性考虑，我们在Alluxio Master上仿照HDFS的代码实现了基于Alluxio的回收站功能，为用户提供了类似于HDFS的回收站功能。</p>
+<h1 id="运维能力增强"><a href="#运维能力增强" class="headerlink" title="运维能力增强"></a>运维能力增强</h1><p>除此之外，我们还在Alluxio上做了一些通用功能的增强，方便Alluxio集群的运维和升级工作。</p>
+<h2 id="审计日志增强"><a href="#审计日志增强" class="headerlink" title="审计日志增强"></a>审计日志增强</h2><p>在实践中，某个业务的大数据集群曾经出现过因为Alluxio客户端代码BUG导致其他大数据组件内存泄漏的问题，虽然我们快速修复了该问题并发布新的客户端版本，但是因为Alluxio客户端广泛分布在大数据组件和业务服务中，难以在短时间内找到所有使用老Alluxio客户端的服务。</p>
+<p>为了及时通知所有用户修改并增强Alluxio客户端的管理能力，我们对Alluxio客户端进行了优化，支持在客户端请求Master节点时带上更多的信息，例如客户端的版本和配置信息，Master端会将这些信息打印到审计日志中。这样当我们在客户端需要升级时，可以在Alluxio Master端动态开启该功能，然后根据审计日志判断是否有其他服务仍然在使用老版本的客户端连接，并以此定位并告知哪些服务器上的哪些服务客户端版本需要升级。</p>
+<figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">2023-06-06 00:00:00,000 INFO AUDIT_LOG: succeeded=false allowed=true ugi=xxx,xxx (AUTH=SIMPLE) ip=/xxx:xxxxxx cmd=getfileinfo src=/tmp dst=null perm=null executionTimeUs=710000 clientVersion=2.7.3-b33d2e7 config=&#123;alluxio.master.rpc.addresses=mmaster119998,mmaster219998,mmaster319998&#125; proto=rpc</span><br></pre></td></tr></table></figure>
+
+<h2 id="UFS-API性能监控"><a href="#UFS-API性能监控" class="headerlink" title="UFS API性能监控"></a>UFS API性能监控</h2><p>为了能够在排查Alluxio性能问题时快速识别性能瓶颈，我们在UFS逻辑中添加了针对不同UFS记录对应UFS API接口调用时长的metric指标和异常日志，可以帮助我们排查分析一段时间内Alluxio性能变化原因是否是因为UFS性能不稳定导致的。</p>
+<p>![UFS API性能监控](UFS API性能监控.png)</p>
+<h2 id="其他优化"><a href="#其他优化" class="headerlink" title="其他优化"></a>其他优化</h2><p><strong>文件上传感知</strong>：为了更好地排查线上问题，我们在Worker服务上添加了新的API-getWritingUfsFiles来识别当前Worker节点哪些文件正在以THROUGH或者CACHE_THROUGH方式写入。例如之前提到的对象存储上传时导致磁盘写满问题，由于之前社区实现的UFS写入的临时文件名是一个生成的UUID，无法直接根据磁盘上的文件名找到对应的上传文件，通过该功能就可以根据该命令找到对应的文件，从而排查找到相应的异常任务。</p>
+<p><img data-src="%E6%96%87%E4%BB%B6%E4%B8%8A%E4%BC%A0%E6%84%9F%E7%9F%A5API.png" alt="文件上传感知API"></p>
+<p><strong>缓存行为控制</strong>：为了能够更好得控制每个Worker节点的缓存空间，我们针对Free和Load命令进行了增强，允许在命令中指定Worker节点来释放和加载数据缓存，从而做到更全面细致地管理Alluxio数据缓存。</p>
+<h1 id="总结与展望"><a href="#总结与展望" class="headerlink" title="总结与展望"></a>总结与展望</h1><p>目前，使用Alluxio作为统一存储入口的网易NDH云上大数据方案已经服务了在AWS、阿里云和华为云上的多个用户，未来该方案会服务更多的大数据用户。文中介绍了网易基于Alluxio做的一些工作，包括对于对象存储、大数据计算和查询引擎的优化以及对网易NDH服务所做的一些协同的功能等等，初步汇总如下：</p>
+<p><img data-src="%E7%BD%91%E6%98%93Alluxio%E5%B7%A5%E4%BD%9C%E6%B1%87%E6%80%BB.png" alt="网易Alluxio工作汇总"></p>
+<p>Alluxio是个优秀的开源软件项目，社区交流活跃，配套机制完善，让参与者很有归属感。网易很早就开始关注Alluxio社区，并与负责社区建设的大佬进行过交流。本着知恩图报、合作共赢的态度，网易Alluxio团队积极参与社区共建，包括及时反馈Issue、贡献特性PR和修复已知Bug等，例举如下：</p>
+<p><img data-src="%E7%A4%BE%E5%8C%BA%E8%B4%A1%E7%8C%AE%E6%83%85%E5%86%B5.png" alt="社区贡献情况"></p>
+<p>据不完全统计，团队累计向Alluxio和Ratis社区贡献了40+Patch，其中绝大部分PR在近期的10个Alluxio版本中。</p>
+<p><img data-src="%E7%A4%BE%E5%8C%BA%E6%84%9F%E8%B0%A2%E6%88%AA%E5%9B%BE.png" alt="社区感谢截图"></p>
+<p>未来，我们会一如既往地跟进社区的版本迭代，同时将一些内部具有通用性的特性贡献给社区，与Alluxio社区一道共同增强Alluxio在缓存特性、性能和易用性等方面的能力。</p>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>qianlei
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://qian0817.top/2023/07/07/Alluxio%E5%9C%A8%E7%BD%91%E6%98%93%E5%A4%A7%E6%95%B0%E6%8D%AE%E7%9A%84%E5%BA%94%E7%94%A8%E5%92%8C%E4%BC%98%E5%8C%96/" title="Alluxio在网易大数据的应用和优化">http://qian0817.top/2023/07/07/Alluxio在网易大数据的应用和优化/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Alluxio/" rel="tag"># Alluxio</a>
+              <a href="/tags/%E5%A4%A7%E6%95%B0%E6%8D%AE/" rel="tag"># 大数据</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/10/13/Alluxio%E5%AE%A2%E6%88%B7%E7%AB%AF%E9%80%BB%E8%BE%91%E5%88%86%E6%9E%90/" rel="prev" title="Alluxio客户端逻辑分析">
+      <i class="fa fa-chevron-left"></i> Alluxio客户端逻辑分析
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/12/14/Impala-SQL-%E8%BD%AC%E6%8D%A2%E5%88%B0-Spark-SQL-%E5%AE%9E%E8%B7%B5/" rel="next" title="Impala SQL 转换到 Spark SQL 实践">
+      Impala SQL 转换到 Spark SQL 实践 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BA%91%E4%B8%8A%E5%A4%A7%E6%95%B0%E6%8D%AE%E5%B9%B3%E5%8F%B0"><span class="nav-number">1.</span> <span class="nav-text">云上大数据平台</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E4%BC%98%E5%8C%96"><span class="nav-number">2.</span> <span class="nav-text">对象存储优化</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8%E6%B5%81%E5%BC%8F%E4%B8%8A%E4%BC%A0"><span class="nav-number">2.1.</span> <span class="nav-text">对象存储流式上传</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Rename-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96"><span class="nav-number">2.2.</span> <span class="nav-text">Rename 性能优化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E6%93%8D%E4%BD%9C%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96"><span class="nav-number">2.3.</span> <span class="nav-text">删除操作性能优化</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Impala%E5%BC%95%E6%93%8E%E9%80%82%E9%85%8D"><span class="nav-number">3.</span> <span class="nav-text">Impala引擎适配</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%96%87%E4%BB%B6%E5%8F%A5%E6%9F%84%E7%BC%93%E5%AD%98%E9%80%82%E9%85%8D"><span class="nav-number">3.1.</span> <span class="nav-text">文件句柄缓存适配</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Transparent-URI"><span class="nav-number">3.2.</span> <span class="nav-text">Transparent URI</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#getFileBlockLocations-%E4%BC%98%E5%8C%96"><span class="nav-number">3.3.</span> <span class="nav-text">getFileBlockLocations()优化</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%95%B0%E6%8D%AE%E8%B5%84%E4%BA%A7%E7%AE%A1%E7%90%86"><span class="nav-number">4.</span> <span class="nav-text">数据资产管理</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#NDH-MetaService"><span class="nav-number">4.1.</span> <span class="nav-text">NDH MetaService</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Alluxio%E9%80%82%E9%85%8D"><span class="nav-number">4.2.</span> <span class="nav-text">Alluxio适配</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%9B%AE%E5%BD%95%E5%86%BB%E7%BB%93%E5%8A%9F%E8%83%BD"><span class="nav-number">4.3.</span> <span class="nav-text">目录冻结功能</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Hadoop%E7%94%9F%E6%80%81%E5%85%BC%E5%AE%B9%E6%80%A7"><span class="nav-number">5.</span> <span class="nav-text">Hadoop生态兼容性</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%BB%E8%BE%91%E5%9F%9F%E5%90%8D%E8%AE%BF%E9%97%AE"><span class="nav-number">5.1.</span> <span class="nav-text">逻辑域名访问</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8A%A8%E6%80%81%E4%BB%A3%E7%90%86%E7%94%A8%E6%88%B7%E9%85%8D%E7%BD%AE"><span class="nav-number">5.2.</span> <span class="nav-text">动态代理用户配置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Hadoop-%E5%9B%9E%E6%94%B6%E7%AB%99%E5%A2%9E%E5%BC%BA"><span class="nav-number">5.3.</span> <span class="nav-text">Hadoop 回收站增强</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%BF%90%E7%BB%B4%E8%83%BD%E5%8A%9B%E5%A2%9E%E5%BC%BA"><span class="nav-number">6.</span> <span class="nav-text">运维能力增强</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AE%A1%E8%AE%A1%E6%97%A5%E5%BF%97%E5%A2%9E%E5%BC%BA"><span class="nav-number">6.1.</span> <span class="nav-text">审计日志增强</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#UFS-API%E6%80%A7%E8%83%BD%E7%9B%91%E6%8E%A7"><span class="nav-number">6.2.</span> <span class="nav-text">UFS API性能监控</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B6%E4%BB%96%E4%BC%98%E5%8C%96"><span class="nav-number">6.3.</span> <span class="nav-text">其他优化</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%80%BB%E7%BB%93%E4%B8%8E%E5%B1%95%E6%9C%9B"><span class="nav-number">7.</span> <span class="nav-text">总结与展望</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">qianlei</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/qian0817" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;qian0817" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:qianlei666@gmail.com" title="E-Mail → mailto:qianlei666@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">qianlei</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">172k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">8:13</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var canonicalURL, curProtocol;
+      //Get the <link> tag
+      var x=document.getElementsByTagName("link");
+		//Find the last canonical URL
+		if(x.length > 0){
+			for (i=0;i<x.length;i++){
+				if(x[i].rel.toLowerCase() == 'canonical' && x[i].href){
+					canonicalURL=x[i].href;
+				}
+			}
+		}
+    //Get protocol
+	    if (!canonicalURL){
+	    	curProtocol = window.location.protocol.split(':')[0];
+	    }
+	    else{
+	    	curProtocol = canonicalURL.split(':')[0];
+	    }
+      //Get current URL if the canonical URL does not exist
+	    if (!canonicalURL) canonicalURL = window.location.href;
+	    //Assign script content. Replace current URL with the canonical URL
+      !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=canonicalURL,t=document.referrer;if(!e.test(r)){var n=(String(curProtocol).toLowerCase() === 'https')?"https://sp0.baidu.com/9_Q4simg2RQJ8t7jm9iCKT-xh_/s.gif":"//api.share.baidu.com/s.gif";t?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var i=new Image;i.src=n}}(window);})();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
