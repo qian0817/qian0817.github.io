@@ -30,9 +30,9 @@
 <meta property="og:site_name" content="Qian0817">
 <meta property="og:description" content="介绍进程线程与纤程">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81.png">
-<meta property="og:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/%E8%BF%9B%E7%A8%8B%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80.png">
-<meta property="og:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/%E8%BF%9B%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2.png">
+<meta property="og:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/进程状态.png">
+<meta property="og:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/进程内存空间布局.png">
+<meta property="og:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/进程上下文切换.png">
 <meta property="article:published_time" content="2020-11-21T11:08:01.000Z">
 <meta property="article:modified_time" content="2020-11-21T11:22:44.000Z">
 <meta property="article:author" content="qianlei">
@@ -40,7 +40,7 @@
 <meta property="article:tag" content="线程">
 <meta property="article:tag" content="协程">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81.png">
+<meta name="twitter:image" content="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/进程状态.png">
 
 <link rel="canonical" href="http://qian0817.top/2020/11/21/%E8%BF%9B%E7%A8%8B%E7%BA%BF%E7%A8%8B%E4%B8%8E%E7%BA%A4%E7%A8%8B/">
 
@@ -259,7 +259,9 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="进程"><a href="#进程" class="headerlink" title="进程"></a>进程</h2><h3 id="进程状态"><a href="#进程状态" class="headerlink" title="进程状态"></a>进程状态</h3><p>线程可以处于以下几种状态</p>
+        <h2 id="进程">进程</h2>
+<h3 id="进程状态">进程状态</h3>
+<p>线程可以处于以下几种状态</p>
 <ul>
 <li>新生状态：表示一个线程刚被创建出来还未完成初始化，不能被调度执行。在初始化完成以后，进入预备状态。</li>
 <li>预备状态：表示进程可以被调度运行，但还未被调度器选择。在被调度器选择以后进入运行状态。</li>
@@ -267,8 +269,12 @@
 <li>阻塞状态：表示线程需要等待外部事件，暂时无法被调度。当线程等待的外部事件完成以后，迁移至预备状态。</li>
 <li>终止状态：表示进程已经完成执行，不会再被调度。</li>
 </ul>
-<p><img data-src="%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81.png" alt="进程状态"></p>
-<h3 id="进程内存空间布局"><a href="#进程内存空间布局" class="headerlink" title="进程内存空间布局"></a>进程内存空间布局</h3><p>进程拥有独立的虚拟内存空间。包括以下几个部分</p>
+<figure>
+<img data-src="进程状态.png" alt="进程状态" />
+<figcaption aria-hidden="true">进程状态</figcaption>
+</figure>
+<h3 id="进程内存空间布局">进程内存空间布局</h3>
+<p>进程拥有独立的虚拟内存空间。包括以下几个部分</p>
 <ul>
 <li>用户栈：保存进程需要使用的各种临时数据。其扩展方向为自顶向下，栈底在高地址上。</li>
 <li>代码库：进程执行所依赖的共享的代码库（比如libc），这些地址会映射在用户栈下方并标记为只读。</li>
@@ -276,49 +282,61 @@
 <li>数据与代码段：保存全局变量的值以及进程执行所需要的代码，处于较低地址。</li>
 <li>内核部分：每个进程的虚拟地址空间都映射了相同的地址空间，处于进程地址空间的最顶端。只有当程序进入内核态时才能访问内核内存。</li>
 </ul>
-<p><img data-src="%E8%BF%9B%E7%A8%8B%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80.png" alt="进程内存空间布局"></p>
-<h3 id="进程控制块"><a href="#进程控制块" class="headerlink" title="进程控制块"></a>进程控制块</h3><p>在内核中，每一个进程都通过一个名为进程控制块的数据结构来保存相关状态。在Linux系统中PCB对应的数据结构为task_struct,定义在[<a target="_blank" rel="noopener" href="https://github.com/torvalds/linux/blob/master/include/linux/sched.h">sched.h</a>]文件中。下面代码列举了几个重要字段。</p>
+<figure>
+<img data-src="进程内存空间布局.png" alt="进程内存空间布局" />
+<figcaption aria-hidden="true">进程内存空间布局</figcaption>
+</figure>
+<h3 id="进程控制块">进程控制块</h3>
+<p>在内核中，每一个进程都通过一个名为进程控制块的数据结构来保存相关状态。在Linux系统中PCB对应的数据结构为task_struct,定义在[<a
+target="_blank" rel="noopener" href="https://github.com/torvalds/linux/blob/master/include/linux/sched.h">sched.h</a>]文件中。下面代码列举了几个重要字段。</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span>&#123;</span></span><br><span class="line">    <span class="comment">/* 进程状态 */</span></span><br><span class="line">	<span class="keyword">volatile</span> <span class="type">long</span>			state;</span><br><span class="line">    <span class="comment">/* 虚拟内存状态 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">mm_struct</span> *<span class="title">mm</span>;</span></span><br><span class="line">    <span class="comment">/* 进程标识符 */</span></span><br><span class="line">    <span class="type">pid_t</span> pid;</span><br><span class="line">    <span class="comment">/* 进程组标识符 */</span></span><br><span class="line">    <span class="type">pid_t</span> tgid;</span><br><span class="line">    <span class="comment">/* 进程间关系 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">task_struct</span> __<span class="title">rcu</span> *<span class="title">parent</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">list_head</span> <span class="title">children</span>;</span></span><br><span class="line">    <span class="comment">/* 打开的文件 */</span></span><br><span class="line">    <span class="class"><span class="keyword">struct</span> <span class="title">files_struct</span> *<span class="title">files</span>;</span></span><br><span class="line">    <span class="comment">/* 省略 */</span></span><br><span class="line">    ...</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="上下文切换"><a href="#上下文切换" class="headerlink" title="上下文切换"></a>上下文切换</h3><p>进程的上下文包括进程运行时的寄存器状态，能够用于保存和恢复一个进程在处理器上运行的状态。当操作系统需要切换当前执行的进程时，就会使用上下文切换机制，将起一个进程的寄存器保存到PCB之中，从而切换该线程执行。</p>
+<h3 id="上下文切换">上下文切换</h3>
+<p>进程的上下文包括进程运行时的寄存器状态，能够用于保存和恢复一个进程在处理器上运行的状态。当操作系统需要切换当前执行的进程时，就会使用上下文切换机制，将起一个进程的寄存器保存到PCB之中，从而切换该线程执行。</p>
 <p>下图展示了线程的上下文切换过程，当进程1用于中断或者系统调用进入内核以后，操作系统将进行上下文切换，保存将线程1的上下文保存到对应的PCB之中去，之后取出线程2对应的PCB的上下文，将其中的值恢复到寄存器中，最后操作系统回到用户态，继续进程2的运行。</p>
-<p><img data-src="%E8%BF%9B%E7%A8%8B%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2.png" alt="进程上下文切换"></p>
-<h3 id="Linux进程操作"><a href="#Linux进程操作" class="headerlink" title="Linux进程操作"></a>Linux进程操作</h3><h4 id="进程创建fork"><a href="#进程创建fork" class="headerlink" title="进程创建fork"></a>进程创建fork</h4><p>在Linux中使用fork函数创建新进程，对于父进程fork函数返回当前进程的PID，子进程的返回值为0。以下是fork的一个示例。</p>
+<figure>
+<img data-src="进程上下文切换.png" alt="进程上下文切换" />
+<figcaption aria-hidden="true">进程上下文切换</figcaption>
+</figure>
+<h3 id="linux进程操作">Linux进程操作</h3>
+<h4 id="进程创建fork">进程创建fork</h4>
+<p>在Linux中使用fork函数创建新进程，对于父进程fork函数返回当前进程的PID，子进程的返回值为0。以下是fork的一个示例。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">pid_t</span> rc = fork();</span><br><span class="line">    <span class="keyword">if</span> (rc &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        std::cout &lt;&lt; <span class="string">&quot;fork 失败&quot;</span> &lt;&lt; std::endl;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">        std::cout &lt;&lt; <span class="string">&quot;当前为子进程， pid: &quot;</span> &lt;&lt; <span class="built_in">getpid</span>() &lt;&lt; std::endl;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        std::cout &lt;&lt; <span class="string">&quot;当前为父进程， pid: &quot;</span> &lt;&lt; <span class="built_in">getpid</span>() &lt;&lt; std::endl;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h4 id="进程执行exec"><a href="#进程执行exec" class="headerlink" title="进程执行exec"></a>进程执行exec</h4><p>exec由一系列接口组成，存在多个变种，功能最全面的是execve：</p>
+<h4 id="进程执行exec">进程执行exec</h4>
+<p>exec由一系列接口组成，存在多个变种，功能最全面的是execve：</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">execve</span> <span class="params">(<span class="type">const</span> <span class="type">char</span> *__path, <span class="type">char</span> *<span class="type">const</span> __argv[], <span class="type">char</span> *<span class="type">const</span> __envp[])</span></span></span><br></pre></td></tr></table></figure>
-
 <p>其共接受三个参数，第一个参数path是进程执行需要载入的可执行文件的路径，第二个参数argv是进程执行所需的参数，第三个参数envp是进程的环境变量，一般以键值对字符串的形式传入。</p>
-<h4 id="进程管理"><a href="#进程管理" class="headerlink" title="进程管理"></a>进程管理</h4><p>在Linux中，进程都由fork创建，操作系统会以fork作为线索记录进程之间的关系，PID会记录每个进程的父进程和子进程。</p>
+<h4 id="进程管理">进程管理</h4>
+<p>在Linux中，进程都由fork创建，操作系统会以fork作为线索记录进程之间的关系，PID会记录每个进程的父进程和子进程。</p>
 <p>处于进程树根部的是init进程，是操作系统创建的第一个进程，之后所有的进程都是由他直接或间接创建出来的。</p>
 <p>为了方便应用程序进行管理，内核还定义了多个进程组合而成的进程组和会话。</p>
 <p>进程组是进程的集合，由一个或多个进程组成。task_struct结构中的tgid即为进程对应的进程组标识符。如果进程想要脱离当前的进程组，可以通过调用setpgid修改自己所在的进程组。</p>
 <p>会话是进程组的集合。由一个或多个进程组构成。会话将进程组根据执行状态分为了前台进程组、后台进程组。控制终端是会话与外界进行交互的窗口，负责接受由用户发来的输入。</p>
-<h4 id="进程监控wait"><a href="#进程监控wait" class="headerlink" title="进程监控wait"></a>进程监控wait</h4><p>进程可以通过wait操作来对子进程进行监控。wait函数有很多变种，以waitpid为例：</p>
+<h4 id="进程监控wait">进程监控wait</h4>
+<p>进程可以通过wait操作来对子进程进行监控。wait函数有很多变种，以waitpid为例：</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;sts/wait.h&gt;</span></span></span><br><span class="line"><span class="function"><span class="type">__pid_t</span> <span class="title">waitpid</span> <span class="params">(<span class="type">__pid_t</span> __pid, <span class="type">int</span> *__stat_loc, <span class="type">int</span> __options)</span></span>;</span><br></pre></td></tr></table></figure>
-
 <p>其中第一个参数表示需要等待的子进程，第二个参数用来表示子进程的状态，第三个参数表示选项。wait可以回收已经运行结束的子进程和释放资源。使用wait的一个示例如下</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">pid_t</span> rc = fork();</span><br><span class="line">    <span class="keyword">if</span> (rc &lt; <span class="number">0</span>) &#123;</span><br><span class="line">        std::cout &lt;&lt; <span class="string">&quot;fork 失败&quot;</span> &lt;&lt; std::endl;</span><br><span class="line">    &#125; <span class="keyword">else</span> <span class="keyword">if</span> (rc == <span class="number">0</span>) &#123;</span><br><span class="line">        std::cout &lt;&lt; <span class="string">&quot;子进程退出&quot;</span> &lt;&lt; std::endl;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        <span class="type">int</span> status = <span class="number">0</span>;</span><br><span class="line">        <span class="keyword">if</span> (<span class="built_in">waitpid</span>(rc, &amp;status, <span class="number">0</span>) &lt; <span class="number">0</span>) &#123;</span><br><span class="line">            std::cout &lt;&lt; <span class="string">&quot;waitpid 失败&quot;</span> &lt;&lt; std::endl;</span><br><span class="line">        &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">            <span class="keyword">if</span> (<span class="built_in">WIFEXITED</span>(status)) &#123;</span><br><span class="line">                std::cout &lt;&lt; <span class="string">&quot;父进程： 子进程退出&quot;</span> &lt;&lt; std::endl;</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
 <p>如果父进程没有调用wait操作，就算子进程已经终止，所占用的资源不会完全释放，这种进程被称为僵尸进程。内核会为僵尸进程保留其进程描述符和中止时信息，以便父进程在调用wait时监控子进程的状态。如果一个进程大量创建子进程且不调用wait，那么会导致僵尸进程占据可用的PID，使得后续的fork因为内核资源不足而失败。直到父线程退出，那么子进程将不会再被父进程使用，所有父进程创建的僵尸进程都会被内核的init进程调用wait进行回收。</p>
-<h2 id="线程"><a href="#线程" class="headerlink" title="线程"></a>线程</h2><p>随着计算机技术的发展，进程显得过于笨重，主要体现在以下几点。</p>
-<ol>
+<h2 id="线程">线程</h2>
+<p>随着计算机技术的发展，进程显得过于笨重，主要体现在以下几点。</p>
+<ol type="1">
 <li>创建进程的开销较大，需要完成创建独立的地址空间、载入数据和代码段、初始化堆等步骤。</li>
 <li>进程用于独立的地址空间，在进程间进行数据的共享和同步比较麻烦</li>
 </ol>
 <p>因此提出了在进程之内添加可独立执行的单元，他们共享进程的地址空间，但又各自保存运行时的上下文状态，称为线程。</p>
-<h3 id="线程地址空间布局"><a href="#线程地址空间布局" class="headerlink" title="线程地址空间布局"></a>线程地址空间布局</h3><p>进程为每个线程都准备了不同的栈，供它们存放临时的数据。进程除了栈只玩的所有其他区域都由该进程的所有线程共享，包括堆数据段以及代码段。</p>
-<h3 id="线程控制块"><a href="#线程控制块" class="headerlink" title="线程控制块"></a>线程控制块</h3><p>与进程类似，线程也有自己的线程控制块(TCB)，用于保存与自身相关的信息。</p>
-<h2 id="纤程"><a href="#纤程" class="headerlink" title="纤程"></a>纤程</h2><p>随着计算机的发展，应用程序变得越来越复杂，在复杂。与操作系统调度器相比，应用程序对于线程的语义以及执行状态更加了解，因此可以做出更加的调度策略。此外用户态线程更加轻量级，创建与上下文切换的开销更小。在这样的背景下，操作系统开始提供对用户态线程（即纤程）的支持。</p>
+<h3 id="线程地址空间布局">线程地址空间布局</h3>
+<p>进程为每个线程都准备了不同的栈，供它们存放临时的数据。进程除了栈只玩的所有其他区域都由该进程的所有线程共享，包括堆数据段以及代码段。</p>
+<h3 id="线程控制块">线程控制块</h3>
+<p>与进程类似，线程也有自己的线程控制块(TCB)，用于保存与自身相关的信息。</p>
+<h2 id="纤程">纤程</h2>
+<p>随着计算机的发展，应用程序变得越来越复杂，在复杂。与操作系统调度器相比，应用程序对于线程的语义以及执行状态更加了解，因此可以做出更加的调度策略。此外用户态线程更加轻量级，创建与上下文切换的开销更小。在这样的背景下，操作系统开始提供对用户态线程（即纤程）的支持。</p>
 <p>纤程的上下文切换的触发机制与内核态线程有较大不同。内核态线程的切换时强制的，因此称为抢占式多任务处理。而纤程在遇到阻塞时会放弃CPU，允许其他纤程的调度，这种调度方式称为合作式多任务处理。</p>
 <p>除了操作系统以外，很多程序语言也提供了对于纤程的支持，方便应用程序创建和管理轻量级的上下文，从而支持更复杂的应用。一般将程序语言提供的纤程支持称为协程。</p>
-<h3 id="POSIX的协程支持"><a href="#POSIX的协程支持" class="headerlink" title="POSIX的协程支持"></a>POSIX的协程支持</h3><p>POSIX中用来支持纤程的是ucontext.h中的接口。</p>
+<h3 id="posix的协程支持">POSIX的协程支持</h3>
+<p>POSIX中用来支持纤程的是ucontext.h中的接口。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span><span class="string">&lt;ucontext.h&gt;</span></span></span><br><span class="line"><span class="comment">/* 保存当前上下文 */</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">getcontext</span> <span class="params">(<span class="type">ucontext_t</span> *__ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 切换到另一个上下文 */</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">setcontext</span> <span class="params">(<span class="type">const</span> <span class="type">ucontext_t</span> *__ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 切换上下文 */</span></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">swapcontext</span> <span class="params">(<span class="type">ucontext_t</span> *__restrict __oucp,<span class="type">const</span> <span class="type">ucontext_t</span> *__restrict __ucp)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 创建全新的上下文 */</span></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">makecontext</span> <span class="params">(<span class="type">ucontext_t</span> *__ucp, <span class="type">void</span> (*__func) (<span class="type">void</span>),<span class="type">int</span> __argc, ...)</span></span>;</span><br></pre></td></tr></table></figure>
-
 <p>下面的代码实现了生产者消费者模型。在主函数中使用makecontext创建了两个上下文context1和context2，分别用于调用produce和consume函数。此后程序通过setcontext不断在produce和consume函数之间跳转，不断重复的生产和消费。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;iostream&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;sys/wait.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="keyword">include</span> <span class="string">&lt;ucontext.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="type">ucontext_t</span> context1, context2;</span><br><span class="line"><span class="type">int</span> current = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">produce</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    current++;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;生产者当前值为&quot;</span> &lt;&lt; current &lt;&lt; std::endl;</span><br><span class="line">    <span class="built_in">setcontext</span>(&amp;context2);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">void</span> <span class="title">consumer</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    std::cout &lt;&lt; <span class="string">&quot;消费者当前值为&quot;</span> &lt;&lt; current &lt;&lt; std::endl;</span><br><span class="line">    <span class="built_in">setcontext</span>(&amp;context1);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="type">int</span> <span class="title">main</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="type">char</span> iteratorStack1[SIGSTKSZ];</span><br><span class="line">    <span class="type">char</span> iteratorStack2[SIGSTKSZ];</span><br><span class="line">    <span class="built_in">getcontext</span>(&amp;context1);</span><br><span class="line">    context<span class="number">1.</span>uc_link = <span class="literal">nullptr</span>;</span><br><span class="line">    context<span class="number">1.</span>uc_stack.ss_sp = iteratorStack1;</span><br><span class="line">    context<span class="number">1.</span>uc_stack.ss_size = <span class="built_in">sizeof</span>(iteratorStack1);</span><br><span class="line">    <span class="built_in">makecontext</span>(&amp;context1, produce, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">getcontext</span>(&amp;context2);</span><br><span class="line">    context<span class="number">2.</span>uc_link = <span class="literal">nullptr</span>;</span><br><span class="line">    context<span class="number">2.</span>uc_stack.ss_sp = iteratorStack2;</span><br><span class="line">    context<span class="number">2.</span>uc_stack.ss_size = <span class="built_in">sizeof</span>(iteratorStack2);</span><br><span class="line">    <span class="built_in">makecontext</span>(&amp;context2, consumer, <span class="number">0</span>);</span><br><span class="line"></span><br><span class="line">    <span class="built_in">setcontext</span>(&amp;context1);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
 <p>通过利用纤程，可以对生产者消费者这样的多个模块协作的场景进行有效的支持。在生产者完成任务以后，可以立即切换到消费者继续执行。由于该切换由用户态线程库完成，不需要操作系统调用，可以达到很好的性能。</p>
 
     </div>
@@ -422,7 +440,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">进程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81"><span class="nav-number">1.1.</span> <span class="nav-text">进程状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80"><span class="nav-number">1.2.</span> <span class="nav-text">进程内存空间布局</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%9D%97"><span class="nav-number">1.3.</span> <span class="nav-text">进程控制块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2"><span class="nav-number">1.4.</span> <span class="nav-text">上下文切换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Linux%E8%BF%9B%E7%A8%8B%E6%93%8D%E4%BD%9C"><span class="nav-number">1.5.</span> <span class="nav-text">Linux进程操作</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E5%88%9B%E5%BB%BAfork"><span class="nav-number">1.5.1.</span> <span class="nav-text">进程创建fork</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E6%89%A7%E8%A1%8Cexec"><span class="nav-number">1.5.2.</span> <span class="nav-text">进程执行exec</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%AE%A1%E7%90%86"><span class="nav-number">1.5.3.</span> <span class="nav-text">进程管理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%9B%91%E6%8E%A7wait"><span class="nav-number">1.5.4.</span> <span class="nav-text">进程监控wait</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80"><span class="nav-number">2.1.</span> <span class="nav-text">线程地址空间布局</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%9D%97"><span class="nav-number">2.2.</span> <span class="nav-text">线程控制块</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%A4%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">纤程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#POSIX%E7%9A%84%E5%8D%8F%E7%A8%8B%E6%94%AF%E6%8C%81"><span class="nav-number">3.1.</span> <span class="nav-text">POSIX的协程支持</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">进程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%8A%B6%E6%80%81"><span class="nav-number">1.1.</span> <span class="nav-text">进程状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E5%86%85%E5%AD%98%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80"><span class="nav-number">1.2.</span> <span class="nav-text">进程内存空间布局</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%9D%97"><span class="nav-number">1.3.</span> <span class="nav-text">进程控制块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%B8%8A%E4%B8%8B%E6%96%87%E5%88%87%E6%8D%A2"><span class="nav-number">1.4.</span> <span class="nav-text">上下文切换</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#linux%E8%BF%9B%E7%A8%8B%E6%93%8D%E4%BD%9C"><span class="nav-number">1.5.</span> <span class="nav-text">Linux进程操作</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E5%88%9B%E5%BB%BAfork"><span class="nav-number">1.5.1.</span> <span class="nav-text">进程创建fork</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E6%89%A7%E8%A1%8Cexec"><span class="nav-number">1.5.2.</span> <span class="nav-text">进程执行exec</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%AE%A1%E7%90%86"><span class="nav-number">1.5.3.</span> <span class="nav-text">进程管理</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E8%BF%9B%E7%A8%8B%E7%9B%91%E6%8E%A7wait"><span class="nav-number">1.5.4.</span> <span class="nav-text">进程监控wait</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B"><span class="nav-number">2.</span> <span class="nav-text">线程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E5%9C%B0%E5%9D%80%E7%A9%BA%E9%97%B4%E5%B8%83%E5%B1%80"><span class="nav-number">2.1.</span> <span class="nav-text">线程地址空间布局</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E7%BA%BF%E7%A8%8B%E6%8E%A7%E5%88%B6%E5%9D%97"><span class="nav-number">2.2.</span> <span class="nav-text">线程控制块</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BA%A4%E7%A8%8B"><span class="nav-number">3.</span> <span class="nav-text">纤程</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#posix%E7%9A%84%E5%8D%8F%E7%A8%8B%E6%94%AF%E6%8C%81"><span class="nav-number">3.1.</span> <span class="nav-text">POSIX的协程支持</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -435,20 +453,20 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-count">40</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-count">36</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -495,12 +513,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">172k</span>
+    <span title="站点总字数">196k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">8:13</span>
+    <span title="站点阅读时长">9:21</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
@@ -582,6 +600,8 @@
 
 
 
+
+  
 
   
 

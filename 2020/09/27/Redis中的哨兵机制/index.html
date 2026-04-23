@@ -259,26 +259,31 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p> 哨兵是Redis高可用的解决方案，由Sentinel实例组成的哨兵系统可以监视主服务器和从服务器。当被监视的主服务器处于下线状态时，自动将某个从服务器升级为新的主服务器，然后由新的主服务器代替已下线的主服务器处理命令请求。</p>
-<h2 id="启动Sentinel节点"><a href="#启动Sentinel节点" class="headerlink" title="启动Sentinel节点"></a>启动Sentinel节点</h2><p>使用如下的命令可以启动Sentinel节点。其中./sentinel.conf代表sentinel的配置文件位置。</p>
+        <p>哨兵是Redis高可用的解决方案，由Sentinel实例组成的哨兵系统可以监视主服务器和从服务器。当被监视的主服务器处于下线状态时，自动将某个从服务器升级为新的主服务器，然后由新的主服务器代替已下线的主服务器处理命令请求。</p>
+<h2 id="启动sentinel节点">启动Sentinel节点</h2>
+<p>使用如下的命令可以启动Sentinel节点。其中./sentinel.conf代表sentinel的配置文件位置。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">redis-sentinel ./sentinel.conf</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">或</span></span><br><span class="line">redis-server ./sentinel.conf --sentinel</span><br></pre></td></tr></table></figure>
-
 <p>当一个Sentinel节点启动时，会执行以下的步骤：</p>
-<h3 id="初始化服务器"><a href="#初始化服务器" class="headerlink" title="初始化服务器"></a>初始化服务器</h3><p>Redis的Sentinel节点本质就是一个Redis服务器，启动Sentinel节点的第一步就是初始化一个Redis服务器。与普通的Redis服务器不同，Sentinel节点不会载入RDB和AOF文件。初始化完成以后，将普通服务器的代码替换成为Sentinel节点的代码，替换的部分包括服务器运行的端口、可执行的命令表等等。</p>
-<h3 id="初始化sentinel状态"><a href="#初始化sentinel状态" class="headerlink" title="初始化sentinel状态"></a>初始化sentinel状态</h3><p>接下来，服务器会初始化一个sentinelState结构，保存所有和Sentinel功能相关的状态。其结构如下：</p>
+<h3 id="初始化服务器">初始化服务器</h3>
+<p>Redis的Sentinel节点本质就是一个Redis服务器，启动Sentinel节点的第一步就是初始化一个Redis服务器。与普通的Redis服务器不同，Sentinel节点不会载入RDB和AOF文件。初始化完成以后，将普通服务器的代码替换成为Sentinel节点的代码，替换的部分包括服务器运行的端口、可执行的命令表等等。</p>
+<h3 id="初始化sentinel状态">初始化sentinel状态</h3>
+<p>接下来，服务器会初始化一个sentinelState结构，保存所有和Sentinel功能相关的状态。其结构如下：</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">sentinelState</span> &#123;</span></span><br><span class="line">    <span class="comment">// 当前纪元</span></span><br><span class="line">    <span class="type">uint64_t</span> current_epoch;</span><br><span class="line">    <span class="comment">// 保存了所有被这个 sentinel 监视的主服务器</span></span><br><span class="line">    <span class="comment">// 字典的键是主服务器的名字</span></span><br><span class="line">    <span class="comment">// 字典的值则是一个指向 sentinelRedisInstance 结构的指针</span></span><br><span class="line">    dict *masters;</span><br><span class="line">    <span class="comment">// 是否进入了 TILT 模式？</span></span><br><span class="line">    <span class="type">int</span> tilt;</span><br><span class="line">    <span class="comment">// 目前正在执行的脚本的数量</span></span><br><span class="line">    <span class="type">int</span> running_scripts;</span><br><span class="line">    <span class="comment">// 进入 TILT 模式的时间</span></span><br><span class="line">    <span class="type">mstime_t</span> tilt_start_time;</span><br><span class="line">    <span class="comment">// 最后一次执行时间处理器的时间</span></span><br><span class="line">    <span class="type">mstime_t</span> previous_time;</span><br><span class="line">    <span class="comment">// 一个 FIFO 队列，包含了所有需要执行的用户脚本</span></span><br><span class="line">    <span class="built_in">list</span> *scripts_queue;</span><br><span class="line">&#125; sentinel;</span><br></pre></td></tr></table></figure>
-
 <p>其中masters字典保存了所有所有被Sentinel节点监视的主服务器的相关信息。其键为监视主服务器的名字，值是一个sentinelRedisInstance结构的指针，代表一个被Sentinel节点监视的Redis服务器实例，可以是主服务器、从服务器或者另外一个Sentinel节点。sentinelRedisInstance结构中会保存实例的IP地址、端口号、实例运行ID等信息。</p>
-<h3 id="创建网络连接"><a href="#创建网络连接" class="headerlink" title="创建网络连接"></a>创建网络连接</h3><p>初始化Sentinel节点的最后一步就是创建连向被监视主服务器的网络连接。</p>
+<h3 id="创建网络连接">创建网络连接</h3>
+<p>初始化Sentinel节点的最后一步就是创建连向被监视主服务器的网络连接。</p>
 <p>对于每个被监视的主服务器来说，Sentinel节点会创建两个连向主服务器的异步网络连接。</p>
 <ul>
 <li>命令连接：用于向主服务发送命令，并接受命令回复</li>
 <li>订阅连接：用于订阅主服务器的__sentine__:hello频道</li>
 </ul>
 <p>通过这两个连接，就可以来与被监视主服务器进行通信。</p>
-<h2 id="获取服务器信息"><a href="#获取服务器信息" class="headerlink" title="获取服务器信息"></a>获取服务器信息</h2><h3 id="获取主服务器信息"><a href="#获取主服务器信息" class="headerlink" title="获取主服务器信息"></a>获取主服务器信息</h3><p>Sentinel节点会以每10秒1次的频率，向被监视的主服务器发送INFO信息，通过主服务器回复Sentinel节点可以获取主服务器本身的信息和主服务器属下所有从服务器的信息。通过主服务器传递的从服务器信息，Sentinel无需用户提供服务器的地址信息就可以自动发现从服务器。</p>
+<h2 id="获取服务器信息">获取服务器信息</h2>
+<h3 id="获取主服务器信息">获取主服务器信息</h3>
+<p>Sentinel节点会以每10秒1次的频率，向被监视的主服务器发送INFO信息，通过主服务器回复Sentinel节点可以获取主服务器本身的信息和主服务器属下所有从服务器的信息。通过主服务器传递的从服务器信息，Sentinel无需用户提供服务器的地址信息就可以自动发现从服务器。</p>
 <p>根据主服务器传递的信息，Sentinel会对主服务器的实例结构进行更新。例如主服务器重启以后，运行ID就会和之前保存的ID不同，就需要更新运行ID信息。</p>
-<h3 id="获取从服务器信息"><a href="#获取从服务器信息" class="headerlink" title="获取从服务器信息"></a>获取从服务器信息</h3><p>Sentinel节点在分析INFO命令中的从服务器信息时，会检查从服务器的实例结构是否已经存在于slaves字典之中。如果对应的实例结构已经存在，那么就对已保存的实例结构进行更新。否则说明这个从服务器是新发现的从服务器，会在slaves字典之中为从服务器创建一个新的实例结构。</p>
+<h3 id="获取从服务器信息">获取从服务器信息</h3>
+<p>Sentinel节点在分析INFO命令中的从服务器信息时，会检查从服务器的实例结构是否已经存在于slaves字典之中。如果对应的实例结构已经存在，那么就对已保存的实例结构进行更新。否则说明这个从服务器是新发现的从服务器，会在slaves字典之中为从服务器创建一个新的实例结构。</p>
 <p>当Sentinel发现有新的从服务器出现时，除了会创建对应的实例结构外，还会创建到从服务器的命令连接以及订阅连接。在创建连接之后，Sentinel会以每10秒1次的频率，向从服务器发送INFO命令。根据INFO命令的回复，Sentinel会获得以下的信息：</p>
 <ul>
 <li>从服务器运行ID</li>
@@ -286,9 +291,10 @@
 <li>主服务器IP和端口号</li>
 <li>主从服务器连接状态</li>
 <li>从服务器优先级</li>
-<li>从服务器的复制偏移量 </li>
+<li>从服务器的复制偏移量</li>
 </ul>
-<h2 id="发送与接受信息"><a href="#发送与接受信息" class="headerlink" title="发送与接受信息"></a>发送与接受信息</h2><p>Sentinel会以两秒一次的频率，通过命令连接向所有被监视的主服务器和从服务器发送一条信息，信息的内容包括：</p>
+<h2 id="发送与接受信息">发送与接受信息</h2>
+<p>Sentinel会以两秒一次的频率，通过命令连接向所有被监视的主服务器和从服务器发送一条信息，信息的内容包括：</p>
 <ul>
 <li>Sentinel的IP地址</li>
 <li>Sentinel的端口号</li>
@@ -301,17 +307,24 @@
 </ul>
 <p>当Sentinel与服务器建立起订阅连接以后，Sentinel会通过订阅连接，向服务器发送以下命令</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">SUBSCRIBE __sentinel__:hello</span><br></pre></td></tr></table></figure>
-
 <p>对于监视一个同服务器的多个Sentinel来说，一个Sentinel发送的信息会被其他Sentinel接收到，用于更新其他Sentinel对于发送信息Sentinel的认知和其他Senttinel对于被监视服务器的认知。</p>
 <p>例如sentinel1、sentinel2、sentinel3都在监视同一个服务器，当sentinel1向服务器的__sentinel__:hello频道发送一条信息时，所有的sentinel都会收到这条信息。</p>
 <p>当Sentinel从__sentinel__:hello频道接收到一条信息时，会对该信息进行分析，提取从中的Sentinel的运行ID，如果与自己的运行ID相同，说明是自己发送的，不做进一步处理。否则说明是其他的Sentinel发送的，更新信息中的各个参数。如果在此过程中发现了新的Sentinel节点，会创建连向其他Sentinel的命令连接，使得最终监视同一服务器的Sentinel形成相互连接的网络。</p>
-<h2 id="检测下线状态"><a href="#检测下线状态" class="headerlink" title="检测下线状态"></a>检测下线状态</h2><p>Sentinel会以每秒一次的频率向所有与它创建了命令连接的实例（包括主服务器，从服务器，Sentinel节点）发送PING命令。通过PING命令的回复来判断实例是否在线。如果一个实例在一定时间内连续向Sentinel返回无效回复，那么会将该实例状态设置为主观下线状态。</p>
+<h2 id="检测下线状态">检测下线状态</h2>
+<p>Sentinel会以每秒一次的频率向所有与它创建了命令连接的实例（包括主服务器，从服务器，Sentinel节点）发送PING命令。通过PING命令的回复来判断实例是否在线。如果一个实例在一定时间内连续向Sentinel返回无效回复，那么会将该实例状态设置为主观下线状态。</p>
 <p>当Sentinel将一个主服务器判断为主观下线之后，为了确认主服务是否真的下线，同样会对监视这一主服务器的Sentinel进行询问。如果从其他Sentinel中接收到足够多的下线判断后，会将服务器判定为客观下线，对主服务器进行故障转移操作。</p>
-<h2 id="选举领头"><a href="#选举领头" class="headerlink" title="选举领头"></a>选举领头</h2><p>当一个主服务器被判断为客观下线之后，监视这个下线服务器的Sentinel会进行协商，选举出一个领头Sentinel。由该领头Sentinel对下线服务器进行故障转移操作。选举领头的方式采用的是Raft算法。</p>
-<h2 id="故障转移"><a href="#故障转移" class="headerlink" title="故障转移"></a>故障转移</h2><p>在选举出领头Sentinel之后，领头Sentinel会对已下线的主服务器进行故障转移操作，其步骤如下：</p>
-<h3 id="选出主服务器"><a href="#选出主服务器" class="headerlink" title="选出主服务器"></a>选出主服务器</h3><p>在主服务器下属的的所有从服务器中，选择出一个状态良好并且数据完整的从服务器，向这个从服务器发送SLAVE no one命令，将从服务器转换为主服务器。在发送完成以后，领头Sentinel会向被升级的从服务器发送INFO命令，观察其角色信息。如果返回的角色信息变为了master，则进行下一步操作。</p>
-<h3 id="修改从服务器的复制目标"><a href="#修改从服务器的复制目标" class="headerlink" title="修改从服务器的复制目标"></a>修改从服务器的复制目标</h3><p>当新的主服务器出现以后，通过向所有的从服务器发送SLAVEOF命令，让所有的从服务器去复制新的主服务器。</p>
-<h3 id="将旧的主服务器变为从服务器"><a href="#将旧的主服务器变为从服务器" class="headerlink" title="将旧的主服务器变为从服务器"></a>将旧的主服务器变为从服务器</h3><p>当旧的主服务器重新上线之后，Sentinel会向其发送SLAVEOF命令，让它成为新的主服务器的从服务器。</p>
+<h2 id="选举领头">选举领头</h2>
+<p>当一个主服务器被判断为客观下线之后，监视这个下线服务器的Sentinel会进行协商，选举出一个领头Sentinel。由该领头Sentinel对下线服务器进行故障转移操作。选举领头的方式采用的是Raft算法。</p>
+<h2 id="故障转移">故障转移</h2>
+<p>在选举出领头Sentinel之后，领头Sentinel会对已下线的主服务器进行故障转移操作，其步骤如下：</p>
+<h3 id="选出主服务器">选出主服务器</h3>
+<p>在主服务器下属的的所有从服务器中，选择出一个状态良好并且数据完整的从服务器，向这个从服务器发送SLAVE
+no
+one命令，将从服务器转换为主服务器。在发送完成以后，领头Sentinel会向被升级的从服务器发送INFO命令，观察其角色信息。如果返回的角色信息变为了master，则进行下一步操作。</p>
+<h3 id="修改从服务器的复制目标">修改从服务器的复制目标</h3>
+<p>当新的主服务器出现以后，通过向所有的从服务器发送SLAVEOF命令，让所有的从服务器去复制新的主服务器。</p>
+<h3 id="将旧的主服务器变为从服务器">将旧的主服务器变为从服务器</h3>
+<p>当旧的主服务器重新上线之后，Sentinel会向其发送SLAVEOF命令，让它成为新的主服务器的从服务器。</p>
 
     </div>
 
@@ -412,7 +425,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8Sentinel%E8%8A%82%E7%82%B9"><span class="nav-number">1.</span> <span class="nav-text">启动Sentinel节点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">1.1.</span> <span class="nav-text">初始化服务器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96sentinel%E7%8A%B6%E6%80%81"><span class="nav-number">1.2.</span> <span class="nav-text">初始化sentinel状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5"><span class="nav-number">1.3.</span> <span class="nav-text">创建网络连接</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">2.</span> <span class="nav-text">获取服务器信息</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E4%B8%BB%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">2.1.</span> <span class="nav-text">获取主服务器信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E4%BB%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">2.2.</span> <span class="nav-text">获取从服务器信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E4%B8%8E%E6%8E%A5%E5%8F%97%E4%BF%A1%E6%81%AF"><span class="nav-number">3.</span> <span class="nav-text">发送与接受信息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E4%B8%8B%E7%BA%BF%E7%8A%B6%E6%80%81"><span class="nav-number">4.</span> <span class="nav-text">检测下线状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%89%E4%B8%BE%E9%A2%86%E5%A4%B4"><span class="nav-number">5.</span> <span class="nav-text">选举领头</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB"><span class="nav-number">6.</span> <span class="nav-text">故障转移</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E5%87%BA%E4%B8%BB%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">6.1.</span> <span class="nav-text">选出主服务器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9%E4%BB%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9A%84%E5%A4%8D%E5%88%B6%E7%9B%AE%E6%A0%87"><span class="nav-number">6.2.</span> <span class="nav-text">修改从服务器的复制目标</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%86%E6%97%A7%E7%9A%84%E4%B8%BB%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%8F%98%E4%B8%BA%E4%BB%8E%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">6.3.</span> <span class="nav-text">将旧的主服务器变为从服务器</span></a></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%90%AF%E5%8A%A8sentinel%E8%8A%82%E7%82%B9"><span class="nav-number">1.</span> <span class="nav-text">启动Sentinel节点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">1.1.</span> <span class="nav-text">初始化服务器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9D%E5%A7%8B%E5%8C%96sentinel%E7%8A%B6%E6%80%81"><span class="nav-number">1.2.</span> <span class="nav-text">初始化sentinel状态</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%9B%E5%BB%BA%E7%BD%91%E7%BB%9C%E8%BF%9E%E6%8E%A5"><span class="nav-number">1.3.</span> <span class="nav-text">创建网络连接</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">2.</span> <span class="nav-text">获取服务器信息</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E4%B8%BB%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">2.1.</span> <span class="nav-text">获取主服务器信息</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%8E%B7%E5%8F%96%E4%BB%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E4%BF%A1%E6%81%AF"><span class="nav-number">2.2.</span> <span class="nav-text">获取从服务器信息</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%91%E9%80%81%E4%B8%8E%E6%8E%A5%E5%8F%97%E4%BF%A1%E6%81%AF"><span class="nav-number">3.</span> <span class="nav-text">发送与接受信息</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A3%80%E6%B5%8B%E4%B8%8B%E7%BA%BF%E7%8A%B6%E6%80%81"><span class="nav-number">4.</span> <span class="nav-text">检测下线状态</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%80%89%E4%B8%BE%E9%A2%86%E5%A4%B4"><span class="nav-number">5.</span> <span class="nav-text">选举领头</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%85%E9%9A%9C%E8%BD%AC%E7%A7%BB"><span class="nav-number">6.</span> <span class="nav-text">故障转移</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E5%87%BA%E4%B8%BB%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">6.1.</span> <span class="nav-text">选出主服务器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%AE%E6%94%B9%E4%BB%8E%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%9A%84%E5%A4%8D%E5%88%B6%E7%9B%AE%E6%A0%87"><span class="nav-number">6.2.</span> <span class="nav-text">修改从服务器的复制目标</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%B0%86%E6%97%A7%E7%9A%84%E4%B8%BB%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%8F%98%E4%B8%BA%E4%BB%8E%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">6.3.</span> <span class="nav-text">将旧的主服务器变为从服务器</span></a></li></ol></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -425,20 +438,20 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-count">40</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-count">36</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -485,12 +498,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">172k</span>
+    <span title="站点总字数">196k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">8:13</span>
+    <span title="站点阅读时长">9:21</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
@@ -572,6 +585,8 @@
 
 
 
+
+  
 
   
 

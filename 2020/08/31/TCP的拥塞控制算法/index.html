@@ -265,41 +265,63 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>在解释TCP的拥塞控制算法之前，需要了解TCP的两个窗口RWND接收窗口和CWND拥塞窗口。  </p>
-<p>接收端会维护接收窗口，会告诉发送端自己能够处理多少的数据，在发送ACK的时候，会告诉发送端自己的接收窗口的大小。    </p>
-<p>发送端会维护拥塞窗口，当网络上出现丢包等表明网络拥塞的情况时的情况时，需要修改自己的窗口大小来进行调整。  </p>
+        <h2 id="前言">前言</h2>
+<p>在解释TCP的拥塞控制算法之前，需要了解TCP的两个窗口RWND接收窗口和CWND拥塞窗口。</p>
+<p>接收端会维护接收窗口，会告诉发送端自己能够处理多少的数据，在发送ACK的时候，会告诉发送端自己的接收窗口的大小。</p>
+<p>发送端会维护拥塞窗口，当网络上出现丢包等表明网络拥塞的情况时的情况时，需要修改自己的窗口大小来进行调整。</p>
 <p>接收窗口的数值接收端能够明确的告诉发送端具体的大小，但是拥塞窗口没有明确的数值告诉发送方应该设置为多大。</p>
 <p>为了解决这一问题，需要使用到拥塞控制算法，来告诉发送方应该设置窗口为多大来避免出现网络拥塞。</p>
-<h2 id="Tahoe和RENO算法"><a href="#Tahoe和RENO算法" class="headerlink" title="Tahoe和RENO算法"></a>Tahoe和RENO算法</h2><p>在最原始的拥塞控制算法Tahoe中，将整个拥塞控制算法分为慢启动和拥塞避免两个部分。  </p>
-<p>慢启动指的是TCP连接刚建立的时候，一点一点的提速，试探网络的承受能力。每过一个RTT，拥塞窗口的大小翻倍，直到CWND大小达到了设置的慢启动阈值ssthresh或者发生了丢包，进入到拥塞避免算法。  </p>
+<h2 id="tahoe和reno算法">Tahoe和RENO算法</h2>
+<p>在最原始的拥塞控制算法Tahoe中，将整个拥塞控制算法分为慢启动和拥塞避免两个部分。</p>
+<p>慢启动指的是TCP连接刚建立的时候，一点一点的提速，试探网络的承受能力。每过一个RTT，拥塞窗口的大小翻倍，直到CWND大小达到了设置的慢启动阈值ssthresh或者发生了丢包，进入到拥塞避免算法。</p>
 <p>在拥塞避免的过程中，每过一个RTT，CWND的大小加一。当网络中发生丢包时，将ssthresh设置为当前CWND的一半，CWND重置为1进入慢启动过程。</p>
-<p><img data-src="Tahoe.png" alt="Tahoe算法图示"></p>
+<figure>
+<img data-src="Tahoe.png" alt="Tahoe算法图示" />
+<figcaption aria-hidden="true">Tahoe算法图示</figcaption>
+</figure>
 <p>RENO算法在Tahoe上进行了改进，当网络中出现了重复确认的情况时，Reno算法只会降低CWND为当前CWND大小的一半，来提高网络的利用率。</p>
-<p><img data-src="Reno.png" alt="RENO算法图示"></p>
-<p>Reno的问题主要有以下几点：</p>
-<ul>
-<li>在于受链路Buffer的影响很大。</li>
-<li>因为其CWND大小每次只能加一,对于高带宽网络可能需要很长的时间才能够到达合适的拥塞窗口大小，在过程中会浪费大量的网络带宽，对于高带宽的网络利用率相当低。</li>
-<li>每收到一个ACK就将CWND加一，对于RTT小的连接，其CWND的增长速度会很快，但是对于RTT大的连接，其在链路上占用的资源会比较小。RTT小的连接会不公平的占用更多的带宽。</li>
-</ul>
-<h2 id="BIC和CUBIC算法"><a href="#BIC和CUBIC算法" class="headerlink" title="BIC和CUBIC算法"></a>BIC和CUBIC算法</h2><p>BIC算法在RENO的基础上做了一些改进，将拥塞避免的过程分为三部分</p>
-<ul>
-<li>在丢包后将CWND降为丢包时 CWND 的常数倍（一般为0.8),并选择上次丢包时的CWND和本次丢包的CWND作为饱和点，然后以一个较快的速度增长CWND大小。</li>
-<li>在接近饱和点，使用二分算法来去逐步的接近饱和点。</li>
-<li>到达饱和点之后转为二次函数去探测下一个极限。当出现丢包时重复第一部分。</li>
-</ul>
+<figure>
+<img data-src="Reno.png" alt="RENO算法图示" />
+<figcaption aria-hidden="true">RENO算法图示</figcaption>
+</figure>
+<p>Reno的问题主要有以下几点： * 在于受链路Buffer的影响很大。 *
+因为其CWND大小每次只能加一,对于高带宽网络可能需要很长的时间才能够到达合适的拥塞窗口大小，在过程中会浪费大量的网络带宽，对于高带宽的网络利用率相当低。
+*
+每收到一个ACK就将CWND加一，对于RTT小的连接，其CWND的增长速度会很快，但是对于RTT大的连接，其在链路上占用的资源会比较小。RTT小的连接会不公平的占用更多的带宽。</p>
+<h2 id="bic和cubic算法">BIC和CUBIC算法</h2>
+<p>BIC算法在RENO的基础上做了一些改进，将拥塞避免的过程分为三部分 *
+在丢包后将CWND降为丢包时 CWND
+的常数倍（一般为0.8),并选择上次丢包时的CWND和本次丢包的CWND作为饱和点，然后以一个较快的速度增长CWND大小。
+* 在接近饱和点，使用二分算法来去逐步的接近饱和点。 *
+到达饱和点之后转为二次函数去探测下一个极限。当出现丢包时重复第一部分。</p>
 <p>BIC的好处在于丢包后能够迅速的进行恢复，在稳定期能够保持更长的时间，同时能够继续探测更高的带宽值。</p>
-<p><img data-src="BIC.png" alt="BIC算法图示"></p>
+<figure>
+<img data-src="BIC.png" alt="BIC算法图示" />
+<figcaption aria-hidden="true">BIC算法图示</figcaption>
+</figure>
 <p>CUBIC比BIC算法在搜索拥塞窗口最大值的过程中更加的温和，使用三次函数来代替二分算法并且使用拐点值作为拥塞窗口的大小。</p>
-<p><img data-src="CUBIC.png" alt="CUBIC算法图示"></p>
-<p>CUBIC 的优势在于因为其算法与RTT无关，所以更加公平，同时适合于网络带宽大的网络。</p>
+<figure>
+<img data-src="CUBIC.png" alt="CUBIC算法图示" />
+<figcaption aria-hidden="true">CUBIC算法图示</figcaption>
+</figure>
+<p>CUBIC
+的优势在于因为其算法与RTT无关，所以更加公平，同时适合于网络带宽大的网络。</p>
 <p>但是CUBIC依旧有缺点，其缺点在于当网络的传输带宽出现变化时，需要比较长的时间才能达到Wmax，同时CUBIC更容易加重链路的负担。</p>
-<h2 id="VEGAS-算法"><a href="#VEGAS-算法" class="headerlink" title="VEGAS 算法"></a>VEGAS 算法</h2><p>基于丢包的算法可以达到最大的传输速率，但是它是以高延迟和高丢包率作为代价的，但是它是以高延迟和高丢包率作为代价的。随着内存价格降低，交换机的Buffer越来越大后，容易导致Bufferfloat，</p>
-<p>与之前基于丢包的算法不同，VEGAS 算法会监控RTT，在尝试增加发送速率时如果发现丢包或者RTT增加就降低发送速率，认为网络中出现拥塞，就将降低发送速率。</p>
+<h2 id="vegas-算法">VEGAS 算法</h2>
+<p>基于丢包的算法可以达到最大的传输速率，但是它是以高延迟和高丢包率作为代价的，但是它是以高延迟和高丢包率作为代价的。随着内存价格降低，交换机的Buffer越来越大后，容易导致Bufferfloat，</p>
+<p>与之前基于丢包的算法不同，VEGAS
+算法会监控RTT，在尝试增加发送速率时如果发现丢包或者RTT增加就降低发送速率，认为网络中出现拥塞，就将降低发送速率。</p>
 <p>但是其致命的缺点在于不能很好的跟基于丢包的算法共存，在同时使用时会导致竞争不过基于丢包的算法，因此没有得到大规模的应用。</p>
-<h2 id="PRR-算法"><a href="#PRR-算法" class="headerlink" title="PRR 算法"></a>PRR 算法</h2><p>TODO</p>
-<h2 id="BBR算法"><a href="#BBR算法" class="headerlink" title="BBR算法"></a>BBR算法</h2><p>TODO</p>
-<h2 id="参考文章"><a href="#参考文章" class="headerlink" title="参考文章"></a>参考文章</h2><p><a target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/TCP%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6">TCP拥塞控制-维基百科</a><br><a target="_blank" rel="noopener" href="https://juejin.im/post/6844904164837818382">常见 TCP 拥塞避免算法浏览-掘金</a><br><a target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/144273871">TCP拥塞控制详解-知乎</a></p>
+<h2 id="prr-算法">PRR 算法</h2>
+<p>TODO</p>
+<h2 id="bbr算法">BBR算法</h2>
+<p>TODO</p>
+<h2 id="参考文章">参考文章</h2>
+<p><a
+target="_blank" rel="noopener" href="https://zh.wikipedia.org/wiki/TCP%E6%8B%A5%E5%A1%9E%E6%8E%A7%E5%88%B6">TCP拥塞控制-维基百科</a>
+<a target="_blank" rel="noopener" href="https://juejin.im/post/6844904164837818382">常见 TCP
+拥塞避免算法浏览-掘金</a> <a
+target="_blank" rel="noopener" href="https://zhuanlan.zhihu.com/p/144273871">TCP拥塞控制详解-知乎</a></p>
 
     </div>
 
@@ -401,7 +423,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Tahoe%E5%92%8CRENO%E7%AE%97%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">Tahoe和RENO算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BIC%E5%92%8CCUBIC%E7%AE%97%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">BIC和CUBIC算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#VEGAS-%E7%AE%97%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">VEGAS 算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#PRR-%E7%AE%97%E6%B3%95"><span class="nav-number">5.</span> <span class="nav-text">PRR 算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#BBR%E7%AE%97%E6%B3%95"><span class="nav-number">6.</span> <span class="nav-text">BBR算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#tahoe%E5%92%8Creno%E7%AE%97%E6%B3%95"><span class="nav-number">2.</span> <span class="nav-text">Tahoe和RENO算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#bic%E5%92%8Ccubic%E7%AE%97%E6%B3%95"><span class="nav-number">3.</span> <span class="nav-text">BIC和CUBIC算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#vegas-%E7%AE%97%E6%B3%95"><span class="nav-number">4.</span> <span class="nav-text">VEGAS 算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#prr-%E7%AE%97%E6%B3%95"><span class="nav-number">5.</span> <span class="nav-text">PRR 算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#bbr%E7%AE%97%E6%B3%95"><span class="nav-number">6.</span> <span class="nav-text">BBR算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8F%82%E8%80%83%E6%96%87%E7%AB%A0"><span class="nav-number">7.</span> <span class="nav-text">参考文章</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -414,20 +436,20 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-count">40</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-count">36</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -474,12 +496,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">172k</span>
+    <span title="站点总字数">196k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">8:13</span>
+    <span title="站点阅读时长">9:21</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
@@ -561,6 +583,8 @@
 
 
 
+
+  
 
   
 

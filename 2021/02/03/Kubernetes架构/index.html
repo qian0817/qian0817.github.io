@@ -286,14 +286,20 @@
 </ul>
 <p>Kubernetes系统组件间只能通过API服务器进行通信，API服务器是和etcd通信的唯一组件，其他组件不会直接和etcd进行通信，而是通过API服务器来修改集群状态。</p>
 <p>控制平面的组件以及kube-proxy可以直接部署在系统上或者作为Pod来运行。Kubelet是唯一一个作为常规系统组件来运行的组件，被部署在master节点上，它把其他组件作为pod来运行。</p>
-<h2 id="etcd"><a href="#etcd" class="headerlink" title="etcd"></a>etcd</h2><p>etcd是一个响应快、分布式的key-value存储，Kubernetes创建的所有对象（pod、ReplicationController等等）都持久化存储到etcd中。只有API服务器能够与etcd进行通信，所有组件都通过API服务器间接的读取和写入数据到etcd当中。etcd是Kubernetes存储集群状态和元数据唯一的地方。</p>
+<h2 id="etcd">etcd</h2>
+<p>etcd是一个响应快、分布式的key-value存储，Kubernetes创建的所有对象（pod、ReplicationController等等）都持久化存储到etcd中。只有API服务器能够与etcd进行通信，所有组件都通过API服务器间接的读取和写入数据到etcd当中。etcd是Kubernetes存储集群状态和元数据唯一的地方。</p>
 <p>为了保证高可用，常常会运行多个etcd实例，etcd使用raft算法保证一致性。</p>
-<h2 id="API服务器"><a href="#API服务器" class="headerlink" title="API服务器"></a>API服务器</h2><p>Kubernetes API服务器作为中心组件，其他组件以及客户端（kubectl）都会调用API服务器。API服务器以restful API的形式提供了可以查询、修改集群状态的接口。API服务器负责将状态存储到etcd当中。</p>
+<h2 id="api服务器">API服务器</h2>
+<p>Kubernetes
+API服务器作为中心组件，其他组件以及客户端（kubectl）都会调用API服务器。API服务器以restful
+API的形式提供了可以查询、修改集群状态的接口。API服务器负责将状态存储到etcd当中。</p>
 <p>当接收到API请求后，API服务器内部会通过认证插件认证客户端、通过授权插件授权客户端、通过准入控制插件验证修改资源请求、验证资源以及持久化存储。</p>
 <p>API服务器会启动控制器以及其他一些组件来监控已部署资源的变更。控制平面可以请求订阅资源被创建修改的通知，使得组件可以在集群元数据变化的时候能够执行任何需要做的任务。</p>
 <p>客户端通过创建到API服务器的HTTP连接来监听变更，通过此连接，客户端会接收到监听对象的一系列变更通知。每当更新对象，服务器会把新版本对象发送到所有监听该对象的客户端。</p>
-<h2 id="调度器"><a href="#调度器" class="headerlink" title="调度器"></a>调度器</h2><p>调度器利用API服务器的监听机制等待新创建的pod，然后给每个新的没有节点的pod去分配节点。</p>
-<h2 id="控制器"><a href="#控制器" class="headerlink" title="控制器"></a>控制器</h2><p>控制器用于让系统的真实状态朝API服务器定义的期望的状态收敛，去完成具体资源的部署工作。</p>
+<h2 id="调度器">调度器</h2>
+<p>调度器利用API服务器的监听机制等待新创建的pod，然后给每个新的没有节点的pod去分配节点。</p>
+<h2 id="控制器">控制器</h2>
+<p>控制器用于让系统的真实状态朝API服务器定义的期望的状态收敛，去完成具体资源的部署工作。</p>
 <p>单个控制器、管理器进程当前组合了多个执行不同非冲突任务的控制器。这些控制器最终会被分解到不同的进程，控制器包括</p>
 <ul>
 <li>Replication控制器</li>
@@ -307,9 +313,12 @@
 <li>PersistentVolume控制器</li>
 <li>其他</li>
 </ul>
-<h2 id="kubelet"><a href="#kubelet" class="headerlink" title="kubelet"></a>kubelet</h2><p>Kubelet是负责所有运行在工作节点上的内容的组件。它的第一个任务就是在API服务器创建一个Node资源来注册该节点，然后持续监控API服务器是否是否把该节点分配给pod，然后启动pod容器，告知容器运行时从特定容器镜像运行容器。Kubelet随后监控运行的容器，向API服务器报告它们的状态、时间和资源消耗。</p>
+<h2 id="kubelet">kubelet</h2>
+<p>Kubelet是负责所有运行在工作节点上的内容的组件。它的第一个任务就是在API服务器创建一个Node资源来注册该节点，然后持续监控API服务器是否是否把该节点分配给pod，然后启动pod容器，告知容器运行时从特定容器镜像运行容器。Kubelet随后监控运行的容器，向API服务器报告它们的状态、时间和资源消耗。</p>
 <p>Kubelet也是运行容器存活探针的组件，当探针报错时会重启容器。当pod从API服务器删除时，Kubelet负责终止容器，并通知服务器pod已经被终止。</p>
-<h2 id="Service-Proxy"><a href="#Service-Proxy" class="headerlink" title="Service Proxy"></a>Service Proxy</h2><p>每个工作节点也会运行kube-proxy，确保客户端可以通过Kubernetes API连接到定义的服务。kube-proxy确保对服务IP和端口的连接最终能够到达支持服务的某个pod处。如果有多个pod支撑一个服务，那么代理会发挥对pod的负载均衡作用。</p>
+<h2 id="service-proxy">Service Proxy</h2>
+<p>每个工作节点也会运行kube-proxy，确保客户端可以通过Kubernetes
+API连接到定义的服务。kube-proxy确保对服务IP和端口的连接最终能够到达支持服务的某个pod处。如果有多个pod支撑一个服务，那么代理会发挥对pod的负载均衡作用。</p>
 
     </div>
 
@@ -410,7 +419,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#etcd"><span class="nav-number">1.</span> <span class="nav-text">etcd</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#API%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">API服务器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E5%99%A8"><span class="nav-number">3.</span> <span class="nav-text">调度器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A7%E5%88%B6%E5%99%A8"><span class="nav-number">4.</span> <span class="nav-text">控制器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kubelet"><span class="nav-number">5.</span> <span class="nav-text">kubelet</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Service-Proxy"><span class="nav-number">6.</span> <span class="nav-text">Service Proxy</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#etcd"><span class="nav-number">1.</span> <span class="nav-text">etcd</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#api%E6%9C%8D%E5%8A%A1%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">API服务器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%B0%83%E5%BA%A6%E5%99%A8"><span class="nav-number">3.</span> <span class="nav-text">调度器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8E%A7%E5%88%B6%E5%99%A8"><span class="nav-number">4.</span> <span class="nav-text">控制器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#kubelet"><span class="nav-number">5.</span> <span class="nav-text">kubelet</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#service-proxy"><span class="nav-number">6.</span> <span class="nav-text">Service Proxy</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -423,20 +432,20 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-count">40</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-count">36</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -483,12 +492,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">172k</span>
+    <span title="站点总字数">196k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">8:13</span>
+    <span title="站点阅读时长">9:21</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
@@ -570,6 +579,8 @@
 
 
 
+
+  
 
   
 

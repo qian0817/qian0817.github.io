@@ -23,20 +23,17 @@
     var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
   </script>
 
-  <meta name="description" content="PaxosPaxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。 Basic Paxos在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。 提议者决议一个值，用于投票表决。集群中">
+  <meta name="description" content="Paxos Paxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。 Basic Paxos 在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。 提议者决议一个值，用于投票表决。集">
 <meta property="og:type" content="article">
 <meta property="og:title" content="分布式一致性算法">
 <meta property="og:url" content="http://qian0817.top/2021/02/10/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%AE%97%E6%B3%95/index.html">
 <meta property="og:site_name" content="Qian0817">
-<meta property="og:description" content="PaxosPaxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。 Basic Paxos在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。 提议者决议一个值，用于投票表决。集群中">
+<meta property="og:description" content="Paxos Paxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。 Basic Paxos 在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。 提议者决议一个值，用于投票表决。集">
 <meta property="og:locale" content="zh_CN">
-<meta property="og:image" content="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE4.png">
-<meta property="og:image" content="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE7.png">
 <meta property="article:published_time" content="2021-02-10T12:05:32.000Z">
 <meta property="article:modified_time" content="2021-03-05T11:39:12.000Z">
 <meta property="article:author" content="qianlei">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE4.png">
 
 <link rel="canonical" href="http://qian0817.top/2021/02/10/%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%80%E8%87%B4%E6%80%A7%E7%AE%97%E6%B3%95/">
 
@@ -251,18 +248,31 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="Paxos"><a href="#Paxos" class="headerlink" title="Paxos"></a>Paxos</h2><p>Paxos算法包含两个部分。一个是Basic Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。</p>
-<h3 id="Basic-Paxos"><a href="#Basic-Paxos" class="headerlink" title="Basic Paxos"></a>Basic Paxos</h3><p>在Basic Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。</p>
+        <h2 id="paxos">Paxos</h2>
+<p>Paxos算法包含两个部分。一个是Basic
+Paxos算法，描述的是多节点之间如何就某个值达成共识。另一个是Multi
+Paxos算法，描述的是执行多个Basic Paxos实例，就一系列值达成共识。</p>
+<h3 id="basic-paxos">Basic Paxos</h3>
+<p>在Basic
+Paxos算法中，有提议者（Proposer），接受者（Acceptor），学习者（Learner）三种角色。</p>
 <p>提议者决议一个值，用于投票表决。集群中收到客户端请求的节点，才是提议者。提议者在收到客户端请求后，发起二阶段提交，进行共识协商。</p>
 <p>接收者对每个提议的值进行投票，并存储接受的值。一般来说，集群中的所有节点都在扮演接受者的角色。接受者参与共识协商，并接受和存储数据。</p>
 <p>学习者是被告知投票的结果，接受达成共识的值。一般来说，学习者是数据备份节点，比如主从模型的从节点，被动地接受数据，容灾备份。</p>
 <p>在准备阶段，客户端分别向所有的接受者发送准备请求。在准备请求中是不需要指定提议的值，只需要提案编号就可以了。如果接受者之前没有通过任何提案，那么会返回一个尚无提案的响应，并承诺以后不再通过编号小于该提案编号的提案。</p>
 <p>第二个阶段就是接受阶段，提议者在收到大部分节点的准备响应以后，会分别发送接受请求。当接受者收到客户端的接受请求时，如果提案的提案编号小于当前能通过的提案的最小提案编号，那么会被拒绝。如果提案编号不小于节点承诺能通过的提案的最小提案编号，那么多个节点之间就能达成了共识。</p>
-<h3 id="Multi-Paxos"><a href="#Multi-Paxos" class="headerlink" title="Multi Paxos"></a>Multi Paxos</h3><p>Basic Paxos只能就单个值达成共识，一旦遇到为一系列的值实现共识的，就需要使用到Multi Paxos算法了。</p>
-<p>Multi Paxos引入了领导者节点，领导者作为唯一的提议者，防止出现多个提议者提示提交提案的情况。当领导者处于稳定状态时，省掉准备阶段，直接进入接受阶段，从而降低往返的消息数，提升性能并降低延时。</p>
-<h2 id="Raft"><a href="#Raft" class="headerlink" title="Raft"></a>Raft</h2><p>Raft在Paxos算法的基础上，做了一些简化和限制。</p>
+<h3 id="multi-paxos">Multi Paxos</h3>
+<p>Basic
+Paxos只能就单个值达成共识，一旦遇到为一系列的值实现共识的，就需要使用到Multi
+Paxos算法了。</p>
+<p>Multi
+Paxos引入了领导者节点，领导者作为唯一的提议者，防止出现多个提议者提示提交提案的情况。当领导者处于稳定状态时，省掉准备阶段，直接进入接受阶段，从而降低往返的消息数，提升性能并降低延时。</p>
+<h2 id="raft">Raft</h2>
+<p>Raft在Paxos算法的基础上，做了一些简化和限制。</p>
 <p>Raft算法包含三种状态：领导者Leader，跟随者Follower以及候选人Candidate。在稳定状态下，只存在一个Leader节点和多个Follower节点，Leader节点通过心跳消息与各个Follower节点保持联系。raft算法中可能出现的状态转换关系如下图所示</p>
-<p><a target="_blank" rel="noopener" href="https://github.com/maemual/raft-zh_cn/blob/master/images/raft-%E5%9B%BE4.png"><img data-src="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE4.png" alt="图 4 "></a></p>
+<p><a
+target="_blank" rel="noopener" href="https://github.com/maemual/raft-zh_cn/blob/master/images/raft-图4.png"><img
+src="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE4.png"
+alt="图 4" /></a></p>
 <p>在集群刚启动时，所有的节点都是follower，在经过心跳超时超时时间以后，会转变成为candidate去拉取选票，获得大多数选票以后就变成了leader。此时如果大部分其他候选人发现了新的leader已经诞生，会自动转变为follower。如果经过一个选举超时时间以后仍然没有选举出leader，那么会重新开始一次新的选举。</p>
 <p>Raft算法在节点之间所使用的消息主要有两种</p>
 <ul>
@@ -270,18 +280,38 @@
 <li>AppendEntries，用于日志复制以及心跳信息，由Leader节点发出</li>
 </ul>
 <p>Raft在选举过程中有一个term参数，作为逻辑时钟值。在选举开始时，增加自己的term，在发送RequestVote消息以及AppendEntries带上自己的term信息，在收到RequestVote消息以及AppendEntries消息时，选择最大的term并更新自己的term。</p>
-<h3 id="选举过程"><a href="#选举过程" class="headerlink" title="选举过程"></a>选举过程</h3><p>Raft通过心跳机制发起leader选举。节点都是从follower状态开始的，如果收到了来自leader或candidate的AppendEntries RPC，那它就保持follower状态，避免争抢称为candidate。Leader会发送空的AppendEntries RPC作为心跳信号来确立自己的地位，如果follower经过选举超时时间仍然没有收到心跳，它就会认为leader已经挂了，发起新的一轮选举。</p>
-<h3 id="日志复制过程"><a href="#日志复制过程" class="headerlink" title="日志复制过程"></a>日志复制过程</h3><p>一旦leader被选举成功，就可以为客户端提供服务了。客户端提交每一条命令都会被按顺序记录到leader的日志中，并且加上term编号和顺序索引，然后向其他节点发送AppendEntries RPC用以复制日志。当大多数节点成功复制以后，leader就会提交命令，执行该命令并将结果返回给客户端。leader会保存当前已经提交的最高日志编号。当发送AppendEntries RPC时，会包含leader上一条刚处理过的命令，如果接收节点发现上一条命令不匹配，会拒绝执行。</p>
-<p>如果在过程中leader崩溃了，那么所记录的日志没有完全被复制，会造成日志不一致的情况，follower相比于当前的leader可能会丢失几条日志，也可能会额外多出几条日志，例如下图所示，a和b丢失了部分命令，c和d多了几条命令，e和f既有增多也有丢失。（场景 f 可能会这样发生，该服务器在任期 2 的时候是领导人，已附加了一些日志条目到自己的日志中，但在提交之前就崩溃了；重启后在任期 3 重新被选为领导人，并且又增加了一些日志条目到自己的日志中；在任期 2 和任期 3 的日志被提交之前，这个服务器又宕机了，并且在接下来的几个任期里一直处于宕机状态。）</p>
-<p><img data-src="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE7.png" alt="图 7"></p>
+<h3 id="选举过程">选举过程</h3>
+<p>Raft通过心跳机制发起leader选举。节点都是从follower状态开始的，如果收到了来自leader或candidate的AppendEntries
+RPC，那它就保持follower状态，避免争抢称为candidate。Leader会发送空的AppendEntries
+RPC作为心跳信号来确立自己的地位，如果follower经过选举超时时间仍然没有收到心跳，它就会认为leader已经挂了，发起新的一轮选举。</p>
+<h3 id="日志复制过程">日志复制过程</h3>
+<p>一旦leader被选举成功，就可以为客户端提供服务了。客户端提交每一条命令都会被按顺序记录到leader的日志中，并且加上term编号和顺序索引，然后向其他节点发送AppendEntries
+RPC用以复制日志。当大多数节点成功复制以后，leader就会提交命令，执行该命令并将结果返回给客户端。leader会保存当前已经提交的最高日志编号。当发送AppendEntries
+RPC时，会包含leader上一条刚处理过的命令，如果接收节点发现上一条命令不匹配，会拒绝执行。</p>
+<p>如果在过程中leader崩溃了，那么所记录的日志没有完全被复制，会造成日志不一致的情况，follower相比于当前的leader可能会丢失几条日志，也可能会额外多出几条日志，例如下图所示，a和b丢失了部分命令，c和d多了几条命令，e和f既有增多也有丢失。（场景
+f 可能会这样发生，该服务器在任期 2
+的时候是领导人，已附加了一些日志条目到自己的日志中，但在提交之前就崩溃了；重启后在任期
+3 重新被选为领导人，并且又增加了一些日志条目到自己的日志中；在任期 2
+和任期 3
+的日志被提交之前，这个服务器又宕机了，并且在接下来的几个任期里一直处于宕机状态。）</p>
+<figure>
+<img
+src="https://github.com/maemual/raft-zh_cn/raw/master/images/raft-%E5%9B%BE7.png"
+alt="图 7" />
+<figcaption aria-hidden="true">图 7</figcaption>
+</figure>
 <p>在Raft中，leader通过强制follower复制自己的日志来解决上述日志不一致的情形，冲突的日志将会被重写。为了让日志一致，先找到最新的一致的那条日志(如f中索引为3的日志条目)，然后把follower之后的日志全部删除，leader再把自己在那之后的日志全部推送给follower，这样就实现了一致。</p>
-<h2 id="Gossip"><a href="#Gossip" class="headerlink" title="Gossip"></a>Gossip</h2><p>Gossip利用一种随机的带传染性的方式，将信息传播到整个网络当中，实现最终一致性的算法。</p>
-<p>gossip的执行过程如下：Gossip 过程是由种子节点发起，当一个种子节点有状态需要更新到网络中的其他节点时，它会随机的选择周围几个节点散播消息，收到消息的节点也会重复该过程，直至最终网络中所有的节点都收到了消息。这个过程可能需要一定的时间，由于不能保证某个时刻所有节点都收到消息，但是理论上最终所有节点都会收到消息，因此它是一个最终一致性协议。</p>
+<h2 id="gossip">Gossip</h2>
+<p>Gossip利用一种随机的带传染性的方式，将信息传播到整个网络当中，实现最终一致性的算法。</p>
+<p>gossip的执行过程如下：Gossip
+过程是由种子节点发起，当一个种子节点有状态需要更新到网络中的其他节点时，它会随机的选择周围几个节点散播消息，收到消息的节点也会重复该过程，直至最终网络中所有的节点都收到了消息。这个过程可能需要一定的时间，由于不能保证某个时刻所有节点都收到消息，但是理论上最终所有节点都会收到消息，因此它是一个最终一致性协议。</p>
 <p>Gossip算法包含直接邮寄、反熵和谣言传播三部分。</p>
 <p>直接邮寄就是直接发送更新数据，当数据发送失败时，将数据缓存下来，然后进行重传。</p>
 <p>反熵指的是集群中的节点，每隔段时间就随机选择某个其他节点，然后通过互相交换自己的所有数据来消除两者之间的差异，实现数据的最终一致性。在反熵实现的时候主要有推、拉以及推拉结合的三种方式。因为反熵需要节点两两交换和比对自己所有的数据，执行反熵通信的成本会很高，不应该在实际场景中频繁的执行反熵。</p>
 <p>谣言传播指的是当一个节点有一个新数据以后，这个节点变成了活跃节点，并周期性的联系其他节点发送新数据，知道所有节点都存储了该数据。</p>
-<p>gossip协议允许网络中节点的任意增加和减少，同时网络中任何节点的宕机和重启都不会影响 Gossip 消息的传播，具有天然的分布式系统容错特性，并且不要求任何的中心节点，但是会出现消息的延迟以及消息冗余的问题。</p>
+<p>gossip协议允许网络中节点的任意增加和减少，同时网络中任何节点的宕机和重启都不会影响
+Gossip
+消息的传播，具有天然的分布式系统容错特性，并且不要求任何的中心节点，但是会出现消息的延迟以及消息冗余的问题。</p>
 
     </div>
 
@@ -379,7 +409,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#Paxos"><span class="nav-number">1.</span> <span class="nav-text">Paxos</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Basic-Paxos"><span class="nav-number">1.1.</span> <span class="nav-text">Basic Paxos</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Multi-Paxos"><span class="nav-number">1.2.</span> <span class="nav-text">Multi Paxos</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Raft"><span class="nav-number">2.</span> <span class="nav-text">Raft</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E4%B8%BE%E8%BF%87%E7%A8%8B"><span class="nav-number">2.1.</span> <span class="nav-text">选举过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">日志复制过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Gossip"><span class="nav-number">3.</span> <span class="nav-text">Gossip</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#paxos"><span class="nav-number">1.</span> <span class="nav-text">Paxos</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#basic-paxos"><span class="nav-number">1.1.</span> <span class="nav-text">Basic Paxos</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#multi-paxos"><span class="nav-number">1.2.</span> <span class="nav-text">Multi Paxos</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#raft"><span class="nav-number">2.</span> <span class="nav-text">Raft</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E9%80%89%E4%B8%BE%E8%BF%87%E7%A8%8B"><span class="nav-number">2.1.</span> <span class="nav-text">选举过程</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E5%A4%8D%E5%88%B6%E8%BF%87%E7%A8%8B"><span class="nav-number">2.2.</span> <span class="nav-text">日志复制过程</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#gossip"><span class="nav-number">3.</span> <span class="nav-text">Gossip</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -392,20 +422,20 @@
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">39</span>
+          <span class="site-state-item-count">40</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-count">16</span>
         <span class="site-state-item-name">分类</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">34</span>
+        <span class="site-state-item-count">36</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -452,12 +482,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">172k</span>
+    <span title="站点总字数">196k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">8:13</span>
+    <span title="站点阅读时长">9:21</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
@@ -539,6 +569,8 @@
 
 
 
+
+  
 
   
 
