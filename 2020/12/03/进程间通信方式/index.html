@@ -240,7 +240,7 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>1.4k</span>
+              <span>1.5k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -261,83 +261,35 @@
 
       
         <p>进程间通信是多进程协作的基础。在该过程中至少需要两个进程参与，这两方分别被称为发送者和接收者，也可以被称为调用者与被调用者、客户端和服务端。常见的进程间通信方式主要有七种。</p>
-<h2 id="管道">管道</h2>
+<h2>管道</h2>
 <p>管道是两个进程间的一条通道，一个负责投递，一个负责接收。管道是单向的通信方式，在操作系统内核之中有缓冲区来缓冲消息，通信的数据是字节流，需要应用自己去解码。一个管道有且只有两端，一个负责输入，一个负责输出。</p>
 <p>在UNIX中管道分为两类：命名管道和匿名管道。</p>
 <p>匿名管道通过pipe的系统调用来创建，在创建的同时拿到两个读写的端口（文件描述符），然后只能使用这两个文件描述符来使用它。因此在这种情况下通常需要结合fork创建子进程的方式来建立父子进程间的连接。该方式适合父子进程这样的场景，不适合两个关系较远的进程。</p>
 <p>命名管道由命令mkfifo进行创建，在创建过程中会指定一个全局的文件名来代指一个具体的管道。通过该方式任意两个进程通过一个相同的管道名就可以建立管道的通信连接。</p>
-<h2 id="消息队列">消息队列</h2>
+<h2>消息队列</h2>
 <p>消息队列是以消息为数据抽象的通信方式。消息队列比较灵活，可以同时支持同时存在多个发送者和接收者。</p>
 <p>当创建一个新的消息队列时，内核将从系统中分配一个队列数据结构，作为消息队列的内核对象。一旦一个队列被创建，那么除非内核重启或者该队列被主动删除，否则其数据会被一直保留。</p>
-<h2 id="信号量">信号量</h2>
+<h2>信号量</h2>
 <p>信号量一般来说仅有一个共享的整形计数器，该计数器由内核维护，对信号量的操作需要经过内核系统调用。</p>
 <p>信号量的两个主要操作为P和V。P表示尝试一个操作，该操作的失败会将当前线程进入阻塞状态，直到其他进程执行了V操作。V操作表示增加，将该计数器加1，同时唤醒因P操作而陷入阻塞的进程。</p>
 <p>信号量可以见到的满足进程间同步的要求，如果希望两个进程A和B，A执行完相关代码以后B再执行，那么可以使用信号量机制。</p>
-<h2 id="共享内存">共享内存</h2>
+<h2>共享内存</h2>
 <p>共享内存为需要通信的进程建立共享区域，一旦共享区域完成建立，内核就不再需要参与进程间通信，通信的多方可以直接使用共享区域上的数据。</p>
 <p>共享内存的机制就是允许多个进程在其所在的虚拟空间映射相同的物理内存页，从而进行通信。当进程不在希望共享内存时，也可以取消共享内核和虚拟内存之间的映射（之影响当前进程的映射，不影响其他仍在使用的共享内存的进程）。</p>
-<h2 id="信号">信号</h2>
+<h2>信号</h2>
 <p>使用信号，一个进程可以随时的发送一个事件到特定的进程、线程或者进程组中。同时接受该事件的进程不需要阻塞等待该消息，内核会帮助其切换到对应的处理函数中响应信号事件，并在完成后恢复之前的上下文。</p>
 <p>信号在Linux中应用十分广泛，例如在控制台中使用Ctrl+C终止一个程序时，其背后的逻辑就是发出一个SIGINT信号，导致默认信号处理函数结束了对应的进程。</p>
-<h2 id="套接字">套接字</h2>
+<h2>套接字</h2>
 <p>套接字是一种既可以用于本地也可以跨网络使用的通信机制，应用程序可以用相同的套接字接口来实现本地进程通信和跨机器的网络通信。</p>
 <p>在套接字进程间通信的模式下，客户端进程通过一个特定的网络地址来找到想要调用的服务端进程。套接字可以使用不同的协议例如TCP和UDP来对通信进行控制。</p>
 <p>进程间通信的对比如下</p>
-<table>
-<thead>
-<tr class="header">
-<th>通信机制</th>
-<th>数据抽象</th>
-<th>参与者</th>
-<th>方向</th>
-<th>内核实现</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>管道</td>
-<td>字节流</td>
-<td>两个进程</td>
-<td>单向</td>
-<td>FIFO的缓冲区</td>
-</tr>
-<tr class="even">
-<td>消息队列</td>
-<td>消息</td>
-<td>多进程</td>
-<td>双向</td>
-<td>队列的组织方式</td>
-</tr>
-<tr class="odd">
-<td>信号量</td>
-<td>计数器</td>
-<td>多进程</td>
-<td>双向</td>
-<td>共享计数器</td>
-</tr>
-<tr class="even">
-<td>共享内存</td>
-<td>内存区间</td>
-<td>多进程</td>
-<td>双向</td>
-<td>共享的内存空间</td>
-</tr>
-<tr class="odd">
-<td>信号</td>
-<td>时间编号</td>
-<td>多进程</td>
-<td>单向</td>
-<td>信号等待队列</td>
-</tr>
-<tr class="even">
-<td>套接字</td>
-<td>数据报文</td>
-<td>两个进程</td>
-<td>双向</td>
-<td>网络栈</td>
-</tr>
-</tbody>
-</table>
+<p>| 通信机制 | 数据抽象 | 参与者 | 方向 | 内核实现 | | -------- |
+-------- | -------- | ---- | -------------- | | 管道 | 字节流 | 两个进程
+| 单向 | FIFO的缓冲区 | | 消息队列 | 消息 | 多进程 | 双向 |
+队列的组织方式 | | 信号量 | 计数器 | 多进程 | 双向 | 共享计数器 | |
+共享内存 | 内存区间 | 多进程 | 双向 | 共享的内存空间 | | 信号 | 时间编号
+| 多进程 | 单向 | 信号等待队列 | | 套接字 | 数据报文 | 两个进程 | 双向 |
+网络栈 |</p>
 
     </div>
 
@@ -439,7 +391,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AE%A1%E9%81%93"><span class="nav-number">1.</span> <span class="nav-text">管道</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B6%88%E6%81%AF%E9%98%9F%E5%88%97"><span class="nav-number">2.</span> <span class="nav-text">消息队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%A1%E5%8F%B7%E9%87%8F"><span class="nav-number">3.</span> <span class="nav-text">信号量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%85%B1%E4%BA%AB%E5%86%85%E5%AD%98"><span class="nav-number">4.</span> <span class="nav-text">共享内存</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BF%A1%E5%8F%B7"><span class="nav-number">5.</span> <span class="nav-text">信号</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%A5%97%E6%8E%A5%E5%AD%97"><span class="nav-number">6.</span> <span class="nav-text">套接字</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">管道</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">消息队列</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">信号量</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.</span> <span class="nav-text">共享内存</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">5.</span> <span class="nav-text">信号</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">6.</span> <span class="nav-text">套接字</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -512,12 +464,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">196k</span>
+    <span title="站点总字数">197k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:21</span>
+    <span title="站点阅读时长">9:22</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

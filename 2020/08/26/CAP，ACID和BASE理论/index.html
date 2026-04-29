@@ -260,9 +260,13 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2 id="cap理论">CAP理论</h2>
-<p>CAP理论对一个分布式系统进行了抽象，形成了以下分布式系统的三个指标： *
-一致性 * 可用性 * 分区容错性</p>
+        <h2>CAP理论</h2>
+<p>CAP理论对一个分布式系统进行了抽象，形成了以下分布式系统的三个指标：</p>
+<ul>
+<li>一致性</li>
+<li>可用性</li>
+<li>分区容错性</li>
+</ul>
 <p>一致性指的是客户端的每次请求，要么返回绝对一致的最新写入的数据，那么读取失败，一致性强调的是数据的正确性。</p>
 <p>可用性指的是客户端的每次请求，无论访问的是哪个节点，都能够得到响应的数据。</p>
 <p>分区容错性指的是当分布式节点之间出现了丢失或者高延迟的时候，系统仍然可以高效的工作，强调的是对分区故障的容错能力。</p>
@@ -270,20 +274,24 @@
 <p>在CAP理论的实际使用之中，实际情况下节点间的分区故障一定会发生，分区容错性是一定需要保证的，舍弃P相当于舍弃分布式系统，所以只剩下在一致性和可用性中间进行选择，即CP系统和AP系统。</p>
 <p>当选择了一致性（即CP系统）时，一定会读取到最新的数据，不会读取到旧数据。当发生了网络分区时，为了不破坏一致性，就不会返回最新的信息而返回出错信息。</p>
 <p>当选择了可用性（即AP系统）时，一定会保持服务的高可用，当发生了网络分区时，将返回自己当前相对新的信息。</p>
-<h2 id="acid理论">ACID理论</h2>
-<p>ACID指的是在数据库管理系统中事务的四个特性 *
-原子性：整个事务的所有操作要么全部完成，要么全部失败。 *
-一致性：系统必须始终处在强一致状态下。 *
-隔离性：两个事务的执行互不干扰。 *
-持久性：在事务完成之后，所做的更改完全保存在数据库中，不会被回滚。</p>
+<h2>ACID理论</h2>
+<p>ACID指的是在数据库管理系统中事务的四个特性</p>
+<ul>
+<li>原子性：整个事务的所有操作要么全部完成，要么全部失败。</li>
+<li>一致性：系统必须始终处在强一致状态下。</li>
+<li>隔离性：两个事务的执行互不干扰。</li>
+<li>持久性：在事务完成之后，所做的更改完全保存在数据库中，不会被回滚。</li>
+</ul>
 <p>绝大部分数据库在单机环境下都实现了ACID特性，但是在分布式的环境下实现ACID特性则变得困难。</p>
 <p>在分布式的环境中，涉及到多个节点之间的操作，只能够保证单个节点之间的ACID特性，不能保证节点间操作的ACID特性。</p>
 <p>为了实现分布式的ACID，需要运用到分布式事务的协议例如二阶段提交协议和TCC。</p>
-<h2 id="base理论">BASE理论</h2>
-<p>在分布式系统之中，ACID的方式很难满足高性能要求，为了提高性能和可用性，出现了ACID的变种BASE，其核心概念为：
-* 基本可用：在出现暂时不可用的状态后，后面会快速恢复。 *
-软状态：介于有状态和无状态之间的中间状态，让服务暂时保存一些状态以及数据。
-* 最终一致性：系统在短暂的时间内是不一致的，但最终是一致的。</p>
+<h2>BASE理论</h2>
+<p>在分布式系统之中，ACID的方式很难满足高性能要求，为了提高性能和可用性，出现了ACID的变种BASE，其核心概念为：</p>
+<ul>
+<li>基本可用：在出现暂时不可用的状态后，后面会快速恢复。</li>
+<li>软状态：介于有状态和无状态之间的中间状态，让服务暂时保存一些状态以及数据。</li>
+<li>最终一致性：系统在短暂的时间内是不一致的，但最终是一致的。</li>
+</ul>
 <p>BASE可以容忍系统出现暂时性的故障，即使在短时间内存在数据不一致的可能性，需要在之后的业务中将出现问题的事务处理掉，最终保证最终的一致性。</p>
 <p>在很多情况下是无法做到ACID的，尤其是需要跨多个系统使用的时候。BASE倾向于设计出更具有弹性的系统。</p>
 
@@ -387,7 +395,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#cap%E7%90%86%E8%AE%BA"><span class="nav-number">1.</span> <span class="nav-text">CAP理论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#acid%E7%90%86%E8%AE%BA"><span class="nav-number">2.</span> <span class="nav-text">ACID理论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#base%E7%90%86%E8%AE%BA"><span class="nav-number">3.</span> <span class="nav-text">BASE理论</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">CAP理论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">ACID理论</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">BASE理论</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -460,12 +468,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">196k</span>
+    <span title="站点总字数">197k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:21</span>
+    <span title="站点阅读时长">9:22</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

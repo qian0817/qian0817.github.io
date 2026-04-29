@@ -23,12 +23,12 @@
     var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
   </script>
 
-  <meta name="description" content="对于Docker来说，Cgroups技术是用来制造约束的主要手段，Namespace技术则是用来修改进程视图的主要方法。 Namespace 在Linux系统中创建进程的系统调用是clone。 1int pid &#x3D; clone(main_function, stack_size, SIGCHLD, NULL); 该系统调用会创建一个新的进程，并且返回它的进程号pid。如果在参数中指定CLONE_N">
+  <meta name="description" content="对于Docker来说，Cgroups技术是用来制造约束的主要手段，Namespace技术则是用来修改进程视图的主要方法。 Namespace 在Linux系统中创建进程的系统调用是clone。 1int pid &#x3D; clone(main_function, stack_size, SIGCHLD, NULL);  该系统调用会创建一个新的进程，并且返回它的进程号pid。如果在参数中指定CLONE_">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Docker实现原理">
 <meta property="og:url" content="http://qian0817.top/2021/02/18/Docker%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86/index.html">
 <meta property="og:site_name" content="Qian0817">
-<meta property="og:description" content="对于Docker来说，Cgroups技术是用来制造约束的主要手段，Namespace技术则是用来修改进程视图的主要方法。 Namespace 在Linux系统中创建进程的系统调用是clone。 1int pid &#x3D; clone(main_function, stack_size, SIGCHLD, NULL); 该系统调用会创建一个新的进程，并且返回它的进程号pid。如果在参数中指定CLONE_N">
+<meta property="og:description" content="对于Docker来说，Cgroups技术是用来制造约束的主要手段，Namespace技术则是用来修改进程视图的主要方法。 Namespace 在Linux系统中创建进程的系统调用是clone。 1int pid &#x3D; clone(main_function, stack_size, SIGCHLD, NULL);  该系统调用会创建一个新的进程，并且返回它的进程号pid。如果在参数中指定CLONE_">
 <meta property="og:locale" content="zh_CN">
 <meta property="article:published_time" content="2021-02-18T06:24:35.000Z">
 <meta property="article:modified_time" content="2021-03-05T11:39:12.000Z">
@@ -240,7 +240,7 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>3.4k</span>
+              <span>3.5k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -260,77 +260,50 @@
 
       
         <p>对于Docker来说，Cgroups技术是用来制造约束的主要手段，Namespace技术则是用来修改进程视图的主要方法。</p>
-<h2 id="namespace">Namespace</h2>
+<h2>Namespace</h2>
 <p>在Linux系统中创建进程的系统调用是clone。</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> pid = <span class="built_in">clone</span>(main_function, stack_size, SIGCHLD, <span class="literal">NULL</span>);</span><br></pre></td></tr></table></figure>
+
 <p>该系统调用会创建一个新的进程，并且返回它的进程号pid。如果在参数中指定CLONE_NEWPID
 参数</p>
 <figure class="highlight c++"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="type">int</span> pid = <span class="built_in">clone</span>(main_function, stack_size, CLONE_NEWPID | SIGCHLD, <span class="literal">NULL</span>); </span><br></pre></td></tr></table></figure>
+
 <p>那么新创建的进程会认为自己的PID是1，但是在宿主机中看到的PID仍然是真实的PID数值。</p>
 <p>除了PID Namespace，Linux系统总共提供了6种Namespace</p>
-<table>
-<thead>
-<tr class="header">
-<th>namespace</th>
-<th>调用参数</th>
-<th>隔离内容</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td>UTS</td>
-<td>CLONE_NEWUTS</td>
-<td>主机名和域名</td>
-</tr>
-<tr class="even">
-<td>IPC</td>
-<td>CLONE_NEWIPC</td>
-<td>信号量，消息队列，共享内存</td>
-</tr>
-<tr class="odd">
-<td>PID</td>
-<td>CLONE_NEWPID</td>
-<td>进程编号</td>
-</tr>
-<tr class="even">
-<td>Network</td>
-<td>CLONE_NEWNET</td>
-<td>网络设备</td>
-</tr>
-<tr class="odd">
-<td>Mount</td>
-<td>CLONE_NEWNS</td>
-<td>挂载点</td>
-</tr>
-<tr class="even">
-<td>User</td>
-<td>CLONE_NEWUSER</td>
-<td>用户和用户组</td>
-</tr>
-</tbody>
-</table>
+<p>| namespace | 调用参数 | 隔离内容 | | --------- | ------------- |
+-------------------------- | | UTS | CLONE_NEWUTS | 主机名和域名 | | IPC
+| CLONE_NEWIPC | 信号量，消息队列，共享内存 | | PID | CLONE_NEWPID |
+进程编号 | | Network | CLONE_NEWNET | 网络设备 | | Mount | CLONE_NEWNS |
+挂载点 | | User | CLONE_NEWUSER | 用户和用户组 |</p>
 <p>通过Namespace机制，容器内部就只能看到当前Namespace所限定的文件状态等信息。所有说容器只是一种特殊的进程而已。</p>
-<h2 id="cgroup">CGroup</h2>
+<h2>CGroup</h2>
 <p>虽然Namespace将进程隔离了起来，但是所能使用到的资源却可以被其他进程所占用。</p>
 <p>Cgroup是Linux用来为进程设置资源限制的一个重要功能，用于限制一个进程组能够使用的资源上限，比如CPU、内存、磁盘、网络带宽资源等等。</p>
 <p>在Linux中，Cgroups给用户暴露的操作接口是文件系统，以文件和目录的方式组织在操作系统的/sys/fs/cgroup路径下。可以使用以下两条命令之一展示出来:</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">mount -f cgroup</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash">lssubsys -m</span></span><br><span class="line">cpuset /sys/fs/cgroup/cpuset</span><br><span class="line">cpu,cpuacct /sys/fs/cgroup/cpu,cpuacct</span><br><span class="line">blkio /sys/fs/cgroup/blkio</span><br><span class="line">memory /sys/fs/cgroup/memory</span><br><span class="line">devices /sys/fs/cgroup/devices</span><br><span class="line">freezer /sys/fs/cgroup/freezer</span><br><span class="line">net_cls,net_prio /sys/fs/cgroup/net_cls,net_prio</span><br><span class="line">perf_event /sys/fs/cgroup/perf_event</span><br><span class="line">hugetlb /sys/fs/cgroup/hugetlb</span><br><span class="line">pids /sys/fs/cgroup/pids</span><br><span class="line">rdma /sys/fs/cgroup/rdma</span><br></pre></td></tr></table></figure>
+
 <p>以CPU为例，在/sys/fs/cgroup/cpu目录下可以看到该资源具体可以被限制的方法。</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">ls</span> /sys/fs/cgroup/cpu</span></span><br><span class="line">cgroup.clone_children  cpuacct.usage_all          cpuacct.usage_user  init.scope         user.slice</span><br><span class="line">cgroup.procs           cpuacct.usage_percpu       cpu.cfs_period_us   notify_on_release</span><br><span class="line">cgroup.sane_behavior   cpuacct.usage_percpu_sys   cpu.cfs_quota_us    release_agent</span><br><span class="line">cpuacct.stat           cpuacct.usage_percpu_user  cpu.shares          system.slice</span><br><span class="line">cpuacct.usage          cpuacct.usage_sys          cpu.stat            tasks</span><br></pre></td></tr></table></figure>
+
 <p>在该目录下创建一个目录container</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">mkdir</span> container</span></span><br><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="built_in">ls</span> container</span></span><br><span class="line">cgroup.clone_children  cpuacct.usage_all          cpuacct.usage_sys   cpu.shares      notify_on_release</span><br><span class="line">cgroup.procs           cpuacct.usage_percpu       cpuacct.usage_user  cpu.stat        tasks</span><br><span class="line">cpuacct.stat           cpuacct.usage_percpu_sys   cpu.cfs_period_us   cpu.uclamp.max</span><br><span class="line">cpuacct.usage          cpuacct.usage_percpu_user  cpu.cfs_quota_us    cpu.uclamp.min</span><br></pre></td></tr></table></figure>
+
 <p>可以看出系统会在新创建的 container
 目录下，自动生成该子系统对应的资源限制文件。在后台执行一个死循环脚本，消耗计算机的CPU为100%:</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_">$ </span><span class="language-bash"><span class="keyword">while</span> : ; <span class="keyword">do</span> : ; <span class="keyword">done</span> &amp;</span></span><br><span class="line">[1] 16594</span><br></pre></td></tr></table></figure>
+
 <p>之后向其中的cfs_quota文件写入20ms(20000us)，表示在每100ms的时间里，被该控制组限制的进程只能使用
 20ms的CPU时间。</p>
 <figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 20000 &gt; /sys/fs/cgroup/cpu/container/cpu.cfs_quota_us</span><br></pre></td></tr></table></figure>
+
 <p>然后把被限制的进程的PID写入到tasks文件当中</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">echo 16594 &gt; /sys/fs/cgroup/cpu/container/tasks</span><br></pre></td></tr></table></figure>
+
 <p>之后使用top命令就可以看到CPU的使用率降到了20%。</p>
 <p>container目录下的文件不可以直接被删除，需要使用到工具cgdelete删除container目录</p>
 <figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">cgdelete cpu:/container/</span><br></pre></td></tr></table></figure>
-<h2 id="网络">网络</h2>
+
+<h2>网络</h2>
 <p>Docker提供了四种不同的网络模式，分别为Host、Container、None 和 Bridge
 模式。</p>
 <p>在默认的网桥模式下，会分配隔离的网络命名空间以外，Docker还会为所有的容器设置IP地址。当Docker服务器在主机上启动以后会创建新的虚拟网桥docker0，随后该主机启动的全部服务都在默认情况下与该网桥相连。</p>
@@ -346,10 +319,10 @@ Namespace，但是，并不为Docker
 容器进行任何网络配置。因此该容器没有网卡、IP、路由等信息。</p>
 <p>Docker 通过 Linux 的命名空间实现了网络的隔离，又通过 iptables
 进行数据包转发，从而让Docker容器能够为宿主机器和其他容器提供服务。</p>
-<h2 id="挂载点">挂载点</h2>
+<h2>挂载点</h2>
 <p>如果一个容器需要启动，那么它一定需要提供一个根文件系统（rootfs），容器需要使用这个文件系统来创建一个新的进程，所有二进制的执行都必须在这个根文件系统中。</p>
 <p>同时为了保证当前的容器进程没有办法访问宿主机上的其他目录，还需要通过pivot_root或者chroot来改变进程能够访问文件目录的根节点。通过改变当前根目录的结构，能够限制容器在新的根目录下并不能够访问旧系统根目录的结构个文件，因此也就建立了一个与原系统完全隔离的目录结构。</p>
-<h2 id="unionfs">UnionFS</h2>
+<h2>UnionFS</h2>
 <p>Docker
 在镜像的设计中，引入了层（layer）的概念。也就是说，用户制作镜像的每一步操作，都会生成一个层，也就是一个增量
 rootfs。其原理就用到了UnionFS。</p>
@@ -457,7 +430,7 @@ UnionFS的升级版，对于AUFS来说，最关键的目录结构在于/var/lib/
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#namespace"><span class="nav-number">1.</span> <span class="nav-text">Namespace</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#cgroup"><span class="nav-number">2.</span> <span class="nav-text">CGroup</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%BD%91%E7%BB%9C"><span class="nav-number">3.</span> <span class="nav-text">网络</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%8C%82%E8%BD%BD%E7%82%B9"><span class="nav-number">4.</span> <span class="nav-text">挂载点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#unionfs"><span class="nav-number">5.</span> <span class="nav-text">UnionFS</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">Namespace</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">CGroup</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">网络</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.</span> <span class="nav-text">挂载点</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">5.</span> <span class="nav-text">UnionFS</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -530,12 +503,12 @@ UnionFS的升级版，对于AUFS来说，最关键的目录结构在于/var/lib/
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">196k</span>
+    <span title="站点总字数">197k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:21</span>
+    <span title="站点阅读时长">9:22</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

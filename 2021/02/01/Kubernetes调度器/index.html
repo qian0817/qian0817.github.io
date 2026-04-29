@@ -23,12 +23,12 @@
     var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
   </script>
 
-  <meta name="description" content="在Kubernetes中，调度器的主要职责就是为一个新创建出来的Pod寻找一个合适的节点Node，其工作流程可以下图表示。   img  Kubernetes 的调度器由两个相互独立的控制循环组成。 第一个控制循环称为Informer Path,其主要目的在于启动一系列的Informer，用来监听Etcd中的Pod、Node、Service等对象的变化。例如当一个Pod被创建出来后，调度器会通过P">
+  <meta name="description" content="在Kubernetes中，调度器的主要职责就是为一个新创建出来的Pod寻找一个合适的节点Node，其工作流程可以下图表示。  Kubernetes 的调度器由两个相互独立的控制循环组成。 第一个控制循环称为Informer Path,其主要目的在于启动一系列的Informer，用来监听Etcd中的Pod、Node、Service等对象的变化。例如当一个Pod被创建出来后，调度器会通过Pod Inf">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Kubernetes调度器">
 <meta property="og:url" content="http://qian0817.top/2021/02/01/Kubernetes%E8%B0%83%E5%BA%A6%E5%99%A8/index.html">
 <meta property="og:site_name" content="Qian0817">
-<meta property="og:description" content="在Kubernetes中，调度器的主要职责就是为一个新创建出来的Pod寻找一个合适的节点Node，其工作流程可以下图表示。   img  Kubernetes 的调度器由两个相互独立的控制循环组成。 第一个控制循环称为Informer Path,其主要目的在于启动一系列的Informer，用来监听Etcd中的Pod、Node、Service等对象的变化。例如当一个Pod被创建出来后，调度器会通过P">
+<meta property="og:description" content="在Kubernetes中，调度器的主要职责就是为一个新创建出来的Pod寻找一个合适的节点Node，其工作流程可以下图表示。  Kubernetes 的调度器由两个相互独立的控制循环组成。 第一个控制循环称为Informer Path,其主要目的在于启动一系列的Informer，用来监听Etcd中的Pod、Node、Service等对象的变化。例如当一个Pod被创建出来后，调度器会通过Pod Inf">
 <meta property="og:locale" content="zh_CN">
 <meta property="og:image" content="http://qian0817.top/2021/02/01/Kubernetes%E8%B0%83%E5%BA%A6%E5%99%A8/调度机制.jpg">
 <meta property="article:published_time" content="2021-02-01T13:21:23.000Z">
@@ -255,40 +255,37 @@
 
       
         <p>在Kubernetes中，调度器的主要职责就是为一个新创建出来的Pod寻找一个合适的节点Node，其工作流程可以下图表示。</p>
-<figure>
-<img data-src="调度机制.jpg" alt="img" />
-<figcaption aria-hidden="true">img</figcaption>
-</figure>
+<p><img data-src="调度机制.jpg" alt="img" /></p>
 <p>Kubernetes 的调度器由两个相互独立的控制循环组成。</p>
 <p>第一个控制循环称为Informer
 Path,其主要目的在于启动一系列的Informer，用来监听Etcd中的Pod、Node、Service等对象的变化。例如当一个Pod被创建出来后，调度器会通过Pod
 Informer将待调度的Pod添加到调度队列之中。</p>
 <p>第二个控制循环称为Scheduling
 Path。其作用是不断的从调度队列中出对一个Pod，调用Predicates算法进行过滤。通过这一步过滤得到的一组Node就是所有可以运行这个Pod的宿主机列表。接下来就可以调用Priorities算法为Node打分，分数从0到10，得分最高的Node就会作为本次调度的结果。在调度算法完成以后，调度器就会将Pod对象的nodeName字段修改为Node的名字，该步骤称为Bind。</p>
-<h2 id="predicates">Predicates</h2>
+<h2>Predicates</h2>
 <p>Predicates在调度过程中的作用就是从所有节点中去除一系列符合条件的节点。Kubernetes默认的调度策略有三种。</p>
-<h3 id="generalpredicates">GeneralPredicates</h3>
+<h3>GeneralPredicates</h3>
 <p>GeneralPredicates负责最基础的调度策略，例如计算宿主机剩余的CPU和内存资源是否足够使用，检查宿主机的名字是否和Pod的spec.nodeName一致，申请的宿主机端口是否跟已经被使用的端口冲突，Pod
 的 nodeSelector 或者 nodeAffinity
 指定的节点，是否与待考察节点匹配。GeneralPredicates检查的是一个Pod能不能运行在Node上最基本的过滤条件。</p>
-<h3 id="volume-相关的过滤规则">Volume 相关的过滤规则</h3>
+<h3>Volume 相关的过滤规则</h3>
 <p>负责与容器持久化Volume相关的调度策略。例如多个 Pod 声明挂载的持久化
 Volume 是否有冲突、一个节点上某种类型的持久化 Volume
 是不是已经超过了一定数目、持久化 Volume 的
 Zone（高可用域）标签，是否与待考察节点的 Zone 标签相匹配、Pod 对应的 PV
 的 nodeAffinity 字段，是否跟某个节点的标签相匹配。</p>
-<h3 id="宿主机相关的过滤规则">宿主机相关的过滤规则</h3>
+<h3>宿主机相关的过滤规则</h3>
 <p>检查Pod是否满足Node本身的一些条件，例如检查Pod
 的Toleration字段与Node的Taint字段是否匹配，当前节点的内存是否足够。</p>
-<h3 id="pod-相关的过滤规则">Pod 相关的过滤规则</h3>
+<h3>Pod 相关的过滤规则</h3>
 <p>大部分与GeneralPredicates重合，特殊的在于还需检查待调度 Pod 与 Node
 上的已有 Pod 之间的亲密（affinity）和反亲密（anti-affinity）关系。</p>
 <p>上面四种类型的Predicates就构成了调度器确定一个 Node 可以运行待调度
 Pod 的基本策略。</p>
-<h2 id="priorities">Priorities</h2>
+<h2>Priorities</h2>
 <p>Priorities阶段会根据不同Node的空闲资源，所有节点里各种资源分配最均衡，容器镜像是否存在以及容器镜像大小进行打分，打分的范围是
 0-10 分，得分最高的节点就是最后被 Pod 绑定的最佳节点。</p>
-<h2 id="优先级和抢占机制">优先级和抢占机制</h2>
+<h2>优先级和抢占机制</h2>
 <p>正常情况下，当一个Pod调度失败后，会被暂时搁置起来，直到Pod被更新或者集群状态发生变化，调度器才会对这个Pod进行重新调度。但是有时候希望一个高级别的Pod调度失败以后，该Pod并不会被搁置，而是挤走某个Node上的低优先级Pod，保证这个高优先级的Pod调度成功。</p>
 <p>在调度其中维护着一个调度队列，当Pod拥有了优先级以后，高优先级的Pod可能会比低优先级的Pod提前出队，从而尽早地完成调度过程。</p>
 <p>当一个高优先级的Pod调度失败的时候，调度器的抢占能力就会被出发，调度器试图从当前集群中寻找一个节点，使得当这个节点上的低优先级Pod被删除后，待调度的高优先级Pod能够被调度到该节点上，这个过程就被称为抢占。</p>
@@ -397,7 +394,7 @@ activeQ 里，重新进行调度。</p>
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#predicates"><span class="nav-number">1.</span> <span class="nav-text">Predicates</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#generalpredicates"><span class="nav-number">1.1.</span> <span class="nav-text">GeneralPredicates</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#volume-%E7%9B%B8%E5%85%B3%E7%9A%84%E8%BF%87%E6%BB%A4%E8%A7%84%E5%88%99"><span class="nav-number">1.2.</span> <span class="nav-text">Volume 相关的过滤规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%AE%BF%E4%B8%BB%E6%9C%BA%E7%9B%B8%E5%85%B3%E7%9A%84%E8%BF%87%E6%BB%A4%E8%A7%84%E5%88%99"><span class="nav-number">1.3.</span> <span class="nav-text">宿主机相关的过滤规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#pod-%E7%9B%B8%E5%85%B3%E7%9A%84%E8%BF%87%E6%BB%A4%E8%A7%84%E5%88%99"><span class="nav-number">1.4.</span> <span class="nav-text">Pod 相关的过滤规则</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#priorities"><span class="nav-number">2.</span> <span class="nav-text">Priorities</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BC%98%E5%85%88%E7%BA%A7%E5%92%8C%E6%8A%A2%E5%8D%A0%E6%9C%BA%E5%88%B6"><span class="nav-number">3.</span> <span class="nav-text">优先级和抢占机制</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">Predicates</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">1.1.</span> <span class="nav-text">GeneralPredicates</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">1.2.</span> <span class="nav-text">Volume 相关的过滤规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">1.3.</span> <span class="nav-text">宿主机相关的过滤规则</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">1.4.</span> <span class="nav-text">Pod 相关的过滤规则</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">Priorities</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">优先级和抢占机制</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -470,12 +467,12 @@ activeQ 里，重新进行调度。</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">196k</span>
+    <span title="站点总字数">197k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:21</span>
+    <span title="站点阅读时长">9:22</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
