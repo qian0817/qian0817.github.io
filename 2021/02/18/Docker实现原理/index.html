@@ -240,7 +240,7 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>3.5k</span>
+              <span>3.4k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -270,11 +270,47 @@
 
 <p>那么新创建的进程会认为自己的PID是1，但是在宿主机中看到的PID仍然是真实的PID数值。</p>
 <p>除了PID Namespace，Linux系统总共提供了6种Namespace</p>
-<p>| namespace | 调用参数 | 隔离内容 | | --------- | ------------- |
--------------------------- | | UTS | CLONE_NEWUTS | 主机名和域名 | | IPC
-| CLONE_NEWIPC | 信号量，消息队列，共享内存 | | PID | CLONE_NEWPID |
-进程编号 | | Network | CLONE_NEWNET | 网络设备 | | Mount | CLONE_NEWNS |
-挂载点 | | User | CLONE_NEWUSER | 用户和用户组 |</p>
+<table>
+<thead>
+<tr>
+<th>namespace</th>
+<th>调用参数</th>
+<th>隔离内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>UTS</td>
+<td>CLONE_NEWUTS</td>
+<td>主机名和域名</td>
+</tr>
+<tr>
+<td>IPC</td>
+<td>CLONE_NEWIPC</td>
+<td>信号量，消息队列，共享内存</td>
+</tr>
+<tr>
+<td>PID</td>
+<td>CLONE_NEWPID</td>
+<td>进程编号</td>
+</tr>
+<tr>
+<td>Network</td>
+<td>CLONE_NEWNET</td>
+<td>网络设备</td>
+</tr>
+<tr>
+<td>Mount</td>
+<td>CLONE_NEWNS</td>
+<td>挂载点</td>
+</tr>
+<tr>
+<td>User</td>
+<td>CLONE_NEWUSER</td>
+<td>用户和用户组</td>
+</tr>
+</tbody>
+</table>
 <p>通过Namespace机制，容器内部就只能看到当前Namespace所限定的文件状态等信息。所有说容器只是一种特殊的进程而已。</p>
 <h2>CGroup</h2>
 <p>虽然Namespace将进程隔离了起来，但是所能使用到的资源却可以被其他进程所占用。</p>
@@ -503,12 +539,12 @@ UnionFS的升级版，对于AUFS来说，最关键的目录结构在于/var/lib/
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">203k</span>
+    <span title="站点总字数">202k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:39</span>
+    <span title="站点阅读时长">9:36</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

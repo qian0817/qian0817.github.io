@@ -247,7 +247,7 @@
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>33 分钟</span>
+              <span>32 分钟</span>
             </span>
 
         </div>
@@ -336,14 +336,40 @@ Worker 节点作为选择的 Worker 节点。</p>
 <code>alluxio.user.ufs.block.read.location.policy</code> 选择一个 Worker
 节点进行读取，目前版本的 Alluxio 提供了以下的策略进行 worker
 节点的选择。</p>
-<p>| 策略名称 | 介绍 | | ----------------------------- |
---------------------------------------------------- | |
-DeterministicHashPolicy | 通过 Hash 确定读取的 Worker | |
-LocalFirstAvoidEvictionPolicy | 优先通过本地 Worker
-进行读取,但是会尝试避免缓存驱逐 | | LocalFirstPolicy | 优先通过本地
-Worker 进行读取 | | MostAvailableFirstPolicy | 向拥有最多空间的 Worker
-节点进行读取 | | RoundRobinPolicy | 轮询所有 Worker 节点进行读取 | |
-SpecificHostPolicy | 只选择指定的一个 Worker 节点 |</p>
+<table>
+<thead>
+<tr>
+<th>策略名称</th>
+<th>介绍</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DeterministicHashPolicy</td>
+<td>通过 Hash 确定读取的 Worker</td>
+</tr>
+<tr>
+<td>LocalFirstAvoidEvictionPolicy</td>
+<td>优先通过本地 Worker 进行读取,但是会尝试避免缓存驱逐</td>
+</tr>
+<tr>
+<td>LocalFirstPolicy</td>
+<td>优先通过本地 Worker 进行读取</td>
+</tr>
+<tr>
+<td>MostAvailableFirstPolicy</td>
+<td>向拥有最多空间的 Worker 节点进行读取</td>
+</tr>
+<tr>
+<td>RoundRobinPolicy</td>
+<td>轮询所有 Worker 节点进行读取</td>
+</tr>
+<tr>
+<td>SpecificHostPolicy</td>
+<td>只选择指定的一个 Worker 节点</td>
+</tr>
+</tbody>
+</table>
 <p>根据不同位置的 Worker
 节点，客户端会通过不同的方式进行读取，如果客户端与 Worker
 节点在同一个节点上，那么会通过短路读直接从本地文件系统当中读取，否则将会通过与
@@ -600,12 +626,12 @@ OutputStream，避免数据的拷贝。</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">203k</span>
+    <span title="站点总字数">202k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:39</span>
+    <span title="站点阅读时长">9:36</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

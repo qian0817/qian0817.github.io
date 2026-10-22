@@ -241,7 +241,7 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>3.7k</span>
+              <span>3.6k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -280,11 +280,36 @@ testKey testValue 这样的命令之后，会在AOF日志中记录如下的内�
 <p>其中Always策略可以做到基本不丢数据，但是在每一个写命令后都必须保存到磁盘上，会导致性能的降低。</p>
 <p>No的写回时机由操作系统控制，在写到缓冲区之后，就可以继续执行后续的命令。但是何时保存到磁盘的时间是不确定的，一旦出现宕机，那么可能会有大量的数据丢失。</p>
 <p>Everysec采用每秒钟写一次的策略，在Always和No策略之间进行了折中。这也是Redis默认的AOF策略。</p>
-<p>| 配置项 | 写回时机 | 优点 | 缺点 | | -------- | ------------------ |
--------------------------- | ----------------- | | Always | 同步写回 |
-可靠性高，数据基本不会丢失 | 性能影响大 | | No | 操作系统控制的写回 |
-性能高 | 丢失数据多 | | Everysec | 每秒写回 | 性能适中 |
-会丢失1秒内的数据 |</p>
+<table>
+<thead>
+<tr>
+<th>配置项</th>
+<th>写回时机</th>
+<th>优点</th>
+<th>缺点</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Always</td>
+<td>同步写回</td>
+<td>可靠性高，数据基本不会丢失</td>
+<td>性能影响大</td>
+</tr>
+<tr>
+<td>No</td>
+<td>操作系统控制的写回</td>
+<td>性能高</td>
+<td>丢失数据多</td>
+</tr>
+<tr>
+<td>Everysec</td>
+<td>每秒写回</td>
+<td>性能适中</td>
+<td>会丢失1秒内的数据</td>
+</tr>
+</tbody>
+</table>
 <h4>AOF重写</h4>
 <p>随着AOF越来越大，会出现AOF文件过大而导致的问题。例如操作系统无法保存过大的文件，通过在追加记录的时候也会导致速率变慢。如果出现宕机，会导致通过AOF日志恢复过程十分缓慢。为了解决这些问题，就需要使用到AOF的重写机制。</p>
 <p>AOF重写机制就是在重写时，将根据数据库的现状来创建一个新的AOF日志。重写机制将旧日志文件中的多条命令，在重写后的新日志变成了一条新的命令。例如以下六条命令，在经历AOF重写之后变成了一条指令。</p>
@@ -500,12 +525,12 @@ testKey testValue 这样的命令之后，会在AOF日志中记录如下的内�
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">203k</span>
+    <span title="站点总字数">202k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:39</span>
+    <span title="站点阅读时长">9:36</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

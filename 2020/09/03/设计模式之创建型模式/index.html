@@ -297,10 +297,42 @@
 
 <h2>创建者模式</h2>
 <p>最常见创建一个对象的方法是调用类的构造函数来完成，但是在有些情况下这种方式就不适用了，就需要使用创建者模式来创建对象。例如对于一个线程池配置类，有以下几个成员变量</p>
-<p>| 成员变量 | 解释 | 是否必填 | 默认值 | | ------------- | --------- |
----- | --- | | name | 名称 | 是 | | | maxPoolSize | 最大连接数 | 否 | 10
-| | corePoolSize | 线程池大小 | 否 | 5 | | keepAliveTime | 存活时间 | 否
-| 1min |</p>
+<table>
+<thead>
+<tr>
+<th>成员变量</th>
+<th>解释</th>
+<th>是否必填</th>
+<th>默认值</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>name</td>
+<td>名称</td>
+<td>是</td>
+<td></td>
+</tr>
+<tr>
+<td>maxPoolSize</td>
+<td>最大连接数</td>
+<td>否</td>
+<td>10</td>
+</tr>
+<tr>
+<td>corePoolSize</td>
+<td>线程池大小</td>
+<td>否</td>
+<td>5</td>
+</tr>
+<tr>
+<td>keepAliveTime</td>
+<td>存活时间</td>
+<td>否</td>
+<td>1min</td>
+</tr>
+</tbody>
+</table>
 <p>如果使用构造函数，则代码如下所示</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//java 11</span></span><br><span class="line"><span class="keyword">public</span> <span class="keyword">class</span> <span class="title class_">ThreadPoolConfig</span> &#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title function_">main</span><span class="params">(String[] args)</span> &#123;</span><br><span class="line">        <span class="type">var</span> <span class="variable">config</span> <span class="operator">=</span> <span class="keyword">new</span> <span class="title class_">ThreadPoolConfig</span>(<span class="string">&quot;test&quot;</span>, <span class="number">10</span>, <span class="literal">null</span>, <span class="literal">null</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">private</span> String name;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">int</span> <span class="variable">maxPoolSize</span> <span class="operator">=</span> <span class="number">10</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">int</span> <span class="variable">corePoolSize</span> <span class="operator">=</span> <span class="number">5</span>;</span><br><span class="line">    <span class="keyword">private</span> <span class="type">int</span> <span class="variable">keepAliveTime</span> <span class="operator">=</span> <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">public</span> <span class="title function_">ThreadPoolConfig</span><span class="params">(String name, Integer maxPoolSize, Integer corePoolSize, Integer keepAliveTime)</span> &#123;</span><br><span class="line">        <span class="keyword">if</span> (name == <span class="literal">null</span> || name.isBlank()) &#123;</span><br><span class="line">            <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;名称不能为空&quot;</span>);</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="built_in">this</span>.name = name;</span><br><span class="line">        <span class="keyword">if</span> (maxPoolSize != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (maxPoolSize &lt;= <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;maxPoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">this</span>.maxPoolSize = maxPoolSize;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (corePoolSize != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (corePoolSize &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;corePoolSize 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">this</span>.corePoolSize = corePoolSize;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">if</span> (keepAliveTime != <span class="literal">null</span>) &#123;</span><br><span class="line">            <span class="keyword">if</span> (keepAliveTime &lt; <span class="number">0</span>) &#123;</span><br><span class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> <span class="title class_">IllegalArgumentException</span>(<span class="string">&quot;keepAliveTime 必须为正数&quot;</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="built_in">this</span>.keepAliveTime = keepAliveTime;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -493,12 +525,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">203k</span>
+    <span title="站点总字数">202k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:39</span>
+    <span title="站点阅读时长">9:36</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

@@ -240,14 +240,14 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>6.2k</span>
+              <span>5.9k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
                 <i class="far fa-clock"></i>
               </span>
                 <span class="post-meta-item-text">阅读时长 &asymp;</span>
-              <span>18 分钟</span>
+              <span>17 分钟</span>
             </span>
             <div class="post-description">介绍在Redis实现时采用的数据结构</div>
 
@@ -355,27 +355,120 @@
 <p>压缩列表用于实现列表键和哈希键。如果一个列表键中只包含少量的元素并且每个元素是小整数或者短字符串，会选择使用压缩列表来作为列表键的底层实现。</p>
 <h3>压缩列表实现</h3>
 <p>压缩列表由以下部分构成。</p>
-<p>| 属性 | 类型 | 长度 | 用途 | | ------- | -------- | ----- |
----------------------------------------- | | zlbytes | uint32_t | 4字节
-| 记录整个压缩列表占用的内存字节数 | | zltail | uint32_t | 4字节 |
-记录表尾节点距离压缩列表的起始位置有多远 | | zllen | uint16_t | 2字节 |
-压缩列表包含的节点个数 | | entryX | 列表节点 | | 压缩列表包含的各个节点
-| | zlend | uint8_t | 1字节 | 用于标记压缩列表的末端 |</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>类型</th>
+<th>长度</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>zlbytes</td>
+<td>uint32_t</td>
+<td>4字节</td>
+<td>记录整个压缩列表占用的内存字节数</td>
+</tr>
+<tr>
+<td>zltail</td>
+<td>uint32_t</td>
+<td>4字节</td>
+<td>记录表尾节点距离压缩列表的起始位置有多远</td>
+</tr>
+<tr>
+<td>zllen</td>
+<td>uint16_t</td>
+<td>2字节</td>
+<td>压缩列表包含的节点个数</td>
+</tr>
+<tr>
+<td>entryX</td>
+<td>列表节点</td>
+<td></td>
+<td>压缩列表包含的各个节点</td>
+</tr>
+<tr>
+<td>zlend</td>
+<td>uint8_t</td>
+<td>1字节</td>
+<td>用于标记压缩列表的末端</td>
+</tr>
+</tbody>
+</table>
 <p>其中每个压缩列表节点可以保存一个字节数组或者整数值。每个压缩列表节点由以下部分构成。</p>
-<p>| 属性 | 长度 | 作用 | | --------------------- | -------------------
-| ------------------------------------- | | previous_entry_length |
-1字节或5字节 | 记录前一个节点的长度 | | encoding | 1字节或2字节或5字节 |
-记录content属性所保存的数据类型及长度 | | content | | 保存节点的值 |</p>
+<table>
+<thead>
+<tr>
+<th>属性</th>
+<th>长度</th>
+<th>作用</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>previous_entry_length</td>
+<td>1字节或5字节</td>
+<td>记录前一个节点的长度</td>
+</tr>
+<tr>
+<td>encoding</td>
+<td>1字节或2字节或5字节</td>
+<td>记录content属性所保存的数据类型及长度</td>
+</tr>
+<tr>
+<td>content</td>
+<td></td>
+<td>保存节点的值</td>
+</tr>
+</tbody>
+</table>
 <p>对于previos_entry_length属性，如果前一个节点的长度小于254则占一个字节，否则占用五个字节，并且第一个字节会被设置为254，后四个节点则用于保存前一个节点的长度。通过previos_entry_length属性，程序可以通过指针运算计算出前一个节点的起始位置，实现从表尾到表头的遍历过程。</p>
 <p>对于encoding属性，其记录了所保存数据的类型的以及长度。</p>
 <p>如果编码最高位为00，01或者10，说明所保存的类型是字节数组。数组的长度由编码除去最高两位之后的记录。如果最高位为00，那么编码长度为1，储存的是小于等于63字节的字节数组。如果最高位为01，那么编码长度为2，储存的是小于等于16383字节的字节数组。如果最高位为10，那么编码长度为5，储存的是小于等于4294967295字节的字节数组。</p>
 <p>如果最高位以11开头，那么说明保存的是整数值。保存的整数值类型与长度由除去最高两位的其他位记录。整数编码的方式如下：</p>
-<p>| 编码 | 编码长度 | 保存的属性类型 | | -------- | -------- |
------------------------------ | | 11000000 | 1字节 | int16_t类型整数 | |
-11010000 | 1字节 | int32_t类型整数 | | 11100000 | 1字节 |
-int64_t类型整数 | | 11110000 | 1字节 | 24位有符号整数 | | 11111110 |
-1字节 | 8位有符号整数 | | 1111xxxx | 1字节 |
-xxxx就是保存的值，无需content |</p>
+<table>
+<thead>
+<tr>
+<th>编码</th>
+<th>编码长度</th>
+<th>保存的属性类型</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>11000000</td>
+<td>1字节</td>
+<td>int16_t类型整数</td>
+</tr>
+<tr>
+<td>11010000</td>
+<td>1字节</td>
+<td>int32_t类型整数</td>
+</tr>
+<tr>
+<td>11100000</td>
+<td>1字节</td>
+<td>int64_t类型整数</td>
+</tr>
+<tr>
+<td>11110000</td>
+<td>1字节</td>
+<td>24位有符号整数</td>
+</tr>
+<tr>
+<td>11111110</td>
+<td>1字节</td>
+<td>8位有符号整数</td>
+</tr>
+<tr>
+<td>1111xxxx</td>
+<td>1字节</td>
+<td>xxxx就是保存的值，无需content</td>
+</tr>
+</tbody>
+</table>
 <h3>连锁更新</h3>
 <p>previos_entry_length属性记录了前一个节点的长度。在一些特殊的情况下，例如在一个压缩列表中存在连续多个长度介于250-253字节的节点e1-eN。因为这些节点的长度都小于254字节，记录这些长度的previos_entry_length只需要1字节。但是如果在e1之前新插入一个长度大于254字节的节点，会导致e1节点的previos_entry_length属性需要扩容到5个字节，但是以此类推会导致e1-eN的所有节点都会需要进行扩容。这种连续多次空间扩展操作被称为连锁更新。</p>
 <p>当出现连锁更新的时候，最坏情况下需要对压缩列表进行N次重新分配空间操作，每次空间分配的最坏时间复杂度为O(N)，最终导致连锁更新的时间复杂度为O(N<sup>2</sup>)。虽然时间复杂度较高，但是因为在实际中这种情况不多见，即使出现如果被更新的节点不多，也不会对性能产生影响。</p>
@@ -553,12 +646,12 @@ xxxx就是保存的值，无需content |</p>
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">203k</span>
+    <span title="站点总字数">202k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:39</span>
+    <span title="站点阅读时长">9:36</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

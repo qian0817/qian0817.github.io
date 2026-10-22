@@ -241,7 +241,7 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>3.2k</span>
+              <span>3.1k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -268,19 +268,72 @@
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">typedef</span> <span class="class"><span class="keyword">struct</span> <span class="title">redisObject</span> &#123;</span></span><br><span class="line">    <span class="comment">// 类型</span></span><br><span class="line">    <span class="type">unsigned</span> type:<span class="number">4</span>;</span><br><span class="line">    <span class="comment">// 编码</span></span><br><span class="line">    <span class="type">unsigned</span> encoding:<span class="number">4</span>;</span><br><span class="line">    <span class="comment">// 对象最后一次被访问的时间</span></span><br><span class="line">    <span class="type">unsigned</span> lru:REDIS_LRU_BITS;</span><br><span class="line">    <span class="comment">// 引用计数</span></span><br><span class="line">    <span class="type">int</span> refcount;</span><br><span class="line">    <span class="comment">// 指向实际值的指针</span></span><br><span class="line">    <span class="type">void</span> *ptr;</span><br><span class="line">&#125; robj;</span><br></pre></td></tr></table></figure>
 
 <p>其中type属性判断该对象是字符串对象，列表对象，集合对象，有序集合对象，哈希对象中的哪一个类型。encoding属性决定ptr指针指向的对象的底层实现数据结构，其对应的方式为：</p>
-<p>| 类型 | 编码 | 对象 | | ------------ | ------------------------- |
----------------------------------- | | REDIS_STRING | REDIS_ENCODING_INT
-| 整数值的字符串对象 | | REDIS_STRING | REDIS_ENCODING_EMBSTR |
-使用embstr编码的字符串对象 | | REDIS_STRING | REDIS_ENCODING_RAW |
-使用简单字符串实现的字符串对象 | | REDIS_LIST | REDIS_ENCODING_ZIPLIST |
-使用压缩列表实现的列表对象 | | REDIS_LIST | REDIS_ENCODING_LINKEDLIST |
-使用链表实现的列表对象 | | REDIS_HASH | REDIS_ENCODING_HT |
-使用字典实现的哈希对象 | | REDIS_HASH | REDIS_ENCODING_ZIPLIST |
-使用压缩列表实现的哈希对象 | | REDIS_SET | REDIS_ENCODING_HT |
-使用字典实现的集合对象 | | REDIS_SET | REDIS_ENCODING_INTSET |
-使用整数集合实现的集合对象 | | REDIS_ZSET | REDIS_ENCODING_ZIPLIST |
-使用压缩列表实现的有序集合对象 | | REDIS_ZSET | REDIS_ENCODING_SKIPLIST
-| 使用跳跃表和字典实现的有序集合对象 |</p>
+<table>
+<thead>
+<tr>
+<th>类型</th>
+<th>编码</th>
+<th>对象</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>REDIS_STRING</td>
+<td>REDIS_ENCODING_INT</td>
+<td>整数值的字符串对象</td>
+</tr>
+<tr>
+<td>REDIS_STRING</td>
+<td>REDIS_ENCODING_EMBSTR</td>
+<td>使用embstr编码的字符串对象</td>
+</tr>
+<tr>
+<td>REDIS_STRING</td>
+<td>REDIS_ENCODING_RAW</td>
+<td>使用简单字符串实现的字符串对象</td>
+</tr>
+<tr>
+<td>REDIS_LIST</td>
+<td>REDIS_ENCODING_ZIPLIST</td>
+<td>使用压缩列表实现的列表对象</td>
+</tr>
+<tr>
+<td>REDIS_LIST</td>
+<td>REDIS_ENCODING_LINKEDLIST</td>
+<td>使用链表实现的列表对象</td>
+</tr>
+<tr>
+<td>REDIS_HASH</td>
+<td>REDIS_ENCODING_HT</td>
+<td>使用字典实现的哈希对象</td>
+</tr>
+<tr>
+<td>REDIS_HASH</td>
+<td>REDIS_ENCODING_ZIPLIST</td>
+<td>使用压缩列表实现的哈希对象</td>
+</tr>
+<tr>
+<td>REDIS_SET</td>
+<td>REDIS_ENCODING_HT</td>
+<td>使用字典实现的集合对象</td>
+</tr>
+<tr>
+<td>REDIS_SET</td>
+<td>REDIS_ENCODING_INTSET</td>
+<td>使用整数集合实现的集合对象</td>
+</tr>
+<tr>
+<td>REDIS_ZSET</td>
+<td>REDIS_ENCODING_ZIPLIST</td>
+<td>使用压缩列表实现的有序集合对象</td>
+</tr>
+<tr>
+<td>REDIS_ZSET</td>
+<td>REDIS_ENCODING_SKIPLIST</td>
+<td>使用跳跃表和字典实现的有序集合对象</td>
+</tr>
+</tbody>
+</table>
 <p>使用命令OBJECT ENCODING可以查看一个数据库键值对象的编码。</p>
 <figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">127.0.0.1:6379&gt; set testKey testValue                                           </span><br><span class="line">OK</span><br><span class="line">127.0.0.1:6379&gt; OBJECT ENCODING testKey                                         </span><br><span class="line">&quot;embstr&quot;</span><br></pre></td></tr></table></figure>
 
@@ -508,12 +561,12 @@ IDLETIME命令可以打印给定键的空转时长。如果服务器打开了max
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">203k</span>
+    <span title="站点总字数">202k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:39</span>
+    <span title="站点阅读时长">9:36</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

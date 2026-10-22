@@ -240,7 +240,7 @@
                 <i class="far fa-file-word"></i>
               </span>
                 <span class="post-meta-item-text">本文字数：</span>
-              <span>1.5k</span>
+              <span>1.4k</span>
             </span>
             <span class="post-meta-item" title="阅读时长">
               <span class="post-meta-item-icon">
@@ -283,13 +283,61 @@
 <p>套接字是一种既可以用于本地也可以跨网络使用的通信机制，应用程序可以用相同的套接字接口来实现本地进程通信和跨机器的网络通信。</p>
 <p>在套接字进程间通信的模式下，客户端进程通过一个特定的网络地址来找到想要调用的服务端进程。套接字可以使用不同的协议例如TCP和UDP来对通信进行控制。</p>
 <p>进程间通信的对比如下</p>
-<p>| 通信机制 | 数据抽象 | 参与者 | 方向 | 内核实现 | | -------- |
--------- | -------- | ---- | -------------- | | 管道 | 字节流 | 两个进程
-| 单向 | FIFO的缓冲区 | | 消息队列 | 消息 | 多进程 | 双向 |
-队列的组织方式 | | 信号量 | 计数器 | 多进程 | 双向 | 共享计数器 | |
-共享内存 | 内存区间 | 多进程 | 双向 | 共享的内存空间 | | 信号 | 时间编号
-| 多进程 | 单向 | 信号等待队列 | | 套接字 | 数据报文 | 两个进程 | 双向 |
-网络栈 |</p>
+<table>
+<thead>
+<tr>
+<th>通信机制</th>
+<th>数据抽象</th>
+<th>参与者</th>
+<th>方向</th>
+<th>内核实现</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>管道</td>
+<td>字节流</td>
+<td>两个进程</td>
+<td>单向</td>
+<td>FIFO的缓冲区</td>
+</tr>
+<tr>
+<td>消息队列</td>
+<td>消息</td>
+<td>多进程</td>
+<td>双向</td>
+<td>队列的组织方式</td>
+</tr>
+<tr>
+<td>信号量</td>
+<td>计数器</td>
+<td>多进程</td>
+<td>双向</td>
+<td>共享计数器</td>
+</tr>
+<tr>
+<td>共享内存</td>
+<td>内存区间</td>
+<td>多进程</td>
+<td>双向</td>
+<td>共享的内存空间</td>
+</tr>
+<tr>
+<td>信号</td>
+<td>时间编号</td>
+<td>多进程</td>
+<td>单向</td>
+<td>信号等待队列</td>
+</tr>
+<tr>
+<td>套接字</td>
+<td>数据报文</td>
+<td>两个进程</td>
+<td>双向</td>
+<td>网络栈</td>
+</tr>
+</tbody>
+</table>
 
     </div>
 
@@ -464,12 +512,12 @@
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">203k</span>
+    <span title="站点总字数">202k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:39</span>
+    <span title="站点阅读时长">9:36</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
