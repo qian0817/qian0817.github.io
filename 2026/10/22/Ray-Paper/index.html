@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.2">
+<link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+  <meta name="google-site-verification" content="kmu8arSRmrVwYbcJZRhbLSDAwEJFx0fp5SM2umI5Py0">
+  <meta name="baidu-site-verification" content="XvPzBf4OrQ">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"qian0817.top","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":true,"pangu":true,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}},"path":"search.json"};
+  </script>
+
+  <meta name="description" content="Ray论文阅读">
+<meta property="og:type" content="article">
+<meta property="og:title" content="论文阅读（Ray:A Distributed Framework for Emerging AI Applications）">
+<meta property="og:url" content="http://qian0817.top/2026/10/22/Ray-Paper/index.html">
+<meta property="og:site_name" content="Qian0817">
+<meta property="og:description" content="Ray论文阅读">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://qian0817.top/2026/10/22/Ray-Paper/Ray计算模型示例.png">
+<meta property="og:image" content="http://qian0817.top/2026/10/22/Ray-Paper/Ray架构图.png">
+<meta property="og:image" content="http://qian0817.top/2026/10/22/Ray-Paper/Ray两级调度器.png">
+<meta property="og:image" content="http://qian0817.top/2026/10/22/Ray-Paper/Ray端到端示例.png">
+<meta property="article:published_time" content="2026-10-22T09:05:07.000Z">
+<meta property="article:modified_time" content="2026-10-22T12:41:58.000Z">
+<meta property="article:author" content="qianlei">
+<meta property="article:tag" content="ray">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://qian0817.top/2026/10/22/Ray-Paper/Ray计算模型示例.png">
+
+<link rel="canonical" href="http://qian0817.top/2026/10/22/Ray-Paper/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>论文阅读（Ray:A Distributed Framework for Emerging AI Applications） | Qian0817</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="Qian0817" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">Qian0817</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+        <i class="fa fa-search fa-fw fa-lg"></i>
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>标签</a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>分类</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+</nav>
+
+
+
+  <div class="search-pop-overlay">
+    <div class="popup search-popup">
+        <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocapitalize="off"
+           placeholder="搜索..." spellcheck="false"
+           type="search" class="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result">
+  <div id="no-result">
+    <i class="fa fa-spinner fa-pulse fa-5x fa-fw"></i>
+  </div>
+</div>
+
+    </div>
+  </div>
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+
+  <a href="https://github.com/qian0817" class="github-corner" title="Follow me on GitHub" aria-label="Follow me on GitHub" rel="noopener" target="_blank"><svg width="80" height="80" viewBox="0 0 250 250" aria-hidden="true"><path d="M0,0 L115,115 L130,115 L142,142 L250,250 L250,0 Z"></path><path d="M128.3,109.0 C113.8,99.7 119.0,89.6 119.0,89.6 C122.0,82.7 120.5,78.6 120.5,78.6 C119.2,72.0 123.4,76.3 123.4,76.3 C127.3,80.9 125.5,87.3 125.5,87.3 C122.9,97.6 130.6,101.9 134.4,103.2" fill="currentColor" style="transform-origin: 130px 106px;" class="octo-arm"></path><path d="M115.0,115.0 C114.9,115.1 118.7,116.5 119.8,115.4 L133.7,101.6 C136.9,99.2 139.9,98.4 142.2,98.6 C133.8,88.0 127.5,74.4 143.8,58.0 C148.5,53.4 154.0,51.2 159.7,51.0 C160.3,49.4 163.2,43.6 171.4,40.1 C171.4,40.1 176.1,42.5 178.8,56.2 C183.1,58.6 187.2,61.8 190.9,65.4 C194.5,69.0 197.7,73.2 200.1,77.6 C213.8,80.2 216.3,84.9 216.3,84.9 C212.7,93.1 206.9,96.0 205.4,96.6 C205.1,102.4 203.0,107.8 198.3,112.5 C181.9,128.9 168.3,122.5 157.7,114.1 C157.9,116.9 156.7,120.9 152.7,124.9 L141.0,136.5 C139.8,137.7 141.6,141.9 141.8,141.8 Z" fill="currentColor" class="octo-body"></path></svg></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://qian0817.top/2026/10/22/Ray-Paper/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="qianlei">
+      <meta itemprop="description" content="">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="Qian0817">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          论文阅读（Ray:A Distributed Framework for Emerging AI Applications）
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2026-10-22 17:05:07 / 修改时间：20:41:58" itemprop="dateCreated datePublished" datetime="2026-10-22T17:05:07+08:00">2026-10-22</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/ray/" itemprop="url" rel="index"><span itemprop="name">ray</span></a>
+                </span>
+            </span>
+
+          <br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="far fa-file-word"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>5.9k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="far fa-clock"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>17 分钟</span>
+            </span>
+            <div class="post-description">Ray论文阅读</div>
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p><a target="_blank" rel="noopener" href="https://arxiv.org/pdf/1712.05889">原文</a></p>
+<p>2018年的论文与后续版本的Ray实现可能不同，例如论文中提到的基于 Redis
+和 chain replication 实现的GCS在后续版本已被进程内in
+memory的GCS替代。</p>
+<h1>动机与需求</h1>
+<p>强化学习（RL）需要三项主要的能力</p>
+<ol type="1">
+<li>依赖仿真来评估策略，通过仿真来探索不同的动作序列了解这些选择的长期后果（仿真）</li>
+<li>需要执行分布式训练，基于通过仿真与物理环境交互生成的数据来改进策略（训练）</li>
+<li>为控制问题提供解决方案，对策略进行服务化部署（推理）</li>
+</ol>
+<p>这些特性带来了新的系统需求，必须支持细粒度计算（以毫秒级渲染动作，执行海量仿真），时间上的异构性（一次仿真可能持续数毫秒到数小时）和资源使用上的异构性（使用GPU训练，使用CPU仿真）。</p>
+<p>为大数据负载或监督学习工作负载而开发的框架无法满足RL的这些需求，MapReduce、Spark、Dryad这些BSP调度不支持细粒度的仿真和推理服务。CIEL和Dask这类任务并行系统以及Naiad和Storm这样的流处理系统缺乏对训练和推理的支持，TensorFlow和MXNet这样的深度学习框架不支持仿真与推理，TensorFlow
+Serving和
+Clipper之类的推理系统不支持训练和仿真。通过拼接现有系统来开发端到端的解决方案给分布式应用带来了系统工程负担，因为这样就把调度、容错和数据移动等标准系统挑战推给每个应用。</p>
+<p>Ray作为一个通用的集群计算框架，可以同时为 RL
+提供仿真、训练、推理。Ray实现了一个统一接口，能够表达并行计算与基于actor的计算。</p>
+<h1>编程模型</h1>
+<p>Ray同时提供actor编程抽象和任务并行编程抽象，这区别于CIEL这样的任务并行抽象系统，也区别于主要提供actor抽象的Orleans和Akka。</p>
+<p>| API | 含义 | | --------------------------------------------- |
+----------------------------------------------- | | futures =
+f.remote(args) | 异步执行远程函数，立即返回 future，非阻塞调用 | |
+objects = ray.get(futures) | 阻塞并取得 future 对应的对象，阻塞调用 | |
+ready_futures = ray.wait(futures, k, timeout) | 在最先完成的 k
+个结果就绪或超时后返回，阻塞调用 | | actor = Class.remote(args) |
+创建远程 Actor，返回 Actor handle，非阻塞调用 | | futures =
+actor.method.remote(args) | 异步调用 Actor 方法，返回 future，非阻塞调用
+|</p>
+<p>Task表示在无状态工作进程上执行远程函数，当调用远程函数时，会立即返回一个表示该任务结果的
+future。可使用 ray.get() 获取
+future，也可将其作为参数传入其他远程函数而无需等待其结果。这使用户能够表达并行性，同时捕获数据依赖关系。远程函数作用于不可变对象，并要求是无状态且无副作用的，要求幂等性，其输出完全由输入决定，从而在失败时可以重新执行函数而简化容错。</p>
+<p>Actor表示有状态计算，每个Actor暴露可远程调用并串行执行的方法，对同一个
+Actor
+的方法调用按顺序执行，后一个方法能看到前一个方法留下的内部状态。</p>
+<p>Task的优势在于</p>
+<ul>
+<li>在任务粒度上利用负载感知调度，实现细粒度负载均衡</li>
+<li>将每个任务调度到存储其输入的节点上，实现输入数据局部性</li>
+<li>具有较低的恢复开销，因为无需对中间状态进行检查点和恢复</li>
+</ul>
+<p>Actor的优势在于</p>
+<ul>
+<li>提供高效得多的细粒度更新，因为这些更新在内部状态而非外部状态上执行，而外部状态通常需要序列化和反序列化。</li>
+</ul>
+<p>为了满足异构性和灵活性的要求，以三种方式扩展了API</p>
+<ul>
+<li>为了处理持续时间异构的并发任务，引入了ray.wait()，等待前k个可用结果，而不是像ray.get()一样等待所有结果</li>
+<li>为处理资源需求异构的任务，Ray使开发者能够指定资源需求，以便 Ray
+调度器高效管理资源。</li>
+<li>为提高灵活性，Ray支持嵌套远程函数，即远程函数可以调用其他远程函数。这对于实现高可扩展性至关重要，因为它使多个进程能够以分布式方式调用远程函数。</li>
+</ul>
+<p>| Task（无状态） | Actor（有状态） | | ---------------- |
+---------------------------- | | 细粒度负载均衡 | 粗粒度负载均衡 | |
+支持对象局部性 | 局部性支持较差 | | 小规模更新开销高 | 小规模更新开销低
+| | 高效的故障处理 | 检查点机制带来的故障恢复开销 |</p>
+<h1>计算模型</h1>
+<p>Ray 采用动态任务图计算模型，其中远程函数和 actor
+方法的执行均会在其输入可用时由系统自动触发。接下来描述怎么把下面的用户程序构造出计算图。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@ray.remote</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">create_policy</span>():</span><br><span class="line">    <span class="comment"># Initialize the policy randomly.</span></span><br><span class="line">    <span class="keyword">return</span> policy</span><br><span class="line"></span><br><span class="line"><span class="meta">@ray.remote(<span class="params">num_gpus=<span class="number">1</span></span>)</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Simulator</span>(<span class="title class_ inherited__">object</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># Initialize the environment.</span></span><br><span class="line">        <span class="variable language_">self</span>.env = Environment()</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">rollout</span>(<span class="params">self, policy, num_steps</span>):</span><br><span class="line">        observations = []</span><br><span class="line">        observation = <span class="variable language_">self</span>.env.current_state()</span><br><span class="line">        <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(num_steps):</span><br><span class="line">            action = policy(observation)</span><br><span class="line">            observation = <span class="variable language_">self</span>.env.step(action)</span><br><span class="line">            observations.append(observation)</span><br><span class="line">        <span class="keyword">return</span> observations</span><br><span class="line"></span><br><span class="line"><span class="meta">@ray.remote(<span class="params">num_gpus=<span class="number">2</span></span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">update_policy</span>(<span class="params">policy, *rollouts</span>):</span><br><span class="line">    <span class="comment"># Update the policy.</span></span><br><span class="line">    <span class="keyword">return</span> policy</span><br><span class="line"></span><br><span class="line"><span class="meta">@ray.remote</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">train_policy</span>():</span><br><span class="line">    <span class="comment"># Create a policy.</span></span><br><span class="line">    policy_id = create_policy.remote()</span><br><span class="line">    <span class="comment"># Create 10 actors.</span></span><br><span class="line">    simulators = [Simulator.remote() <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>)]</span><br><span class="line">    <span class="comment"># Do 100 steps of training.</span></span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100</span>):</span><br><span class="line">        <span class="comment"># Perform one rollout on each actor.</span></span><br><span class="line">        rollout_ids = [s.rollout.remote(policy_id) <span class="keyword">for</span> s <span class="keyword">in</span> simulators]</span><br><span class="line">        <span class="comment"># Update the policy with the rollouts.</span></span><br><span class="line">        policy_id = update_policy.remote(policy_id, *rollout_ids)</span><br><span class="line">    <span class="keyword">return</span> ray.get(policy_id)</span><br></pre></td></tr></table></figure>
+
+<p><img data-src="Ray计算模型示例.png" alt="Ray计算模型示例" /></p>
+<p>首先暂不考虑
+actor，计算图中有两类节点：数据对象和远程函数调用（即任务Task）。边也有两类：数据边和控制边。数据边表示的是数据对象与任务之间的依赖关系。控制边表示的是由Task产生的计算依赖：如果任务
+T1 调用任务 T2 ，则添加一条从 T1 到 T2 的控制边。</p>
+<p>actor
+方法调用也表示为计算图中的节点。它们与任务相同，但有一个关键差异。为描述同一
+actor
+上后续方法调用之间的状态依赖，我们添加第三类边：有状态边。如果一个方法在同一
+actor 上紧接在另一个方法之后被调用，则有状态边。因此，在同一 actor
+对象上调用的所有方法形成一条由有状态边连接的链。该链描述了这些方法被调用的顺序。</p>
+<p>有状态边有助于我们将 actor 嵌入原本无状态的任务图，因为它们体现了共享
+actor
+内部状态的连续方法调用之间的隐式数据依赖。有状态边还使我们能够维护血缘关系。与其他数据流系统一样，我们跟踪数据血缘以支持重建。通过将状态边显式纳入血缘图，我们可以轻松重建丢失的数据，无论这些数据是由远程函数还是
+actor 方法生成的。</p>
+<h1>架构</h1>
+<p>Ray 的架构包括</p>
+<ul>
+<li>实现 API 的应用层</li>
+<li>提供高可扩展性和容错性的系统层</li>
+</ul>
+<p><img data-src="Ray架构图.png" alt="Ray架构图.png" /></p>
+<h2>应用层</h2>
+<p>应用层由三类进程组成</p>
+<ul>
+<li>Driver：执行用户程序的进程。</li>
+<li>Worker：无状态进程，用于执行Task（远程函数）。Worker
+由系统层自动启动并分配任务。当远程函数被声明时，该函数会自动发布到所有
+worker。单个 Worker 串行执行任务，任务之间不保留任何本地状态。</li>
+<li>Actor：有状态进程，在被调用时仅执行其对外暴露的方法。与 worker
+不同，actor 由 worker 或 driver 显式实例化。与 worker 一样，actor
+串行执行方法，不同之处在于每个方法都依赖于前一方法执行所产生的状态。</li>
+</ul>
+<h2>系统层</h2>
+<p>系统层由三个主要组件组成：全局控制存储、分布式调度器和分布式对象存储。所有组件均具备水平可扩展性和容错性。</p>
+<h3>全局控制存储(GCS)</h3>
+<p>GCS
+是一个具有Pub-Sub功能的键值存储，用于维护集群的全部控制状态。GCS使用分片来实现扩展，并使用分片的链式复制来提供容错性。GCS可以为每秒动态生成数百万个任务的系统维持容错能力和低延迟。</p>
+<p>为了在节点故障的情况下维护血缘信息，Ray将持久化血缘存储与其他系统组件解耦，使各组件能够独立扩展。</p>
+<p>任务调度涉及到选择执行位置，任务分发涉及从其他节点获取远程输入。许多系统将对象位置和大小存储在集中式调度器中来耦合二者，这在调度器不是瓶颈时是一种自然设计。但是Ray的规模要求调度器远离关键路径，Ray将对象元数据存储在
+GCS 而非调度器中，从而将任务分发与任务调度完全解耦。</p>
+<p>GCS使系统中的每个组件都保持无状态，简化了对于容错的支持，发生故障时，组件只需重新启动然后从GCS读取血缘信息，而且使分布式对象存储和调度器易于独立扩展，因为所有组件都通过
+GCS 共享所需状态。另一个好处是易于开发调试、性能分析和可视化工具。</p>
+<h3>自底向上的分布式调度器</h3>
+<p>Ray需要每秒调度数百万个任务，而这些任务仅需几毫秒。大多数框架，如Spark、CIEL、Dryad实现的是集中式调度器，这些调度器能提供局部性但是延迟在数十毫秒量级。work-stealing、Sparrow、Canary之类的分布式调度器能够实现大规模的调度，但它们要么不考虑数据局部性，要么假设任务属于相互独立的作业，要么假设计算图已知。</p>
+<p>Ray使用了全局调度器和每节点本地调度器组成的两级层次化调度器，调度过程如下</p>
+<ol type="1">
+<li>新任务先提交给创建它的节点上的本地调度器，本地调度器会在本地调度任务，除非该节点过载或者无法满足任务的需求（例如缺少
+GPU）</li>
+<li>如果本地调度器决定不在本地调度某个任务，则将其转发给全局调度器</li>
+<li>全局调度器会考虑每个节点的负载和任务的约束来制定调度决策，识别出具有任务所请求类型足够资源的节点集合，并在这些节点中选择估计等待时间最低的节点。</li>
+</ol>
+<p>估计等待时间 = 本地排队时间 + 任务远程输入传输时间 ≈ 队列长度 ×
+平均任务耗时 + 远端输入总大小 ÷ 平均网络带宽</p>
+<p>全局调度器通过心跳获取每个节点的队列大小和节点资源可用性，并从 GCS
+获取任务输入的位置及其大小。此外，全局调度器使用简单指数平均计算平均任务执行时间和平均传输带宽。</p>
+<p><img data-src="Ray两级调度器.png" alt="Ray两级调度器.png" /></p>
+<h3>内存分布式对象存储</h3>
+<p>Ray实现了一个内存分布式存储系统，用于存储每个任务的输入与输出，或无状态计算的输入与输出。在每个节点上，我们通过共享内存实现对象存储，使用
+Arrow 作为数据格式，允许同一节点上运行的任务之间进行零拷贝数据共享。</p>
+<p>如果任务的输入不在本地，则在执行前将输入复制到本地对象存储。任务运行完成后将输出写入本地对象存储。复制避免了热对象的潜在访问瓶颈，缩短任务执行时间，提高计算密集型工作负载的吞吐量。为了低延迟，Ray将对象保留在内存当中，并根据需要使用
+LRU 策略逐出到磁盘当中。</p>
+<p>对象存储仅限于不可变数据。这消除了对复杂一致性协议的需求，并简化了容错实现。在节点故障的情况下，Ray
+通过血缘重执行来恢复任何所需对象。GCS
+中存储的血缘在初始执行期间同时跟踪无状态任务和有状态 actor；Ray
+使用前者来重建存储中的对象。</p>
+<h2>整合应用层和系统层</h2>
+<p>论文通过一个简单示例说明了 Ray 如何端到端工作：该示例将两个对象 a 与
+b 相加，并返回结果 c 。远程函数 add() 在初始化时自动注册到
+GCS，并被分发到系统中的每个工作进程（第 0 步）。</p>
+<p><img data-src="Ray端到端示例.png" alt="Ray端到端示例.png" /></p>
+<p>图a展示了Driver调用add.remote(a,b)所触发的逐步操作，其中a和b分别存储在N1和N2上，Driver先将Task提交到本地调度器（步骤1），随后转发给全局调度器（步骤2），接下来全局调度器根据查询的参数位置(步骤3)，决定调度到存储参数b的节点N2上（步骤4）。N2上的本地调度器检查本地对象存储是否包含add(a,b)的参数(步骤5)，然后在GCS查找参数a的位置(步骤6)，将存储在N1的a复制到本地的对象存储(步骤7)，由于add的所有参数都存储在本地了，本地调度器在worker上调用add（步骤8），worker通过共享内存访问这些参数(步骤9)。</p>
+<p>图b展示了分别由在N1处执行ray.get()和在N2处执行add()所触发的分步操作。在调用ray.get时，Driver检查本地对象存储是否存在值c，并使用add返回的future
+id（步骤1）。由于本地对象存储未存储 c，它会在 GCS 中查找其位置。此时 c
+尚未创建。因此N1的对象存储向GCS的Object Table注册一个回调，以便在 c
+的条目创建时触发（步骤 2）。当 N2 节点上add() 完成执行后，将结果 c
+存入本地对象存储（步骤 3），本地对象存储进而将 c 的条目添加到 GCS
+中（步骤 4）。因此，GCS 使用 c 的条目向 N1 的对象存储触发一个回调（步骤
+5）。接下来，N1 从 N2 复制 c（步骤 6），并将 c 返回给 ray.get()（步骤
+7），最终完成任务。</p>
+<h1>评估</h1>
+<p>论文接下来这段是Ray的benchmark，体现了 Ray
+在提供通用抽象的同时没有牺牲性能。本篇笔记跳过这里。</p>
+<h1>理解</h1>
+<ol type="1">
+<li>Ray 在设计API时强调极简主义，基于ray-core 的核心库提供了 RL
+应用的关键最小抽象，在上层衍生出了ray-tune/ray-train/ray-serve/ray-data
+等更高阶的语义</li>
+<li>由于Ray面对的工作负载的通用性和动态性，Ray难以在不了解计算图的情况下做出最合理的调度决策，只能根据运行时统计信息做出近似决策</li>
+</ol>
+
+    </div>
+
+    
+    
+    
+        
+
+<div>
+<ul class="post-copyright">
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>qianlei
+  </li>
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="http://qian0817.top/2026/10/22/Ray-Paper/" title="论文阅读（Ray:A Distributed Framework for Emerging AI Applications）">http://qian0817.top/2026/10/22/Ray-Paper/</a>
+  </li>
+  <li class="post-copyright-license">
+    <strong>版权声明： </strong>本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank"><i class="fab fa-fw fa-creative-commons"></i>BY-NC-SA</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+</div>
+
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/ray/" rel="tag"># ray</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2026/04/22/%E7%BD%AE%E8%BA%AB%E4%BA%8B%E5%86%85%E7%AC%94%E8%AE%B0/" rel="prev" title="置身事内笔记">
+      <i class="fa fa-chevron-left"></i> 置身事内笔记
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">动机与需求</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">编程模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">计算模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">4.</span> <span class="nav-text">架构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.1.</span> <span class="nav-text">应用层</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.2.</span> <span class="nav-text">系统层</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">4.2.1.</span> <span class="nav-text">全局控制存储(GCS)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">4.2.2.</span> <span class="nav-text">自底向上的分布式调度器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">4.2.3.</span> <span class="nav-text">内存分布式对象存储</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.3.</span> <span class="nav-text">整合应用层和系统层</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">5.</span> <span class="nav-text">评估</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">6.</span> <span class="nav-text">理解</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">qianlei</p>
+  <div class="site-description" itemprop="description"></div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives">
+          <span class="site-state-item-count">41</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">17</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/qian0817" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;qian0817" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:qianlei666@gmail.com" title="E-Mail → mailto:qianlei666@gmail.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+  </div>
+  <div class="cc-license motion-element" itemprop="license">
+    <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" class="cc-opacity" rel="noopener" target="_blank"><img src="/images/cc-by-nc-sa.svg" alt="Creative Commons"></a>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2026</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">qianlei</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-chart-area"></i>
+    </span>
+    <span title="站点总字数">203k</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-coffee"></i>
+    </span>
+    <span title="站点阅读时长">9:39</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/lozad@1/dist/lozad.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/pangu@4/dist/browser/pangu.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+  <script>
+    (function(){
+      var canonicalURL, curProtocol;
+      //Get the <link> tag
+      var x=document.getElementsByTagName("link");
+		//Find the last canonical URL
+		if(x.length > 0){
+			for (i=0;i<x.length;i++){
+				if(x[i].rel.toLowerCase() == 'canonical' && x[i].href){
+					canonicalURL=x[i].href;
+				}
+			}
+		}
+    //Get protocol
+	    if (!canonicalURL){
+	    	curProtocol = window.location.protocol.split(':')[0];
+	    }
+	    else{
+	    	curProtocol = canonicalURL.split(':')[0];
+	    }
+      //Get current URL if the canonical URL does not exist
+	    if (!canonicalURL) canonicalURL = window.location.href;
+	    //Assign script content. Replace current URL with the canonical URL
+      !function(){var e=/([http|https]:\/\/[a-zA-Z0-9\_\.]+\.baidu\.com)/gi,r=canonicalURL,t=document.referrer;if(!e.test(r)){var n=(String(curProtocol).toLowerCase() === 'https')?"https://sp0.baidu.com/9_Q4simg2RQJ8t7jm9iCKT-xh_/s.gif":"//api.share.baidu.com/s.gif";t?(n+="?r="+encodeURIComponent(document.referrer),r&&(n+="&l="+r)):r&&(n+="?l="+r);var i=new Image;i.src=n}}(window);})();
+  </script>
+
+
+
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+</body>
+</html>
