@@ -262,7 +262,7 @@
 <p>2018年的论文与后续版本的Ray实现可能不同，例如论文中提到的基于 Redis
 和 chain replication 实现的GCS在后续版本已被进程内in
 memory的GCS替代。</p>
-<h1>动机与需求</h1>
+<h1 id="动机与需求">动机与需求</h1>
 <p>强化学习（RL）需要三项主要的能力</p>
 <ol type="1">
 <li>依赖仿真来评估策略，通过仿真来探索不同的动作序列了解这些选择的长期后果（仿真）</li>
@@ -275,7 +275,7 @@ Serving和
 Clipper之类的推理系统不支持训练和仿真。通过拼接现有系统来开发端到端的解决方案给分布式应用带来了系统工程负担，因为这样就把调度、容错和数据移动等标准系统挑战推给每个应用。</p>
 <p>Ray作为一个通用的集群计算框架，可以同时为 RL
 提供仿真、训练、推理。Ray实现了一个统一接口，能够表达并行计算与基于actor的计算。</p>
-<h1>编程模型</h1>
+<h1 id="编程模型">编程模型</h1>
 <p>Ray同时提供actor编程抽象和任务并行编程抽象，这区别于CIEL这样的任务并行抽象系统，也区别于主要提供actor抽象的Orleans和Akka。</p>
 <table>
 <thead>
@@ -356,7 +356,7 @@ Actor
 </tr>
 </tbody>
 </table>
-<h1>计算模型</h1>
+<h1 id="计算模型">计算模型</h1>
 <p>Ray 采用动态任务图计算模型，其中远程函数和 actor
 方法的执行均会在其输入可用时由系统自动触发。接下来描述怎么把下面的用户程序构造出计算图。</p>
 <figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@ray.remote</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">create_policy</span>():</span><br><span class="line">    <span class="comment"># Initialize the policy randomly.</span></span><br><span class="line">    <span class="keyword">return</span> policy</span><br><span class="line"></span><br><span class="line"><span class="meta">@ray.remote(<span class="params">num_gpus=<span class="number">1</span></span>)</span></span><br><span class="line"><span class="keyword">class</span> <span class="title class_">Simulator</span>(<span class="title class_ inherited__">object</span>):</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">__init__</span>(<span class="params">self</span>):</span><br><span class="line">        <span class="comment"># Initialize the environment.</span></span><br><span class="line">        <span class="variable language_">self</span>.env = Environment()</span><br><span class="line">    <span class="keyword">def</span> <span class="title function_">rollout</span>(<span class="params">self, policy, num_steps</span>):</span><br><span class="line">        observations = []</span><br><span class="line">        observation = <span class="variable language_">self</span>.env.current_state()</span><br><span class="line">        <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(num_steps):</span><br><span class="line">            action = policy(observation)</span><br><span class="line">            observation = <span class="variable language_">self</span>.env.step(action)</span><br><span class="line">            observations.append(observation)</span><br><span class="line">        <span class="keyword">return</span> observations</span><br><span class="line"></span><br><span class="line"><span class="meta">@ray.remote(<span class="params">num_gpus=<span class="number">2</span></span>)</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">update_policy</span>(<span class="params">policy, *rollouts</span>):</span><br><span class="line">    <span class="comment"># Update the policy.</span></span><br><span class="line">    <span class="keyword">return</span> policy</span><br><span class="line"></span><br><span class="line"><span class="meta">@ray.remote</span></span><br><span class="line"><span class="keyword">def</span> <span class="title function_">train_policy</span>():</span><br><span class="line">    <span class="comment"># Create a policy.</span></span><br><span class="line">    policy_id = create_policy.remote()</span><br><span class="line">    <span class="comment"># Create 10 actors.</span></span><br><span class="line">    simulators = [Simulator.remote() <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>)]</span><br><span class="line">    <span class="comment"># Do 100 steps of training.</span></span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">100</span>):</span><br><span class="line">        <span class="comment"># Perform one rollout on each actor.</span></span><br><span class="line">        rollout_ids = [s.rollout.remote(policy_id) <span class="keyword">for</span> s <span class="keyword">in</span> simulators]</span><br><span class="line">        <span class="comment"># Update the policy with the rollouts.</span></span><br><span class="line">        policy_id = update_policy.remote(policy_id, *rollout_ids)</span><br><span class="line">    <span class="keyword">return</span> ray.get(policy_id)</span><br></pre></td></tr></table></figure>
@@ -375,14 +375,14 @@ actor 上紧接在另一个方法之后被调用，则有状态边。因此，�
 actor
 内部状态的连续方法调用之间的隐式数据依赖。有状态边还使我们能够维护血缘关系。与其他数据流系统一样，我们跟踪数据血缘以支持重建。通过将状态边显式纳入血缘图，我们可以轻松重建丢失的数据，无论这些数据是由远程函数还是
 actor 方法生成的。</p>
-<h1>架构</h1>
+<h1 id="架构">架构</h1>
 <p>Ray 的架构包括</p>
 <ul>
 <li>实现 API 的应用层</li>
 <li>提供高可扩展性和容错性的系统层</li>
 </ul>
 <p><img data-src="Ray架构图.png" alt="Ray架构图.png" /></p>
-<h2>应用层</h2>
+<h2 id="应用层">应用层</h2>
 <p>应用层由三类进程组成</p>
 <ul>
 <li>Driver：执行用户程序的进程。</li>
@@ -393,9 +393,9 @@ worker。单个 Worker 串行执行任务，任务之间不保留任何本地状
 不同，actor 由 worker 或 driver 显式实例化。与 worker 一样，actor
 串行执行方法，不同之处在于每个方法都依赖于前一方法执行所产生的状态。</li>
 </ul>
-<h2>系统层</h2>
+<h2 id="系统层">系统层</h2>
 <p>系统层由三个主要组件组成：全局控制存储、分布式调度器和分布式对象存储。所有组件均具备水平可扩展性和容错性。</p>
-<h3>全局控制存储(GCS)</h3>
+<h3 id="全局控制存储gcs">全局控制存储(GCS)</h3>
 <p>GCS
 是一个具有Pub-Sub功能的键值存储，用于维护集群的全部控制状态。GCS使用分片来实现扩展，并使用分片的链式复制来提供容错性。GCS可以为每秒动态生成数百万个任务的系统维持容错能力和低延迟。</p>
 <p>为了在节点故障的情况下维护血缘信息，Ray将持久化血缘存储与其他系统组件解耦，使各组件能够独立扩展。</p>
@@ -403,7 +403,7 @@ worker。单个 Worker 串行执行任务，任务之间不保留任何本地状
 GCS 而非调度器中，从而将任务分发与任务调度完全解耦。</p>
 <p>GCS使系统中的每个组件都保持无状态，简化了对于容错的支持，发生故障时，组件只需重新启动然后从GCS读取血缘信息，而且使分布式对象存储和调度器易于独立扩展，因为所有组件都通过
 GCS 共享所需状态。另一个好处是易于开发调试、性能分析和可视化工具。</p>
-<h3>自底向上的分布式调度器</h3>
+<h3 id="自底向上的分布式调度器">自底向上的分布式调度器</h3>
 <p>Ray需要每秒调度数百万个任务，而这些任务仅需几毫秒。大多数框架，如Spark、CIEL、Dryad实现的是集中式调度器，这些调度器能提供局部性但是延迟在数十毫秒量级。work-stealing、Sparrow、Canary之类的分布式调度器能够实现大规模的调度，但它们要么不考虑数据局部性，要么假设任务属于相互独立的作业，要么假设计算图已知。</p>
 <p>Ray使用了全局调度器和每节点本地调度器组成的两级层次化调度器，调度过程如下</p>
 <ol type="1">
@@ -417,7 +417,7 @@ GPU）</li>
 <p>全局调度器通过心跳获取每个节点的队列大小和节点资源可用性，并从 GCS
 获取任务输入的位置及其大小。此外，全局调度器使用简单指数平均计算平均任务执行时间和平均传输带宽。</p>
 <p><img data-src="Ray两级调度器.png" alt="Ray两级调度器.png" /></p>
-<h3>内存分布式对象存储</h3>
+<h3 id="内存分布式对象存储">内存分布式对象存储</h3>
 <p>Ray实现了一个内存分布式存储系统，用于存储每个任务的输入与输出，或无状态计算的输入与输出。在每个节点上，我们通过共享内存实现对象存储，使用
 Arrow 作为数据格式，允许同一节点上运行的任务之间进行零拷贝数据共享。</p>
 <p>如果任务的输入不在本地，则在执行前将输入复制到本地对象存储。任务运行完成后将输出写入本地对象存储。复制避免了热对象的潜在访问瓶颈，缩短任务执行时间，提高计算密集型工作负载的吞吐量。为了低延迟，Ray将对象保留在内存当中，并根据需要使用
@@ -426,7 +426,7 @@ LRU 策略逐出到磁盘当中。</p>
 通过血缘重执行来恢复任何所需对象。GCS
 中存储的血缘在初始执行期间同时跟踪无状态任务和有状态 actor；Ray
 使用前者来重建存储中的对象。</p>
-<h2>整合应用层和系统层</h2>
+<h2 id="整合应用层和系统层">整合应用层和系统层</h2>
 <p>论文通过一个简单示例说明了 Ray 如何端到端工作：该示例将两个对象 a 与
 b 相加，并返回结果 c 。远程函数 add() 在初始化时自动注册到
 GCS，并被分发到系统中的每个工作进程（第 0 步）。</p>
@@ -440,10 +440,10 @@ id（步骤1）。由于本地对象存储未存储 c，它会在 GCS 中查找�
 中（步骤 4）。因此，GCS 使用 c 的条目向 N1 的对象存储触发一个回调（步骤
 5）。接下来，N1 从 N2 复制 c（步骤 6），并将 c 返回给 ray.get()（步骤
 7），最终完成任务。</p>
-<h1>评估</h1>
+<h1 id="评估">评估</h1>
 <p>论文接下来这段是Ray的benchmark，体现了 Ray
 在提供通用抽象的同时没有牺牲性能。本篇笔记跳过这里。</p>
-<h1>理解</h1>
+<h1 id="理解">理解</h1>
 <ol type="1">
 <li>Ray 在设计API时强调极简主义，基于ray-core 的核心库提供了 RL
 应用的关键最小抽象，在上层衍生出了ray-tune/ray-train/ray-serve/ray-data
@@ -488,7 +488,10 @@ id（步骤1）。由于本地对象存储未存储 c，它会在 GCS 中查找�
     <a href="/2026/04/22/%E7%BD%AE%E8%BA%AB%E4%BA%8B%E5%86%85%E7%AC%94%E8%AE%B0/" rel="prev" title="置身事内笔记">
       <i class="fa fa-chevron-left"></i> 置身事内笔记
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2026/10/23/Ray-Data-Paper/" rel="next" title="论文阅读(The Streaming Batch Model for Efficient and Fault-Tolerant Heterogeneous Execution)">
+      论文阅读(The Streaming Batch Model for Efficient and Fault-Tolerant Heterogeneous Execution) <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -547,7 +550,7 @@ id（步骤1）。由于本地对象存储未存储 c，它会在 GCS 中查找�
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">动机与需求</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">编程模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">计算模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">4.</span> <span class="nav-text">架构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.1.</span> <span class="nav-text">应用层</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.2.</span> <span class="nav-text">系统层</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">4.2.1.</span> <span class="nav-text">全局控制存储(GCS)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">4.2.2.</span> <span class="nav-text">自底向上的分布式调度器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">4.2.3.</span> <span class="nav-text">内存分布式对象存储</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.3.</span> <span class="nav-text">整合应用层和系统层</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">5.</span> <span class="nav-text">评估</span></a></li><li class="nav-item nav-level-1"><a class="nav-link"><span class="nav-number">6.</span> <span class="nav-text">理解</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%8A%A8%E6%9C%BA%E4%B8%8E%E9%9C%80%E6%B1%82"><span class="nav-number">1.</span> <span class="nav-text">动机与需求</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%BC%96%E7%A8%8B%E6%A8%A1%E5%9E%8B"><span class="nav-number">2.</span> <span class="nav-text">编程模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AE%A1%E7%AE%97%E6%A8%A1%E5%9E%8B"><span class="nav-number">3.</span> <span class="nav-text">计算模型</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E6%9E%B6%E6%9E%84"><span class="nav-number">4.</span> <span class="nav-text">架构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BA%94%E7%94%A8%E5%B1%82"><span class="nav-number">4.1.</span> <span class="nav-text">应用层</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%B3%BB%E7%BB%9F%E5%B1%82"><span class="nav-number">4.2.</span> <span class="nav-text">系统层</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%85%A8%E5%B1%80%E6%8E%A7%E5%88%B6%E5%AD%98%E5%82%A8gcs"><span class="nav-number">4.2.1.</span> <span class="nav-text">全局控制存储(GCS)</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E8%87%AA%E5%BA%95%E5%90%91%E4%B8%8A%E7%9A%84%E5%88%86%E5%B8%83%E5%BC%8F%E8%B0%83%E5%BA%A6%E5%99%A8"><span class="nav-number">4.2.2.</span> <span class="nav-text">自底向上的分布式调度器</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%86%85%E5%AD%98%E5%88%86%E5%B8%83%E5%BC%8F%E5%AF%B9%E8%B1%A1%E5%AD%98%E5%82%A8"><span class="nav-number">4.2.3.</span> <span class="nav-text">内存分布式对象存储</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%95%B4%E5%90%88%E5%BA%94%E7%94%A8%E5%B1%82%E5%92%8C%E7%B3%BB%E7%BB%9F%E5%B1%82"><span class="nav-number">4.3.</span> <span class="nav-text">整合应用层和系统层</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E8%AF%84%E4%BC%B0"><span class="nav-number">5.</span> <span class="nav-text">评估</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%90%86%E8%A7%A3"><span class="nav-number">6.</span> <span class="nav-text">理解</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -560,7 +563,7 @@ id（步骤1）。由于本地对象存储未存储 c，它会在 GCS 中查找�
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">41</span>
+          <span class="site-state-item-count">42</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -573,7 +576,7 @@ id（步骤1）。由于本地对象存储未存储 c，它会在 GCS 中查找�
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-count">38</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -620,12 +623,12 @@ id（步骤1）。由于本地对象存储未存储 c，它会在 GCS 中查找�
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">202k</span>
+    <span title="站点总字数">206k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:36</span>
+    <span title="站点阅读时长">9:48</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

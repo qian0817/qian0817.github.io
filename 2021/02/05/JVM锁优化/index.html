@@ -260,16 +260,16 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2>自旋锁</h2>
+        <h2 id="自旋锁">自旋锁</h2>
 <p>互斥同步对性能最大的影响在于阻塞的实现，，因为挂起线程和恢复线程都需要转入到内核态进行完成。通过不放弃处理器的执行时间，让线程忙循坏，看看持有锁的线程能否很快就释放锁，就是自旋锁。</p>
 <p>自旋锁虽然避免了线程切换的开销，但是需要占用处理器时间，所以如果锁被占用的时间很短，自旋等待的效果会比较好，反之只能白白的消耗处理器资源，带来性能的浪费。因此自选等待的时间必须要有一定的限度，如果超过自旋的限定次数仍然没有成功获得锁，那么就应当用传统的方式来挂起线程。自旋次数的默认值为10次，可以使用-XX:PreBlockSpin参数来自行修改。</p>
 <p>在JDK6以后加入了对于自旋锁的优化，引入了自适应的自旋锁。自适应意味着自旋的时间不再是固定的，而是由前一次在同一个锁上的自旋时间以及锁的拥有者状态来决定。</p>
-<h2>锁消除</h2>
+<h2 id="锁消除">锁消除</h2>
 <p>锁消除指的是虚拟机即时编译器在运行时，对一些代码有球同步但是被检测到不存在共享数据的锁进行消除。锁消除的主要判定依据来源于逃逸分析的数据支持。</p>
-<h2>锁粗化</h2>
+<h2 id="锁粗化">锁粗化</h2>
 <p>在通常情况下，同步块的作用范围应该限制的尽量小，这样即使存在锁竞争，等待锁的线程也能尽可能地拿到锁。</p>
 <p>但是如果一系列的操作对同一个对象反复进行加锁和解锁，那么即使没有线程竞争，频繁的进行互斥行为也会导致不必要的性能损耗。如果虚拟机探测到有这样一连串的操作都对同一个对象加锁，将会把加锁同步的范围扩展到整个操作序列的外部。</p>
-<h2>轻量级锁</h2>
+<h2 id="轻量级锁">轻量级锁</h2>
 <p>轻量级锁的设计初衷在于在没有多线程竞争的情况下，减少传统的重量级锁使用操作系统互斥量产生的性能消耗。</p>
 <p>虚拟机的对象头分为两个部分，其中第一部分用于存储对象自身的运行时数据，如哈希码、GC分代年龄等，称为Mark
 Word，是实现轻量级锁和偏向锁的关键。</p>
@@ -284,7 +284,7 @@ Word中存储的就是指向重量级锁的指针，后面等待锁的线程也�
 Word仍然指向线程的锁记录，那么就用CAS操作将当前的Mark
 Word和线程中复制的Mark
 Word替换回来。假如能够成功替换，那么整个同步过程就顺利完成了。如果替换失败，那么说明其他线程尝试获取过该锁，需要在释放锁的同时唤醒被挂起的线程。</p>
-<h2>偏向锁</h2>
+<h2 id="偏向锁">偏向锁</h2>
 <p>偏向锁的目的在于消除数据在无竞争的情况下的同步原语，进一步提升程序的运行性能。偏向锁的偏表示这个锁会偏向于第一个获得它的线程，如果在接下来的执行过程中，该锁一直没有被其他的线程所获取，则持有偏向锁的线程就永远不需要进行同步。</p>
 <p>当锁对象第一次被线程获取的时候，虚拟机会将对象头的标志位设置为01，把偏向模式设置为1，表示进入偏向模式，同时使用CAS操作把获取到这个锁的ID记录在对象的Mark
 Word之中。如果CAS操作成功，持有偏向锁的线程以后每次进入这个锁的同步块时，虚拟机都可以不再进行任何同步操作。</p>
@@ -389,7 +389,7 @@ Word之中。如果CAS操作成功，持有偏向锁的线程以后每次进入�
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">自旋锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">锁消除</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">锁粗化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.</span> <span class="nav-text">轻量级锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">5.</span> <span class="nav-text">偏向锁</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%87%AA%E6%97%8B%E9%94%81"><span class="nav-number">1.</span> <span class="nav-text">自旋锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%94%81%E6%B6%88%E9%99%A4"><span class="nav-number">2.</span> <span class="nav-text">锁消除</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%94%81%E7%B2%97%E5%8C%96"><span class="nav-number">3.</span> <span class="nav-text">锁粗化</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BD%BB%E9%87%8F%E7%BA%A7%E9%94%81"><span class="nav-number">4.</span> <span class="nav-text">轻量级锁</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%81%8F%E5%90%91%E9%94%81"><span class="nav-number">5.</span> <span class="nav-text">偏向锁</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -402,7 +402,7 @@ Word之中。如果CAS操作成功，持有偏向锁的线程以后每次进入�
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">41</span>
+          <span class="site-state-item-count">42</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -415,7 +415,7 @@ Word之中。如果CAS操作成功，持有偏向锁的线程以后每次进入�
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-count">38</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -462,12 +462,12 @@ Word之中。如果CAS操作成功，持有偏向锁的线程以后每次进入�
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">202k</span>
+    <span title="站点总字数">206k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:36</span>
+    <span title="站点阅读时长">9:48</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>

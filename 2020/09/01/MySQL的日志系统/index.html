@@ -261,33 +261,33 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <h2>归档日志binlog</h2>
+        <h2 id="归档日志binlog">归档日志binlog</h2>
 <p>归档日志记录了所有对MySQL数据库执行更改的所有操作（不包括SELECT和SHOW这样不会修改数据的操作）</p>
-<h3>作用</h3>
+<h3 id="作用">作用</h3>
 <ol type="1">
 <li>恢复：用户可以通过binlog对数据库中的数据进行恢复。</li>
 <li>复制：可以通过binlog使得两台MySQL数据库之间进行实时同步。</li>
 <li>审计：通过binlog来判断是否存在对数据库进行注入的攻击。</li>
 </ol>
-<h3>日志格式</h3>
+<h3 id="日志格式">日志格式</h3>
 <p>binlog_format参数记录了binlog的格式，可选值由ROW,STATEMENT和MIXED。</p>
 <p>ROW格式下记录了表的更改情况。</p>
 <p>STATEMENT格式记录了日志的逻辑SQL语句。</p>
 <p>MIXED格式下，MySQL会默认采用STATEMENT格式进行binlog的记录，但是在一些特殊的情况下会使用ROW格式（例如使用了UUID和RAND函数）。</p>
-<h2>错误日志</h2>
+<h2 id="错误日志">错误日志</h2>
 <p>错误日志文件对MySqlQL的启动、关闭、运行过程进行记录，记录所有的错误日志以及一部分的警告或正确的信息。可以使用如下命令来定位错误日志文件。</p>
 <figure class="highlight text"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; SHOW VARIABLES LIKE &#x27;log_error&#x27;;</span><br><span class="line">+---------------+--------------------------+</span><br><span class="line">| Variable_name | Value                    |</span><br><span class="line">+---------------+--------------------------+</span><br><span class="line">| log_error     | /var/log/mysql/error.log |</span><br><span class="line">+---------------+--------------------------+</span><br><span class="line">1 row in set (0.00 sec)</span><br></pre></td></tr></table></figure>
 
-<h2>慢查询日志</h2>
+<h2 id="慢查询日志">慢查询日志</h2>
 <p>慢查询日志可以帮助定位可能存在问题的SQL语句，从而帮助SQL语句优化。在MySQL运行期间，运行时间超过参数long_query_time的值（默认为10）的所有SQL语句都记录到慢查询日志之中。</p>
-<h2>查询日志</h2>
+<h2 id="查询日志">查询日志</h2>
 <p>查询日志记录了所有对MySQL数据库请求的信息，无论这些请求是否得到了正确的执行。</p>
-<h2>重做日志redo log</h2>
+<h2 id="重做日志redo-log">重做日志redo log</h2>
 <p>当InnoDB引擎在进行更新的时候，会先把记录写到redo
 log中，同时更新内存，这个时候更新就算完成了。同时，InnoDB
 引擎会在适当的时候，将这个操作记录保存到磁盘里面。有了redo
 log，InnoDB保证了可以在数据库发生异常重启时之前提交的记录不会丢失。</p>
-<h2>binlog与redo log区别</h2>
+<h2 id="binlog与redo-log区别">binlog与redo log区别</h2>
 <ul>
 <li>redo
 log是InnoDB独有的日志系统，而Binlog对于所有的引擎都可以使用。</li>
@@ -298,7 +298,7 @@ log来实现Crash-safe。</li>
 <li>redo log是物理日志，记录的是在某个数据页上做了什么修改；binlog
 是逻辑日志，记录的是这个语句的原始逻辑。</li>
 </ul>
-<h2>二阶段提交</h2>
+<h2 id="二阶段提交">二阶段提交</h2>
 <p>为了保证两份日志之间的逻辑一致，必须要有二阶段提交的操作。在二阶段提交的过程中，需要先写入redo
 log，然后进入prepare阶段，之后写入binlog，提交事务，处于commit状态，完成二阶段提交。</p>
 <p>如果不使用二阶段提交的方案，那么数据库的状态就有可能和用它的日志恢复出来的库的状态不一致。</p>
@@ -418,7 +418,7 @@ log还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值�
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">1.</span> <span class="nav-text">归档日志binlog</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">1.1.</span> <span class="nav-text">作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link"><span class="nav-number">1.2.</span> <span class="nav-text">日志格式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">2.</span> <span class="nav-text">错误日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text">慢查询日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">4.</span> <span class="nav-text">查询日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">5.</span> <span class="nav-text">重做日志redo log</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">6.</span> <span class="nav-text">binlog与redo log区别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">7.</span> <span class="nav-text">二阶段提交</span></a></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%BD%92%E6%A1%A3%E6%97%A5%E5%BF%97binlog"><span class="nav-number">1.</span> <span class="nav-text">归档日志binlog</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%9C%E7%94%A8"><span class="nav-number">1.1.</span> <span class="nav-text">作用</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%A5%E5%BF%97%E6%A0%BC%E5%BC%8F"><span class="nav-number">1.2.</span> <span class="nav-text">日志格式</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%94%99%E8%AF%AF%E6%97%A5%E5%BF%97"><span class="nav-number">2.</span> <span class="nav-text">错误日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%85%A2%E6%9F%A5%E8%AF%A2%E6%97%A5%E5%BF%97"><span class="nav-number">3.</span> <span class="nav-text">慢查询日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%9F%A5%E8%AF%A2%E6%97%A5%E5%BF%97"><span class="nav-number">4.</span> <span class="nav-text">查询日志</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%87%8D%E5%81%9A%E6%97%A5%E5%BF%97redo-log"><span class="nav-number">5.</span> <span class="nav-text">重做日志redo log</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#binlog%E4%B8%8Eredo-log%E5%8C%BA%E5%88%AB"><span class="nav-number">6.</span> <span class="nav-text">binlog与redo log区别</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E4%BA%8C%E9%98%B6%E6%AE%B5%E6%8F%90%E4%BA%A4"><span class="nav-number">7.</span> <span class="nav-text">二阶段提交</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
@@ -431,7 +431,7 @@ log还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值�
   <nav class="site-state">
       <div class="site-state-item site-state-posts">
           <a href="/archives">
-          <span class="site-state-item-count">41</span>
+          <span class="site-state-item-count">42</span>
           <span class="site-state-item-name">日志</span>
         </a>
       </div>
@@ -444,7 +444,7 @@ log还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值�
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">37</span>
+        <span class="site-state-item-count">38</span>
         <span class="site-state-item-name">标签</span></a>
       </div>
   </nav>
@@ -491,12 +491,12 @@ log还没写，崩溃恢复以后这个事务无效，所以这一行 c 的值�
     <span class="post-meta-item-icon">
       <i class="fa fa-chart-area"></i>
     </span>
-    <span title="站点总字数">202k</span>
+    <span title="站点总字数">206k</span>
     <span class="post-meta-divider">|</span>
     <span class="post-meta-item-icon">
       <i class="fa fa-coffee"></i>
     </span>
-    <span title="站点阅读时长">9:36</span>
+    <span title="站点阅读时长">9:48</span>
 </div>
   <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a> 强力驱动
   </div>
